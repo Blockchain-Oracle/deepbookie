@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@deepbookie/predict-client": "workspace:*",
+    "@mysten/deepbook-v3": "^1.5.1",
     "@mysten/sui": "^2.19.0",
     "zod": "^4.0.0"
   }
