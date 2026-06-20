@@ -28,6 +28,9 @@ export const SUISCAN_ACCOUNT = (addr: string) => `https://suiscan.xyz/testnet/ac
 /** Operator tally form — fallback path to request testnet dUSDC (hackathon-gated). */
 export const TALLY_FAUCET_URL = 'https://tally.so/r/Xx102L';
 
+/** External documentation site (separate app, deployed at this domain). */
+export const DOCS_URL = 'https://docs.deepbookie.xyz';
+
 /** Server cache lifetimes (seconds) for the BFF route handlers — see spec §3. */
 export const REVALIDATE = {
   markets: 10,

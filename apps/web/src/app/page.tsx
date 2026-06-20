@@ -1,3 +1,4 @@
+import { LandingHeader } from '@/components/landing/LandingHeader';
 import { Hero } from '@/components/landing/Hero';
 import { DemoPhone } from '@/components/landing/DemoPhone';
 import { HowItWorks } from '@/components/landing/HowItWorks';
@@ -14,6 +15,7 @@ import { CtaFooter } from '@/components/landing/CtaFooter';
 export default function Home() {
   return (
     <main className="min-h-screen bg-paper text-ink">
+      <LandingHeader />
       <section className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-12 gap-y-14 px-6 py-16 lg:py-24">
         <Hero />
         <DemoPhone />

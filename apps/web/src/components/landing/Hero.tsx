@@ -1,23 +1,13 @@
 import Link from 'next/link';
-import { BrandMark } from '@/components/ui/BrandMark';
 
 /**
  * Hero — the landing page's left text column. Server component (no interactivity).
- * The animated DemoPhone is placed beside it by the page, not imported here.
+ * The brand mark lives in the LandingHeader; the animated DemoPhone is placed beside this by the page.
  * Mirrors Demo.dc.html lines 32-49 (copy, type scale, spacing).
  */
 export function Hero() {
   return (
     <div className="min-w-0 flex-1 basis-[440px] lg:min-w-[360px]">
-      {/* Brand mark + SUI TESTNET chip */}
-      <div className="mb-7 flex items-center gap-[11px]">
-        <BrandMark size={17} className="block flex-none" />
-        <span className="text-lg font-bold tracking-[-0.03em] text-ink">DeepBookie</span>
-        <span className="ml-1 rounded-card-in border border-line-strong px-[7px] py-1 font-mono text-[10px] tracking-[0.08em] text-muted">
-          SUI TESTNET
-        </span>
-      </div>
-
       {/* Eyebrow kicker */}
       <div className="mb-[22px] font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
         DeepBook Predict — live on Sui
