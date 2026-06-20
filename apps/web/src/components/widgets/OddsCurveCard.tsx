@@ -76,7 +76,7 @@ export function OddsCurveCard({ status = 'live', odds, asset = 'BTC', strikeUsd,
       </Card>
     );
   }
-  if (status === 'error' || !odds) {
+  if (status === 'error' || !odds || odds.curve.length === 0) {
     return (
       <Card className="flex h-[233px] flex-col items-center justify-center gap-2 border-[#E6C9BE] p-4 text-center">
         <span className="flex size-8 items-center justify-center rounded-full border border-clay text-lg text-clay">!</span>

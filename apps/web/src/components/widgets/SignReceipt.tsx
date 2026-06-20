@@ -27,6 +27,7 @@ export interface SignReceiptProps {
   digest?: string;
   reason?: string; // failure reason (required visible in failed state)
   suiscanUrl?: string;
+  authorizeDisabled?: boolean;
   onAuthorize?: () => void;
   onCancel?: () => void;
   onRetry?: () => void;
@@ -151,7 +152,12 @@ export function SignReceipt(p: SignReceiptProps) {
 
       {p.state === 'proposed' && (
         <div className="flex gap-2.5 px-4 pb-4 pt-2">
-          <button type="button" onClick={p.onAuthorize} className="flex-1 rounded-card-in bg-ink py-3 text-sm font-semibold text-paper transition hover:opacity-90">
+          <button
+            type="button"
+            onClick={p.onAuthorize}
+            disabled={p.authorizeDisabled}
+            className="flex-1 rounded-card-in bg-ink py-3 text-sm font-semibold text-paper transition hover:opacity-90 disabled:opacity-50"
+          >
             Authorize &amp; sign
           </button>
           <button type="button" onClick={p.onCancel} className="rounded-card-in border border-line-strong px-5 py-3 text-sm font-semibold text-[#7d7870] transition hover:bg-paper">

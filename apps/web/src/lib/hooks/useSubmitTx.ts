@@ -42,10 +42,11 @@ export function useSubmitTx() {
       await client.waitForTransaction({ digest });
 
       // Bust server tags + client caches so balances/positions reflect chain immediately.
+      const tags = ['markets', 'activity', ...(managerId ? [`manager:${managerId}`] : [])];
       void fetch('/api/revalidate', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ tags: ['markets', 'activity'] }),
+        body: JSON.stringify({ tags }),
       }).catch(() => {});
       qc.invalidateQueries({ queryKey: ['balance'] });
       qc.invalidateQueries({ queryKey: ['positions'] });
