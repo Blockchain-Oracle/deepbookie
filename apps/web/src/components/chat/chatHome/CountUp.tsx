@@ -6,14 +6,17 @@ const fmt = (v: number) => `$${v.toLocaleString('en-US', { minimumFractionDigits
 
 /**
  * Decorative count-up for the "Your account" launcher motif (ease-out cubic over 1.2s). It is a
- * living-detail flourish, not the user's real balance. Renders the final value immediately when
- * prefers-reduced-motion is set, and SSRs the final string so there is no hydration flash.
+ * living-detail flourish, not the user's real balance. Starts at 0 (SSR + first client render match,
+ * so no hydration mismatch) and animates up; with prefers-reduced-motion it snaps to the final value.
  */
 export function CountUp({ to, className }: { to: number; className?: string }) {
-  const [value, setValue] = useState(to);
+  const [value, setValue] = useState(0);
 
   useEffect(() => {
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setValue(to); // reduced motion → show the final value, no animation (don't strand at 0)
+      return;
+    }
     let raf = 0;
     const dur = 1200;
     const start = performance.now();

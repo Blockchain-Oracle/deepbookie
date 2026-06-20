@@ -106,7 +106,7 @@ export function LimitOrderTicket({
   const lines: ReceiptLine[] = useMemo(
     () => [
       { label: 'Notional', value: `${formatUsd(notional)} ${quote}` },
-      { label: 'Maker fee · in DEEP', value: makerFee > 0 ? makerFee.toFixed(2) : '0.00' },
+      { label: 'Est. maker fee', value: makerFee > 0 ? makerFee.toFixed(2) : '0.00' },
     ],
     [notional, quote, makerFee],
   );
@@ -190,7 +190,7 @@ export function LimitOrderTicket({
         <span className="font-mono font-semibold tabular-nums">{formatUsd(notional)} {quote}</span>
       </div>
       <div className="mb-2 flex justify-between py-[5px] text-[13px]">
-        <span className="text-[#7d7870]">Maker fee · in DEEP</span>
+        <span className="text-[#7d7870]">Est. maker fee</span>
         <span className="font-mono font-medium tabular-nums">{makerFee > 0 ? makerFee.toFixed(2) : '—'}</span>
       </div>
 
@@ -205,9 +205,11 @@ export function LimitOrderTicket({
         ))}
       {!w.hasBalanceManager && !w.bmLoading && (
         <div className="mb-[11px] rounded-[8px] border border-[#E6C9BE] bg-[#FBF1EC] px-3 py-2 text-[11.5px] font-medium text-[#8a2f1c]">
-          {w.storageBlocked
-            ? 'Your browser is blocking storage — we can’t detect your account; don’t create a second one.'
-            : 'You need a BalanceManager before placing maker orders.'}
+          {w.bmError
+            ? 'Couldn’t reach your account — retry in a moment; don’t create a new one.'
+            : w.storageBlocked
+              ? 'Your browser is blocking storage — we can’t detect your account; don’t create a second one.'
+              : 'You need a BalanceManager before placing maker orders.'}
         </div>
       )}
 
