@@ -31,6 +31,22 @@
 
 :root {
   color-scheme: light;
+
+  /* shadcn-style vars the @mysten/dapp-kit-react /ui components read — mapped to our tokens. */
+  --background: #f4f2ec;
+  --foreground: #1a1714;
+  --card: #ffffff;
+  --card-foreground: #1a1714;
+  --primary: #1a1714;
+  --primary-foreground: #f4f2ec;
+  --secondary: #f4f2ec;
+  --muted: #ece8df;
+  --muted-foreground: #8a857b;
+  --border: #ded9cf;
+  --input: #ded9cf;
+  --ring: #2c5e4a;
+  --radius: 8px;
+  --font-sans: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {

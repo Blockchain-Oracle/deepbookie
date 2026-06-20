@@ -62,5 +62,7 @@ export const VAULT_PERF_MAX_POINTS = 120;
 export const CHAT_PRUNE_MAX_MESSAGES = 40;
 
 /** App-run faucet: a small dUSDC grant from the operator wallet to remove demo friction. */
-export const FAUCET_AMOUNT_USD = 25;
-export const FAUCET_MIN_BALANCE_USD = 1;
+export const FAUCET_AMOUNT_USD = 10;
+export const FAUCET_MIN_BALANCE_USD = 1; // only grant dUSDC if recipient is below this
+export const FAUCET_MIN_SUI = 0.05; // request gas SUI if recipient is below this
+export const SUI_GAS_FAUCET_URL = 'https://faucet.testnet.sui.io/v2/gas';
