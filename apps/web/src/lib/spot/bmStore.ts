@@ -38,3 +38,21 @@ export function setStoredBalanceManager(owner: string, balanceManagerId: string)
     noteStorageBlocked();
   }
 }
+
+/**
+ * Probe whether localStorage is usable (private/hardened browsers block it). Lets callers tell a
+ * genuine "no stored id" apart from "can't read storage" — the latter must NOT collapse into "no
+ * account", which would invite a returning user to create a duplicate (orphaning) BalanceManager.
+ */
+export function isStorageAvailable(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const probe = 'deepbookie.probe';
+    window.localStorage.setItem(probe, '1');
+    window.localStorage.removeItem(probe);
+    return true;
+  } catch {
+    noteStorageBlocked();
+    return false;
+  }
+}

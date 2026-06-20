@@ -78,23 +78,25 @@ export function useSubmitTx() {
       const tx = await getToolsForAdapter(allTools, ctx).build(toolName, safeInput);
       const { digest } = await signAndExecute({ transaction: tx });
 
-      // Capturing a freshly-created BalanceManager id is the ONE thing we wait for — so the very next
-      // spot action (deposit/swap) has it immediately, instead of failing "set up your account first"
-      // while the resolver lags. Bounded by waitForTransaction's own timeout; never fatal.
+      // Capturing the freshly-created SHARED BalanceManager id is critical: the on-chain resolver can't
+      // find shared objects, so this captured id is the ONLY authoritative source for later spot actions
+      // + reloads. Retry on a flaky/cold-start RPC so a transient waitForTransaction failure can't
+      // silently strand the id and later guide the user into creating a duplicate (orphaning funds).
       if (toolName === 'spot_create_balance_manager') {
-        try {
-          const tb = await client.waitForTransaction({ digest, options: { showObjectChanges: true } });
-          const created = (tb.objectChanges as ObjChange[] | undefined)?.find(
-            (c) => c.type === 'created' && c.objectType?.includes('balance_manager::BalanceManager'),
-          );
-          if (created?.objectId) {
-            // Persist (localStorage) + prime the cache — the on-chain resolver can't find shared BMs,
-            // so this captured id is the authoritative source for every later spot action + reload.
-            setStoredBalanceManager(owner, created.objectId);
-            qc.setQueryData(['balanceManager', owner], { balanceManagerId: created.objectId });
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const tb = await client.waitForTransaction({ digest, options: { showObjectChanges: true } });
+            const created = (tb.objectChanges as ObjChange[] | undefined)?.find(
+              (c) => c.type === 'created' && c.objectType?.includes('balance_manager::BalanceManager'),
+            );
+            if (created?.objectId) {
+              setStoredBalanceManager(owner, created.objectId);
+              qc.setQueryData(['balanceManager', owner], { balanceManagerId: created.objectId });
+              break;
+            }
+          } catch {
+            /* retry; the resolver refetch below is the last (best-effort) resort */
           }
-        } catch {
-          /* fall back to the resolver refetch below */
         }
       }
 

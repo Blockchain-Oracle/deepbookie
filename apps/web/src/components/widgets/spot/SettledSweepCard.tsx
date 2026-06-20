@@ -6,7 +6,7 @@ import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt'
 import { useSpotAccount } from '@/lib/hooks/useSpotRead';
 import type { SpotBalances } from '@/lib/bff/spot-types';
 import { SUISCAN_TX } from '@/lib/constants';
-import { formatUsd, splitPool } from '@/lib/format';
+import { docNumberFor, formatUsd, splitPool } from '@/lib/format';
 
 const DEFAULT_POOL = 'SUI_DBUSDC';
 const ZERO: SpotBalances = { base: 0, quote: 0, deep: 0 };
@@ -57,7 +57,7 @@ export function SettledSweepCard({
 
   if (w.dismissed) return null;
 
-  const docNumber = `DB·${part.toolCallId.slice(0, 4).toUpperCase()}·${part.toolCallId.slice(-4)}`;
+  const docNumber = docNumberFor(part.toolCallId);
 
   // Terminal states render the receipt (title + Pool/Proceeds lines).
   if (w.state !== 'proposed') {

@@ -31,9 +31,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!b.toolCallId || !b.walletAddress || !isValidSuiAddress(b.walletAddress) || !b.status || !STATUSES.has(b.status)) {
       return NextResponse.json({ error: 'bad request' }, { status: 400 });
     }
-    // Claim the session for this wallet if new, then verify ownership — a chatId already owned by
-    // another wallet yields no row here → 404 (write-side isolation). Also guarantees a discoverable
-    // parent so a signed trade is never orphaned if the stream never resumes.
+    // Ensure a discoverable parent row exists so a signed trade isn't orphaned if the stream never
+    // resumes, then verify ownership. NOTE: this is NOT a strong auth boundary — the FIRST caller of a
+    // (122-bit random, unguessable) chatId owns it; truly binding the id to a verified wallet needs
+    // SIWS session auth (the documented fast-follow). A 2nd wallet supplying the same id → no row → 404.
     await ensureChat(id, b.walletAddress);
     if (!(await getChat(id, b.walletAddress))) {
       return NextResponse.json({ error: 'not found' }, { status: 404 });

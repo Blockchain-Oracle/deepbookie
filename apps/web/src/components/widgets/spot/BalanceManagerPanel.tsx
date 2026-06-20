@@ -32,13 +32,15 @@ function StatusLine({ status, digest, reason }: { status: TxStatus; digest: stri
 
 /** One held-coin row inside the ink summary. Calls the per-coin balance hook (can't loop hooks). */
 function CoinRow({ coinKey }: { coinKey: SpotCoinKey }) {
-  const { data } = useSpotBalance(coinKey);
-  const bal = data?.balance ?? 0;
+  const q = useSpotBalance(coinKey);
+  const bal = q.data?.balance ?? 0;
+  // Don't render a failed/loading read as a real "0.00" — that could hide funds the user holds.
+  const text = q.isError ? '—' : q.isLoading ? '…' : formatUsd(bal, bal >= 1000 ? 1 : 2);
   return (
     <div className="flex items-center px-[18px] py-[9px]">
       <CoinLogo asset={coinKey} size={20} />
       <span className="ml-[9px] text-[13px] font-semibold">{coinKey}</span>
-      <span className="ml-auto font-mono text-[13px] tabular-nums">{formatUsd(bal, bal >= 1000 ? 1 : 2)}</span>
+      <span className="ml-auto font-mono text-[13px] tabular-nums">{text}</span>
     </div>
   );
 }
@@ -122,6 +124,12 @@ export function BalanceManagerPanel({ onAction }: { onAction?: (text: string) =>
         <p className="text-[12px] leading-relaxed text-muted">
           Create one to deposit coins, swap, and place orders. A one-time on-chain setup.
         </p>
+        {bm.data?.storageBlocked && (
+          <p className="rounded-[8px] border border-[#E6C9BE] bg-[#FBF1EC] px-3 py-2 text-[11.5px] font-medium text-[#8a2f1c]">
+            Your browser is blocking storage, so we can’t detect an existing account. If you already
+            created one in another session, creating again will make a second (duplicate) manager.
+          </p>
+        )}
         <button
           type="button"
           disabled={busy}

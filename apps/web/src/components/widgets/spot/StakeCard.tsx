@@ -6,7 +6,7 @@ import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/w
 import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt';
 import { useSpotAccount, useSpotBalance } from '@/lib/hooks/useSpotRead';
 import { SUISCAN_TX } from '@/lib/constants';
-import { formatUsd, num, poolLabel } from '@/lib/format';
+import { docNumberFor, formatUsd, num, poolLabel } from '@/lib/format';
 
 const DEFAULT_POOL = 'SUI_DBUSDC';
 const deep = (n: number) => formatUsd(n, 0);
@@ -45,7 +45,7 @@ export function StakeCard({
   if (w.dismissed) return null;
 
   const title = isUnstake ? 'Unstake DEEP' : 'Stake DEEP';
-  const docNumber = `DB·${part.toolCallId.slice(0, 4).toUpperCase()}·${part.toolCallId.slice(-4)}`;
+  const docNumber = docNumberFor(part.toolCallId);
 
   // Terminal states render the receipt; line copy matches the design (Pool + Amount). The signed
   // figure lives in the durable output (persisted at sign time) so it survives remount + replay.
@@ -192,10 +192,9 @@ export function StakeCard({
             </div>
             <div className="flex items-center justify-between">
               <input
-                type="number"
                 inputMode="decimal"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
                 placeholder="0"
                 className="w-full bg-transparent font-mono text-[20px] font-semibold tabular-nums text-ink outline-none placeholder:text-faint"
               />

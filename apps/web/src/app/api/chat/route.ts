@@ -7,7 +7,7 @@ import { resolveBalanceManagerByOwner } from '@/lib/bff/spot';
 import { isValidSuiAddress } from '@mysten/sui/utils';
 import { upsertChat } from '@/lib/db/chats';
 import { allowRequest, clientIp } from '@/lib/rate-limit';
-import { CHAT_RATE_PER_IP, CHAT_RATE_WINDOW_MS } from '@/lib/constants';
+import { CHAT_MAX_MESSAGES, CHAT_RATE_PER_IP, CHAT_RATE_WINDOW_MS } from '@/lib/constants';
 import { logger } from '@/lib/logger.server';
 
 export const runtime = 'nodejs';
@@ -79,6 +79,10 @@ export async function POST(req: Request) {
   // walletAddress is optional (launcher-first reads run pre-wallet), but if present it must be a
   // well-formed Sui address — it's used as the quote sender + the history row key.
   if (walletAddress && !isValidSuiAddress(walletAddress)) {
+    return new Response('bad request', { status: 400 });
+  }
+  // Bound the transcript size so a single request can't blow up LLM token cost or jsonb storage.
+  if (!Array.isArray(messages) || messages.length > CHAT_MAX_MESSAGES) {
     return new Response('bad request', { status: 400 });
   }
 

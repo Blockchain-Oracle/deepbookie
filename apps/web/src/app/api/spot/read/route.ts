@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
+import { isValidSuiAddress } from '@mysten/sui/utils';
 import { allTools, createContext, getToolsForAdapter } from '@deepbookie/core';
 import { withReliability } from '@/lib/bff/read';
 import { resolveBalanceManagerByOwner } from '@/lib/bff/spot';
-import { NETWORK } from '@/lib/constants';
+import { CHAT_RATE_WINDOW_MS, NETWORK, SPOT_READ_RATE_PER_IP } from '@/lib/constants';
+import { allowRequest, clientIp } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger.server';
 
 export const runtime = 'nodejs';
@@ -36,6 +38,9 @@ const BM_SCOPED = new Set([
  *  the same core read tool the agent uses (timeout + retry). `owner` is a quote/account convenience,
  *  never authorization. */
 export async function POST(req: Request) {
+  if (!allowRequest(`spotread:${clientIp(req)}`, SPOT_READ_RATE_PER_IP, CHAT_RATE_WINDOW_MS)) {
+    return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
+  }
   let tool: string | undefined;
   try {
     const body = (await req.json()) as {
@@ -47,6 +52,11 @@ export async function POST(req: Request) {
     tool = body.tool;
     if (!tool || !ALLOWED.has(tool)) {
       return NextResponse.json({ error: 'unknown spot read' }, { status: 400 });
+    }
+    // `owner` is a quote/inspection convenience (never auth), but validate its shape before it's used
+    // as the devInspect sender / resolver key.
+    if (body.owner && !isValidSuiAddress(body.owner)) {
+      return NextResponse.json({ error: 'invalid owner' }, { status: 400 });
     }
     let balanceManagerId: string | null = null;
     if (BM_SCOPED.has(tool)) {

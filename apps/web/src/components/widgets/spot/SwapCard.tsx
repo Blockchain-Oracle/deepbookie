@@ -6,7 +6,7 @@ import { useSpotWriteCard } from '@/components/widgets/spot/useSpotWriteCard';
 import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/widgets/ReceiptController';
 import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt';
 import { SUISCAN_TX } from '@/lib/constants';
-import { formatUsd } from '@/lib/format';
+import { docNumberFor, formatUsd } from '@/lib/format';
 
 const SLIPPAGES = [0.5, 1] as const;
 // DEEP fee headroom on non-whitelisted pools: the quoted deepRequired is computed against the book at
@@ -90,12 +90,16 @@ export function SwapCard({
   const whitelisted = signed?.whitelisted ?? liveWhitelisted;
   const quoting = quote.isFetching && amt > 0;
   const emptyBook = amt > 0 && quote.data != null && out <= 0;
-  const docNumber = `DB·${part.toolCallId.slice(0, 4).toUpperCase()}·${part.toolCallId.slice(-4)}`;
+  const docNumber = docNumberFor(part.toolCallId);
 
   if (w.dismissed) return null;
 
   if (w.state !== 'proposed') {
-    const lines: ReceiptLine[] = [
+    // Only show the economics on a receipt the user actually authorized (`signed` set at sign time);
+    // a cancelled/void receipt has no snapshot, so we'd otherwise render a misleading "rate 0".
+    const lines: ReceiptLine[] = !signed
+      ? []
+      : [
       { label: 'Rate', value: `1 ${from} = ${formatUsd(rate, 4)} ${to}` },
       { label: `Min received · ${slip}%`, value: `${formatUsd(minOut, out >= 1000 ? 2 : 4)} ${to}` },
       {

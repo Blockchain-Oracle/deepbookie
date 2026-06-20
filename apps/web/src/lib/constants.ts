@@ -68,7 +68,9 @@ export const STALE = {
 export const INDEXER_TIMEOUT_MS = 22_000;
 export const INDEXER_RETRIES = 1;
 export const VAULT_PERF_MAX_POINTS = 120;
-export const CHAT_PRUNE_MAX_MESSAGES = 40;
+// Hard cap on inbound chat transcript length — bounds LLM token cost + jsonb storage growth per
+// request (the per-IP rate limit caps request count, not body size). A normal session is well under it.
+export const CHAT_MAX_MESSAGES = 500;
 
 /** Markets board enrichment: bound per-market odds fan-out; scan the activity feed for volume/trades. */
 export const MARKETS_ENRICH_CONCURRENCY = 6;
@@ -90,3 +92,5 @@ export const FAUCET_RATE_WINDOW_MS = 60 * 60 * 1000;
 // is keyed by a secret random chatId; signed-message (SIWS) session auth is the documented fast-follow.
 export const CHAT_RATE_PER_IP = 60;
 export const CHAT_RATE_WINDOW_MS = 60 * 1000;
+// Spot reads poll (orderbook/account/balance), so the per-IP cap is higher than chat's.
+export const SPOT_READ_RATE_PER_IP = 300;
