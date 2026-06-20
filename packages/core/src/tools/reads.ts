@@ -32,6 +32,8 @@ function mapPosition(p: PositionEntry) {
     probabilityAtTrade: fromScaled(p.ask_price),
     digest: p.digest,
     at: p.checkpoint_timestamp_ms,
+    trader: p.trader ?? null,
+    managerId: p.manager_id ?? null,
   };
 }
 

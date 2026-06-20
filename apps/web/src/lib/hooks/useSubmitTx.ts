@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useCurrentAccount, useCurrentClient, useDAppKit } from '@mysten/dapp-kit-react';
+import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit';
 import { useQueryClient } from '@tanstack/react-query';
+import { SuiJsonRpcClient } from '@mysten/sui/jsonRpc';
 import { allTools, getToolsForAdapter, type ToolContext } from '@deepbookie/core';
 import { NETWORK } from '@/lib/constants';
 
@@ -26,19 +27,23 @@ export function reasonFor(e: unknown): string {
  * caches. Returns the digest; throws on failure (caller renders the FAILED receipt via reasonFor).
  */
 export function useSubmitTx() {
-  const dappKit = useDAppKit();
-  const client = useCurrentClient();
+  const client = useSuiClient();
   const account = useCurrentAccount();
+  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
   const qc = useQueryClient();
 
   return useCallback(
     async (toolName: string, input: Record<string, unknown>, managerId?: string): Promise<string> => {
       if (!account) throw new Error('wallet not connected');
-      const ctx: ToolContext = { client, network: NETWORK, sender: account.address, managerId };
+      // The browser client (SuiClient) exposes the same getCoins/devInspect surface the builders need.
+      const ctx: ToolContext = {
+        client: client as unknown as SuiJsonRpcClient,
+        network: NETWORK,
+        sender: account.address,
+        managerId,
+      };
       const tx = await getToolsForAdapter(allTools, ctx).build(toolName, input);
-      const res = await dappKit.signAndExecuteTransaction({ transaction: tx });
-      if (res.$kind === 'FailedTransaction') throw new Error('transaction failed on-chain');
-      const digest = res.Transaction.digest;
+      const { digest } = await signAndExecute({ transaction: tx });
       await client.waitForTransaction({ digest });
 
       // Bust server tags + client caches so balances/positions reflect chain immediately.
@@ -53,6 +58,6 @@ export function useSubmitTx() {
 
       return digest;
     },
-    [account, client, dappKit, qc],
+    [account, client, signAndExecute, qc],
   );
 }

@@ -87,6 +87,10 @@ export interface PositionEntry {
   ask_price: number;
   digest: string;
   checkpoint_timestamp_ms: number;
+  /** Present on the global activity feed (/positions/minted); the wallet that placed the bet. */
+  trader?: string;
+  /** Present on the global activity feed; the PredictManager that holds the position. */
+  manager_id?: string;
 }
 
 export interface ManagerPositions {

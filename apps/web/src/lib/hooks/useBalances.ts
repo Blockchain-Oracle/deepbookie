@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useCurrentAccount, useCurrentClient } from '@mysten/dapp-kit-react';
+import { useCurrentAccount, useSuiClient } from '@mysten/dapp-kit';
 import { fromDusdc } from '@deepbookie/predict-client';
 import { DUSDC_TYPE, POLL, SUI_DECIMALS } from '@/lib/constants';
 
@@ -9,7 +9,7 @@ import { DUSDC_TYPE, POLL, SUI_DECIMALS } from '@/lib/constants';
  */
 export function useBalances() {
   const account = useCurrentAccount();
-  const client = useCurrentClient();
+  const client = useSuiClient();
   const owner = account?.address;
 
   const dusdc = useQuery({

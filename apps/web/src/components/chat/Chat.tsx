@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from 'ai';
-import { useCurrentAccount } from '@mysten/dapp-kit-react';
+import { useCurrentAccount } from '@mysten/dapp-kit';
 import { Composer } from './Composer';
 import { MessageList } from './MessageList';
 import type { AddToolResult } from '@/components/widgets/ReceiptController';
@@ -24,6 +24,19 @@ export function Chat() {
     // Resume the stream once the user has signed (or declined) every proposed write.
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
   });
+
+  // Deep-link intent: a "Trade"/"Bet" tap lands here as ?q=<prompt> — auto-send it once, then
+  // clear the param so a refresh doesn't resend. Read via window to avoid a Suspense boundary.
+  const autoSent = useRef(false);
+  useEffect(() => {
+    if (autoSent.current) return;
+    const q = new URLSearchParams(window.location.search).get('q');
+    if (q) {
+      autoSent.current = true;
+      sendMessage({ text: q });
+      window.history.replaceState(null, '', '/chat');
+    }
+  }, [sendMessage]);
 
   const onSend = () => {
     const text = input.trim();

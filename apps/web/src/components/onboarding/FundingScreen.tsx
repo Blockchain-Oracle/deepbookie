@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCurrentAccount } from '@mysten/dapp-kit-react';
+import { useCurrentAccount } from '@mysten/dapp-kit';
 import { useBalances } from '@/lib/hooks/useBalances';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';

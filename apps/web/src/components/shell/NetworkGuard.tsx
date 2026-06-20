@@ -1,6 +1,6 @@
 'use client';
 
-import { useCurrentAccount } from '@mysten/dapp-kit-react';
+import { useCurrentAccount } from '@mysten/dapp-kit';
 
 const TARGET_CHAIN = 'sui:testnet';
 

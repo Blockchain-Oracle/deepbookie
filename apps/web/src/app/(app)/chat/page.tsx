@@ -1,6 +1,6 @@
 'use client';
 
-import { useCurrentAccount } from '@mysten/dapp-kit-react';
+import { useCurrentAccount } from '@mysten/dapp-kit';
 import { useBalances } from '@/lib/hooks/useBalances';
 import { ConnectScreen } from '@/components/onboarding/ConnectScreen';
 import { FundingScreen } from '@/components/onboarding/FundingScreen';

@@ -33,3 +33,13 @@ export function formatCountdown(expiryMs: number, nowMs = Date.now()): string {
 export function formatStrikeShort(usd: number): string {
   return usd >= 1000 ? `$${(usd / 1000).toFixed(usd % 1000 === 0 ? 0 : 1)}k` : `$${usd.toFixed(0)}`;
 }
+
+/** Absolute settlement time, e.g. "Jun 20, 4:15 PM" — the per-market differentiator. */
+export function formatSettleTime(ms: number): string {
+  return new Date(ms).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}

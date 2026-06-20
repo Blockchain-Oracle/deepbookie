@@ -63,6 +63,11 @@ export const INDEXER_RETRIES = 1;
 export const VAULT_PERF_MAX_POINTS = 120;
 export const CHAT_PRUNE_MAX_MESSAGES = 40;
 
+/** Markets board enrichment: bound per-market odds fan-out; scan the activity feed for volume/trades. */
+export const MARKETS_ENRICH_CONCURRENCY = 6;
+export const ACTIVITY_SCAN_LIMIT = 100; // /positions/minted returns up to 100 recent events
+export const MARKET_TRADES_LIMIT = 12; // recent trades shown on a market detail page
+
 /** App-run faucet: a small dUSDC grant from the operator wallet to remove demo friction. */
 export const FAUCET_AMOUNT_USD = 10;
 export const FAUCET_MIN_BALANCE_USD = 1; // only grant dUSDC if recipient is below this

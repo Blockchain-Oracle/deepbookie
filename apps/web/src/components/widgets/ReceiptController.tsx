@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useCurrentAccount } from '@mysten/dapp-kit-react';
+import { useCurrentAccount } from '@mysten/dapp-kit';
 import { SignReceipt, type ReceiptLine, type ReceiptState } from './SignReceipt';
 import { useSubmitTx, reasonFor } from '@/lib/hooks/useSubmitTx';
 import { useQuote } from '@/lib/hooks/useQuote';

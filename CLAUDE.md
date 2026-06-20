@@ -21,8 +21,9 @@ Predict-deep (27 tools): all Predict writes/reads + a thin Spot funding/price br
 Per phase: run `pr-review-toolkit` over the diff + manual-test. Every 2 phases: a review workflow, then a PR via `gh`; merge to `main` only on green CI.
 
 ## Stack (pinned; resolve latest at install)
-`ai@6` + `@ai-sdk/react@3` (NOT v7/RSC) · `@modelcontextprotocol/sdk@1.29` · `@mysten/sui@2.19` · `@mysten/deepbook-v3@1.5.1` (spot reads) · `zod@4` · `@mysten/dapp-kit-react` + `-core` (NOT legacy `@mysten/dapp-kit`) · `commander`.
-⚠️ **`@mysten/sui` 2.x:** the JSON-RPC client is `SuiJsonRpcClient` + `getJsonRpcFullnodeUrl` from `@mysten/sui/jsonRpc` (1.x `SuiClient` / `getFullnodeUrl` are gone).
+`ai@6` + `@ai-sdk/react@3` (NOT v7/RSC) · `@modelcontextprotocol/sdk@1.29` · `@mysten/sui@2.19` · `@mysten/deepbook-v3@1.5.1` (spot reads) · `zod@4` · `@mysten/dapp-kit@1.1.1` (the **stable** wallet stack — `SuiClientProvider`/`WalletProvider`/`ConnectButton` + `import '@mysten/dapp-kit/dist/index.css'`) · `commander`.
+⚠️ **Wallet kit (web):** we use **legacy `@mysten/dapp-kit`**, NOT the new `@mysten/dapp-kit-react`/`-core` — the new Lit web-component `ConnectButton` opened a blank modal on testnet. Reference impl: `onemem/apps/hosted-dashboard`. Client hooks: `useSuiClient` (returns a `SuiClient`; cast to `SuiJsonRpcClient` for the core `ToolContext` — it exposes the same `getCoins`/`devInspect` surface), `useCurrentAccount`, `useSignAndExecuteTransaction` (result has `.digest`).
+⚠️ **`@mysten/sui` 2.x:** for server-side reads/builders use `SuiJsonRpcClient` + `getJsonRpcFullnodeUrl` from `@mysten/sui/jsonRpc`. `SuiClient` is **still exported** at `@mysten/sui/client` (legacy dapp-kit uses it); only `getFullnodeUrl` is gone (hardcode the fullnode URL).
 
 ## Predict testnet facts (provisional — churn at mainnet; keep in `constants.ts`)
 - Predict pkg `0xf5ea2b37…785138` · obj `0xc8736204…28028a` · registry `0x43af14fe…2a6e64`.
