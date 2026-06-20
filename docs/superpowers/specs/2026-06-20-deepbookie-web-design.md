@@ -159,6 +159,18 @@ export function getModel() {
    lastAssistantMessageIsCompleteWithToolCalls` resumes the stream so the agent reacts to the digest.
 6. Invalidate caches (§3).
 
+**Idempotency & terminal states (a signed or settled action cannot be re-fired):** the Authorize
+action exists *only* while the tool part is `input-available` (proposed). Once it flips to
+`output-available` (signed — carries a digest) the widget renders the **terminal** signed receipt
+(green rule, wax stamp, digest, **no buttons**), so it can never be re-signed; `output-error` renders
+failed → "Try again", which is a *new* attempt, not a re-sign of the old one. The Authorize button
+disables on click to prevent a double-submit during the wallet round-trip. Receipts **restored from
+History are always `output-available` → read-only by construction.** Settled/expired markets render
+read-only (OddsCurveCard `settled` state — no Bet UP/DOWN); additionally the write `build()` layer
+refuses to construct a tx against a non-`active` oracle, and Redeem disappears once a position's
+on-chain `redeemable_value` is 0 (redeem is naturally once-only). This mirrors the
+Components / Components-Support state sets exactly.
+
 **Tool → widget map** (each a typed renderer keyed by `part.type === 'tool-<name>'` × `part.state`):
 
 | Tool(s) | Widget | States map to design |
@@ -341,6 +353,13 @@ One token layer → Tailwind theme **and** dapp-kit CSS vars.
   view time), so History renders "Settled · UP won · +100" without ever persisting a stale outcome.
   The transcript is frozen; the outcome is always re-derived from chain. (Optional later: cache a
   *terminal* outcome once fully settled+redeemed to skip re-fetching.)
+- **When we write to the DB (chats only).** Persistence runs in the route's `onFinish` (fires when
+  each assistant turn completes). So after you sign, the **resumed** turn (the agent reacting to the
+  digest, §5) finalizes and the signed receipt *with its digest* is saved as part of the normal
+  cycle — no bespoke write path. Belt-and-suspenders for the sign case: the client also issues an
+  explicit save (`PATCH /api/chats/{id}` with current `messages`, wallet + ownership checked per
+  §5.1) right after a successful sign, so the digest lands in History even if the user navigates away
+  before the agent's follow-up streams. Writes are debounced/idempotent (upsert by `chat.id`).
 - **Funds stay on-chain** — only transcripts live in the DB ("not in our database" holds for money).
 
 ---
