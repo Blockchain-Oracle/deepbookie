@@ -4,14 +4,15 @@ import type { CSSProperties, ReactNode } from 'react';
 import { CountUp } from './CountUp';
 import type { MotifKind } from './categories';
 
-const CURVE = 'M2 30 C30 28 48 14 72 16 C100 18 120 6 150 8 C170 9 186 5 198 4';
+/** Shared odds-curve glyph geometry (also used by the mobile hero tile). */
+export const CURVE = 'M2 30 C30 28 48 14 72 16 C100 18 120 6 150 8 C170 9 186 5 198 4';
 
 /** The living-detail motif for a rail card. Animations are CSS classes (globals.css), all paused
- *  under prefers-reduced-motion by the global guard. `big` is the larger mobile featured-hero curve. */
-export function Motif({ kind, big }: { kind: MotifKind; big?: boolean }) {
+ *  under prefers-reduced-motion by the global guard. */
+export function Motif({ kind }: { kind: MotifKind }) {
   switch (kind) {
     case 'oddsCurve':
-      return <OddsCurve big={big} />;
+      return <OddsCurve />;
     case 'upDown':
       return (
         <div className="my-[11px] flex gap-[7px]">
@@ -97,20 +98,18 @@ export function Motif({ kind, big }: { kind: MotifKind; big?: boolean }) {
   }
 }
 
-function OddsCurve({ big }: { big?: boolean }) {
-  const h = big ? 38 : 30;
+function OddsCurve() {
+  const h = 30;
   return (
     <div className="relative my-[10px]" style={{ height: h }}>
       <svg viewBox="0 0 200 40" width="100%" height={h} preserveAspectRatio="none">
         <path d={`${CURVE} L198 40 L2 40 Z`} fill="#2C5E4A" opacity="0.06" />
         <path d={CURVE} fill="none" stroke="#2C5E4A" strokeWidth="2.4" strokeLinecap="round" />
       </svg>
-      {!big && (
-        <span
-          className="spark-dot absolute size-[7px] rounded-full border-[1.5px] border-white bg-green"
-          style={{ offsetPath: `path('${CURVE}')`, boxShadow: '0 0 0 2px rgb(44 94 74 / 0.18)', top: -3.5, left: -3.5 }}
-        />
-      )}
+      <span
+        className="spark-dot absolute size-[7px] rounded-full border-[1.5px] border-white bg-green"
+        style={{ offsetPath: `path('${CURVE}')`, boxShadow: '0 0 0 2px rgb(44 94 74 / 0.18)', top: -3.5, left: -3.5 }}
+      />
       <span className="absolute right-0 top-[-4px] font-mono text-[13px] font-semibold tabular-nums text-green">62%</span>
     </div>
   );

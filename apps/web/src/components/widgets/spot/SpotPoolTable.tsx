@@ -77,7 +77,6 @@ function PoolRow({
         ) : (
           <span className="flex-[1.4] text-right font-mono text-[13px] tabular-nums">{midTxt}</span>
         )}
-        <span className="flex-1 text-right font-mono text-[12px] tabular-nums text-muted">—</span>
         <span className="flex-1 text-right font-mono text-[12px] tabular-nums text-muted">{takerTxt}</span>
         <span className="flex-[1.5] text-center">
           {loading ? <Skeleton className="mx-auto h-4 w-16 rounded-pill" /> : <FeeChip whitelisted={whitelisted} />}
@@ -120,7 +119,7 @@ function PoolRow({
   );
 }
 
-/** Directory of DeepBook V3 spot markets: mid, spread, taker fee, whitelist chip → Trade. */
+/** Directory of DeepBook V3 spot markets: mid, taker fee, whitelist chip → Trade. */
 export function SpotPoolTable({
   pools,
   onTrade,
@@ -145,7 +144,6 @@ export function SpotPoolTable({
         <div className="flex items-center border-b border-[#EDE9E0] bg-[#FAF8F3] px-[18px] py-[11px]">
           <span className={`${TH} flex-[2]`}>Pair</span>
           <span className={`${TH} flex-[1.4] text-right`}>Mid</span>
-          <span className={`${TH} flex-1 text-right`}>Spread</span>
           <span className={`${TH} flex-1 text-right`}>Taker</span>
           <span className={`${TH} flex-[1.5] text-center`}>Fees</span>
           <span className="flex-[1.1]" />

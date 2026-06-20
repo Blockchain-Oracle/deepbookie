@@ -1,22 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useSpotWriteCard } from '@/components/widgets/spot/useSpotWriteCard';
+import { useSpotOpenOrders, useSpotPoolParams } from '@/lib/hooks/useSpotRead';
 import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/widgets/ReceiptController';
 import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt';
 import { SUISCAN_TX } from '@/lib/constants';
-import { formatUsd } from '@/lib/format';
+import { docNumberFor, formatUsd, num, splitPool, str } from '@/lib/format';
 
 const TITLE = 'Reduce order';
-const num = (v: unknown) => (typeof v === 'number' ? v : 0);
-const str = (v: unknown) => (typeof v === 'string' ? v : '');
-
-/** SUI_DBUSDC → { pair: "SUI/DBUSDC", base: "SUI", quote: "DBUSDC" }. */
-function splitPool(poolKey: string): { pair: string; base: string; quote: string } {
-  const [base = '', quote = ''] = poolKey.split('_');
-  return { pair: base && quote ? `${base}/${quote}` : poolKey, base, quote };
-}
-
 const qty = (n: number) => formatUsd(n, 1);
 
 export function ModifyOrderCard({
@@ -35,32 +27,56 @@ export function ModifyOrderCard({
 
   const poolKey = str(p.poolKey);
   const orderId = str(p.orderId);
-  const { pair, base, quote } = splitPool(poolKey);
-  const isBid = p.isBid === true;
-  const price = num(p.price);
-  const current = num(p.currentQuantity) || num(p.quantity);
-  const filled = num(p.filledQuantity);
-  // Seed at the agent's proposal if in range, else at the current size (a no-op until dragged down).
-  const seeded = num(p.newQuantity);
-  const seed = seeded > filled && seeded < current ? seeded : current;
-  const [newQty, setNewQty] = useState<number>(seed);
+  const { base, quote, pair } = splitPool(poolKey);
 
-  const reducingBy = Math.max(0, current - newQty);
+  // Reduce-only bounds come from the LIVE order — NEVER agent input (spot_modify_order's schema only
+  // carries {poolKey, orderId, newQuantity}, so current/filled/price/isBid are stripped before us).
+  const orders = useSpotOpenOrders(w.state === 'proposed' && w.hasBalanceManager && poolKey ? poolKey : undefined);
+  const order = orders.data?.find((o) => o.orderId === orderId);
+  const isBid = order?.isBid ?? p.isBid === true;
+  const price = order?.price ?? num(p.price);
+  const current = order?.quantity ?? 0;
+  const filled = order?.filledQuantity ?? 0;
+
+  // Lot/min from pool params — the on-chain modify asserts newQuantity % lotSize == 0 AND
+  // newQuantity >= minSize AND newQuantity < current. We FLOOR to the lot grid (never round up), so the
+  // signed value is always a lot multiple ≤ the slider value, hence strictly below current when valid.
+  const params = useSpotPoolParams(w.state === 'proposed' && poolKey ? poolKey : undefined);
+  const lotSize = params.data?.lotSize ?? 0;
+  const minSize = params.data?.minSize ?? 0;
+  const paramsReady = !!params.data;
+  const snap = (v: number) => (lotSize > 0 ? Math.floor(v / lotSize) * lotSize : v);
+
+  // The user drags the lot-aligned slider down to reduce; seed at the agent's in-range proposal, else
+  // the current size (a no-op until dragged down). `override` tracks an edit.
+  const seeded = num(p.newQuantity);
+  const defaultQty = seeded > filled && seeded < current ? seeded : current;
+  const [override, setOverride] = useState<number | null>(null);
+  const newQty = override ?? defaultQty;
+  const signQty = snap(newQty); // the lot-aligned value we validate AND sign
+
+  // Snapshot the signed figures so the terminal receipt stays correct after the order leaves the book.
+  const [signed, setSigned] = useState<{ newQty: number; reducingBy: number; base: string } | null>(null);
+
+  const reducingBy = Math.max(0, current - signQty);
   const releases = reducingBy * price;
-  const invalid = newQty >= current || newQty <= filled || !poolKey || !orderId;
+  const belowMin = minSize > 0 && signQty < minSize;
+  // Gate on the SAME bounds we sign: newQty>=current is "no change"; signQty<=filled / belowMin invalid.
+  const invalid = !order || newQty >= current || signQty <= filled || belowMin || !paramsReady;
   const filledPct = current > 0 ? Math.min(100, (filled / current) * 100) : 0;
   const knobPct = current > 0 ? Math.min(100, (newQty / current) * 100) : 0;
   const activeWidth = Math.max(0, knobPct - filledPct);
 
   if (w.dismissed) return null;
 
-  const docNumber = `DB·${part.toolCallId.slice(0, 4).toUpperCase()}·${part.toolCallId.slice(-4)}`;
+  const docNumber = docNumberFor(part.toolCallId);
 
   if (w.state !== 'proposed') {
+    const s = signed ?? { newQty: signQty, reducingBy, base };
     const lines: ReceiptLine[] = [
       { label: 'Pair', value: pair },
-      { label: 'New quantity', value: `${qty(newQty)} ${base}`, strong: true, accent: true },
-      { label: 'Reducing by', value: `−${qty(reducingBy)} ${base}` },
+      { label: 'New quantity', value: `${qty(s.newQty)} ${s.base}`, strong: true, accent: true },
+      { label: 'Reducing by', value: `−${qty(s.reducingBy)} ${s.base}` },
     ];
     return (
       <SignReceipt
@@ -73,6 +89,41 @@ export function ModifyOrderCard({
         reason={w.reason}
         onRetry={onRetry}
         onDismiss={w.dismiss}
+      />
+    );
+  }
+
+  // A BalanceManager is required to read/modify orders. On a resolver failure show retry (don't imply
+  // "create one"); each Notice resolves the tool call via Dismiss so the assistant turn never wedges.
+  if (!w.hasBalanceManager && !w.bmLoading) {
+    return w.bmError ? (
+      <Notice title={TITLE} text="Couldn’t reach your account — retry, don’t create a new one." onCancel={w.cancel} onRetry={w.bmRefetch} />
+    ) : (
+      <Notice title={TITLE} text="A balance manager is required to modify orders." onCancel={w.cancel} />
+    );
+  }
+
+  // Resolving the live order / pool limits — hold space rather than render a dead slider.
+  if (orders.isLoading || w.bmLoading) {
+    return (
+      <div className="flex h-[150px] w-full items-center justify-center rounded-card border border-line bg-card">
+        <span className="size-5 animate-spin rounded-full border-2 border-line-strong border-t-ink" />
+      </div>
+    );
+  }
+
+  // A transient read failure must NOT masquerade as "order gone" (the user could re-place a duplicate).
+  if (orders.isError) {
+    return <Notice title={TITLE} text="Couldn’t load this order right now — try again in a moment." onCancel={w.cancel} onRetry={() => void orders.refetch()} />;
+  }
+
+  // The order isn't in the book anymore (filled, cancelled, or expired) — nothing valid to sign.
+  if (!order) {
+    return (
+      <Notice
+        title={TITLE}
+        text={`That order is no longer open on ${pair} — it may have filled or been cancelled.`}
+        onCancel={w.cancel}
       />
     );
   }
@@ -103,13 +154,13 @@ export function ModifyOrderCard({
         </div>
       </div>
 
-      {/* stepper */}
+      {/* stepper — show the lot-aligned value that will actually be signed */}
       <div className="mb-2 flex items-end justify-between">
         <span className="text-[9.5px] font-semibold uppercase tracking-[0.13em] text-faint">New quantity</span>
-        <span className="font-mono text-[19px] font-semibold tabular-nums">{qty(newQty)}</span>
+        <span className="font-mono text-[19px] font-semibold tabular-nums">{qty(signQty)}</span>
       </div>
 
-      {/* slider — reduce only */}
+      {/* slider — reduce only, lot-aligned (min=0 so the step grid lands on lot multiples) */}
       <div className="relative mb-[5px] h-6">
         <div className="absolute left-0 right-0 top-[9px] h-[5px] rounded-pill bg-[#EDE9E0]" />
         {/* hatched floor zone (cannot reduce below filled) */}
@@ -118,24 +169,21 @@ export function ModifyOrderCard({
           style={{
             left: 0,
             width: `${filledPct}%`,
-            background:
-              'repeating-linear-gradient(45deg,#E6DCD4,#E6DCD4 3px,#EDE9E0 3px,#EDE9E0 6px)',
+            background: 'repeating-linear-gradient(45deg,#E6DCD4,#E6DCD4 3px,#EDE9E0 3px,#EDE9E0 6px)',
           }}
         />
         {/* active (selected) track */}
-        <div
-          className="absolute top-[9px] h-[5px] bg-ink"
-          style={{ left: `${filledPct}%`, width: `${activeWidth}%` }}
-        />
+        <div className="absolute top-[9px] h-[5px] bg-ink" style={{ left: `${filledPct}%`, width: `${activeWidth}%` }} />
         <input
           type="range"
-          min={filled}
+          min={0}
           max={current}
-          step={Math.max(0.1, current / 1000)}
+          step={lotSize > 0 ? lotSize : Math.max(0.1, current / 1000)}
           value={newQty}
-          onChange={(e) => setNewQty(Number(e.target.value))}
+          disabled={!paramsReady}
+          onChange={(e) => setOverride(Number(e.target.value))}
           aria-label="New quantity"
-          className="absolute inset-0 h-6 w-full cursor-pointer appearance-none bg-transparent [&::-moz-range-thumb]:size-[17px] [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-ink [&::-moz-range-thumb]:bg-white [&::-webkit-slider-thumb]:size-[17px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-ink [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-[0_1px_4px_rgba(26,23,20,.18)]"
+          className="absolute inset-0 h-6 w-full cursor-pointer appearance-none bg-transparent disabled:cursor-not-allowed [&::-moz-range-thumb]:size-[17px] [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-ink [&::-moz-range-thumb]:bg-white [&::-webkit-slider-thumb]:size-[17px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-ink [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-[0_1px_4px_rgba(26,23,20,.18)]"
         />
       </div>
       <div className="mb-[13px] flex justify-between font-mono text-[9.5px] text-[#b0aa9f]">
@@ -159,7 +207,7 @@ export function ModifyOrderCard({
         ↑ To <b className="text-[#7d7870]">increase</b> size, cancel &amp; re-place — modify can only reduce.
       </div>
 
-      {invalid && newQty >= current && (
+      {invalid && newQty >= current && paramsReady && (
         <div className="mb-[13px] flex items-center gap-2 rounded-[9px] border border-[#E6C9BE] bg-[#FBF1EC] px-3 py-[9px]">
           <span className="font-bold text-clay">!</span>
           <span className="text-[11.5px] text-[#8a2f1c]">
@@ -168,7 +216,7 @@ export function ModifyOrderCard({
         </div>
       )}
 
-      {invalid && newQty <= filled && filled > 0 && (
+      {invalid && signQty <= filled && filled > 0 && newQty < current && (
         <div className="mb-[13px] flex items-center gap-2 rounded-[9px] border border-[#E6C9BE] bg-[#FBF1EC] px-3 py-[9px]">
           <span className="font-bold text-clay">!</span>
           <span className="text-[11.5px] text-[#8a2f1c]">
@@ -177,10 +225,12 @@ export function ModifyOrderCard({
         </div>
       )}
 
-      {!w.hasBalanceManager && !w.bmLoading && (
+      {belowMin && newQty < current && signQty > filled && (
         <div className="mb-[13px] flex items-center gap-2 rounded-[9px] border border-[#E6C9BE] bg-[#FBF1EC] px-3 py-[9px]">
           <span className="font-bold text-clay">!</span>
-          <span className="text-[11.5px] text-[#8a2f1c]">A balance manager is required to modify orders.</span>
+          <span className="text-[11.5px] text-[#8a2f1c]">
+            New size is below the {qty(minSize)} minimum — cancel the order instead to go lower.
+          </span>
         </div>
       )}
 
@@ -188,14 +238,25 @@ export function ModifyOrderCard({
         <button
           type="button"
           disabled={!canSign}
-          onClick={() => w.sign({ poolKey, orderId, newQuantity: newQty })}
+          onClick={() => {
+            setSigned({ newQty: signQty, reducingBy, base });
+            void w.sign({ poolKey, orderId, newQuantity: signQty });
+          }}
           className={
             invalid
               ? 'flex-1 rounded-[9px] bg-[#EDE9E0] py-3 text-center text-sm font-semibold text-[#a8a298]'
               : 'flex-1 rounded-[9px] bg-ink py-3 text-center text-sm font-semibold text-paper transition hover:opacity-90 disabled:opacity-50'
           }
         >
-          {!invalid ? 'Update order' : newQty >= current ? 'No change to apply' : 'Reduce below filled'}
+          {!paramsReady
+            ? 'Loading limits…'
+            : !invalid
+              ? 'Update order'
+              : newQty >= current
+                ? 'No change to apply'
+                : belowMin
+                  ? 'Below minimum size'
+                  : 'Reduce below filled'}
         </button>
         <button
           type="button"
@@ -203,6 +264,45 @@ export function ModifyOrderCard({
           className="rounded-[9px] border border-line-strong px-5 py-3 text-sm font-semibold text-[#7d7870] transition hover:bg-paper"
         >
           Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** A quiet full-card notice (no BalanceManager / order gone / read failed). Always resolves the tool
+ *  call via Dismiss (w.cancel) so the assistant turn never wedges; optional Retry for transient cases. */
+function Notice({
+  title,
+  text,
+  onCancel,
+  onRetry,
+}: {
+  title: string;
+  text: string;
+  onCancel: () => void;
+  onRetry?: () => void;
+}) {
+  return (
+    <div className="flex min-h-[120px] w-full flex-col justify-center gap-3 rounded-card border border-line bg-card p-5">
+      <div className="text-[9.5px] font-semibold uppercase tracking-[0.13em] text-faint">{title}</div>
+      <div className="text-[13px] leading-[1.45] text-muted">{text}</div>
+      <div className="flex gap-2.5">
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="rounded-[9px] border border-line-strong px-4 py-2 text-[12.5px] font-semibold text-ink transition hover:bg-paper"
+          >
+            Retry
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-[9px] border border-line-strong px-4 py-2 text-[12.5px] font-semibold text-[#7d7870] transition hover:bg-paper"
+        >
+          Dismiss
         </button>
       </div>
     </div>

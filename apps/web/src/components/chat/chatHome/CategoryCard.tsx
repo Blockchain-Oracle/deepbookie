@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { Motif } from './motifs';
 import type { Category } from './categories';
@@ -34,22 +33,7 @@ function Body({ category, dim }: { category: Category; dim?: boolean }) {
   );
 }
 
-function Prompt({ text, sending }: { text: string; sending: boolean }) {
-  if (sending) {
-    return (
-      <div className="mt-auto flex items-center gap-1.5 rounded-[8px] border border-ink bg-ink px-2.5 py-[7px] font-mono text-[10.5px] text-paper">
-        <span className="flex items-center gap-1.5">
-          Sending
-          <span className="flex gap-[2px]">
-            <span className="size-[3px] rounded-full bg-paper opacity-50" />
-            <span className="size-[3px] rounded-full bg-paper" />
-            <span className="size-[3px] rounded-full bg-paper opacity-50" />
-          </span>
-        </span>
-        <span className="ml-auto">↑</span>
-      </div>
-    );
-  }
+function Prompt({ text }: { text: string }) {
   return (
     <div className="mt-auto flex items-center gap-1.5 rounded-[8px] border border-[#EDE9E0] bg-[#F6F4EF] px-2.5 py-[7px] font-mono text-[10.5px] text-ink-soft transition-[background,color,border-color] duration-200 group-hover:border-ink group-hover:bg-ink group-hover:text-paper">
       <span className="min-w-0 flex-1 truncate">&ldquo;{text}&rdquo;</span>
@@ -73,7 +57,6 @@ export function CategoryCard({
   onAction: (text: string) => void;
   onNeedWallet: () => void;
 }) {
-  const [sending, setSending] = useState(false);
   const style = { animationDelay: `${0.04 + index * 0.06}s` } as const;
 
   if (disabled) {
@@ -94,7 +77,7 @@ export function CategoryCard({
       <Link href={category.href} className={`${CARD} ${HOVER} animate-rise`} style={style}>
         <Header category={category} />
         <Body category={category} />
-        <Prompt text={category.prompt ?? category.description} sending={false} />
+        <Prompt text={category.prompt ?? category.description} />
       </Link>
     );
   }
@@ -102,16 +85,13 @@ export function CategoryCard({
   return (
     <button
       type="button"
-      onClick={() => {
-        setSending(true);
-        onAction(category.prompt!);
-      }}
+      onClick={() => onAction(category.prompt!)}
       className={`${CARD} ${HOVER} animate-rise`}
       style={style}
     >
       <Header category={category} />
       <Body category={category} />
-      <Prompt text={category.prompt!} sending={sending} />
+      <Prompt text={category.prompt!} />
     </button>
   );
 }

@@ -6,10 +6,6 @@ import { cachedAiRead, withReliability } from '@/lib/bff/read';
 // redeem_permissionless is a keeper tool, not a user action — exclude it from the agent.
 const EXCLUDED = new Set(['redeem_permissionless']);
 
-// Tools whose managerId must come from the connected wallet, never the model. We force the resolved
-// id (or undefined) so a hallucinated "unknown" can't override it — the #1 "can't read balance" bug.
-const MANAGER_SCOPED = new Set(['get_portfolio', 'get_positions']);
-
 // Reads that depend on the user's PredictManager / DeepBook BalanceManager (or live per-input quote
 // against their account). These run REQUEST-SCOPED against the wallet ctx (never shared-cached), but
 // still get timeout + retry. Everything else routes through the shared `cachedAiRead`.
@@ -56,7 +52,14 @@ export function buildAiTools(opts: {
                 ? // Runs against the wallet ctx (managerId/balanceManagerId baked in); the Predict
                   // manager reads also force the resolved id over any model-supplied one.
                   withReliability(() =>
-                    api.read(t.name, MANAGER_SCOPED.has(t.name) ? { ...args, managerId: opts.managerId } : args),
+                    // Predict manager reads force the wallet-resolved managerId over any model-supplied
+                    // one (a hallucinated "unknown" must never win — the #1 "can't read balance" bug).
+                    api.read(
+                      t.name,
+                      t.name === 'get_portfolio' || t.name === 'get_positions'
+                        ? { ...args, managerId: opts.managerId }
+                        : args,
+                    ),
                   )
                 : // Shared catalog/book reads: cached + timeout + retry (no wallet ctx needed).
                   cachedAiRead(t.name, args),

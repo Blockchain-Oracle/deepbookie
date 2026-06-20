@@ -40,3 +40,26 @@ export function allowFaucet(ip: string): boolean {
   globalBucket.count += 1;
   return true;
 }
+
+// Generic per-key sliding-window limiter — used to cap abuse on the chat + history-write routes
+// (unauthenticated by design; the durable fix is SIWS session auth). Keyed e.g. `chat:<ip>`.
+const genBuckets = new Map<string, Bucket>();
+
+export function allowRequest(key: string, max: number, windowMs: number): boolean {
+  const now = Date.now();
+  let bucket = genBuckets.get(key);
+  if (!bucket || now > bucket.resetAt) {
+    bucket = { count: 0, resetAt: now + windowMs };
+    genBuckets.set(key, bucket);
+  }
+  if (bucket.count >= max) return false;
+  bucket.count += 1;
+  return true;
+}
+
+/** Best-effort client IP from proxy headers — for rate-limit keys only, NEVER trusted for auth. */
+export function clientIp(req: Request): string {
+  const fwd = req.headers.get('x-forwarded-for');
+  if (fwd) return fwd.split(',')[0]!.trim();
+  return req.headers.get('x-real-ip')?.trim() ?? 'unknown';
+}

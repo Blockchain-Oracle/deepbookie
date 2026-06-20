@@ -85,6 +85,30 @@ export function BalanceManagerPanel({ onAction }: { onAction?: (text: string) =>
     );
   }
 
+  // ── (2a) resolver failed (transient) ───────────────────────────────────────
+  // A network/RPC failure resolving the BalanceManager is NOT "no account". Offering "Create one"
+  // here would let the user mint a SECOND shared BalanceManager and orphan funds in the first, so
+  // show a retry instead. (The error flag is plumbed from /api/spot/balance-manager.)
+  if (!bm.isLoading && managerId == null && bm.data?.error) {
+    return (
+      <div className="flex flex-col justify-center gap-[11px] rounded-card border border-line bg-card p-5">
+        <div className="text-[9.5px] font-semibold uppercase tracking-[0.13em] text-faint">Spot account</div>
+        <div className="text-[15px] font-bold leading-tight tracking-[-0.02em]">Couldn’t reach your account</div>
+        <p className="text-[12px] leading-relaxed text-muted">
+          We couldn’t check for your BalanceManager just now — usually a brief network hiccup. Retry in a moment;
+          don’t create a new one or you may end up with two.
+        </p>
+        <button
+          type="button"
+          onClick={() => void bm.refetch()}
+          className="mt-0.5 rounded-[9px] border border-line-strong py-3 text-[13.5px] font-semibold text-ink transition hover:bg-paper"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   // ── (2) no BalanceManager ──────────────────────────────────────────────────
   if (!bm.isLoading && managerId == null) {
     return (

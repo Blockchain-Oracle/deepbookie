@@ -85,3 +85,8 @@ export const SUI_DECIMALS = 9;
 export const FAUCET_RATE_PER_IP = 5;
 export const FAUCET_RATE_GLOBAL = 40;
 export const FAUCET_RATE_WINDOW_MS = 60 * 60 * 1000;
+
+// Chat + history-write abuse guard (in-memory; per-process). NOT an authorization boundary — history
+// is keyed by a secret random chatId; signed-message (SIWS) session auth is the documented fast-follow.
+export const CHAT_RATE_PER_IP = 60;
+export const CHAT_RATE_WINDOW_MS = 60 * 1000;

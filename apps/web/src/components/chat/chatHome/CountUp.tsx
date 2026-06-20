@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const fmt = (v: number) => `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -11,7 +11,6 @@ const fmt = (v: number) => `$${v.toLocaleString('en-US', { minimumFractionDigits
  */
 export function CountUp({ to, className }: { to: number; className?: string }) {
   const [value, setValue] = useState(to);
-  const ref = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
@@ -29,9 +28,5 @@ export function CountUp({ to, className }: { to: number; className?: string }) {
     return () => cancelAnimationFrame(raf);
   }, [to]);
 
-  return (
-    <span ref={ref} className={className}>
-      {fmt(value)}
-    </span>
-  );
+  return <span className={className}>{fmt(value)}</span>;
 }

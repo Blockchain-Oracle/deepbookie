@@ -1,23 +1,16 @@
 'use client';
 
-import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { CoinLogo } from '@/components/widgets/CoinLogo';
 import { useTxAction } from '@/lib/hooks/useTxAction';
 import { useBalanceManager } from '@/lib/hooks/useBalanceManager';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { SUISCAN_TX } from '@/lib/constants';
-import { formatUsd, shortenDigest } from '@/lib/format';
+import { formatUsd, shortenDigest, splitPool } from '@/lib/format';
 import type { SpotOpenOrder } from '@/lib/bff/spot-types';
 
 const TH = 'text-[10px] font-semibold uppercase tracking-[0.1em] text-faint';
 const PILL = 'rounded-card-in border border-[#E6C9BE] px-3 py-1 text-[11.5px] font-semibold text-clay';
-
-/** SUI_DBUSDC -> SUI/DBUSDC; base coin drives the row logo. */
-function parsePair(poolKey: string): { label: string; base: string } {
-  const [base = poolKey, quote = ''] = poolKey.split('_');
-  return { label: quote ? `${base}/${quote}` : base, base };
-}
 
 function fillPct(o: SpotOpenOrder): number {
   if (!o.quantity) return 0;
@@ -30,9 +23,7 @@ export function OpenOrdersList({ orders }: { orders: SpotOpenOrder[] }) {
   const bm = useBalanceManager(account?.address);
   const balanceManagerId = bm.data?.balanceManagerId ?? undefined;
 
-  const cancelOne = useTxAction();
   const cancelAll = useTxAction();
-  const [activeId, setActiveId] = useState<string | null>(null);
 
   if (!orders.length) {
     return (
@@ -46,11 +37,6 @@ export function OpenOrdersList({ orders }: { orders: SpotOpenOrder[] }) {
 
   const poolKey = orders[0]!.poolKey; // non-empty: the empty case returned above
   const allBusy = cancelAll.status === 'signing';
-
-  const runCancel = (orderId: string) => {
-    setActiveId(orderId);
-    void cancelOne.run('spot_cancel_order', { poolKey, orderId }, { balanceManagerId });
-  };
 
   return (
     <Card className="overflow-hidden p-0">
@@ -85,41 +71,31 @@ export function OpenOrdersList({ orders }: { orders: SpotOpenOrder[] }) {
         <span className="flex-[0.9]" />
       </div>
 
-      {orders.map((o) => {
-        const busy = cancelOne.status === 'signing' && activeId === o.orderId;
-        const done = cancelOne.status === 'done' && activeId === o.orderId;
-        return (
-          <Row
-            key={o.orderId}
-            order={o}
-            busy={busy}
-            done={done}
-            digest={done ? cancelOne.digest : null}
-            canCancel={!!balanceManagerId && !busy && !allBusy}
-            onCancel={() => runCancel(o.orderId)}
-          />
-        );
-      })}
+      {orders.map((o) => (
+        <Row key={o.orderId} order={o} poolKey={poolKey} balanceManagerId={balanceManagerId} allBusy={allBusy} />
+      ))}
     </Card>
   );
 }
 
+/** Each row owns its own cancel action so one row's receipt never clobbers another's. */
 function Row({
   order,
-  busy,
-  done,
-  digest,
-  canCancel,
-  onCancel,
+  poolKey,
+  balanceManagerId,
+  allBusy,
 }: {
   order: SpotOpenOrder;
-  busy: boolean;
-  done: boolean;
-  digest: string | null;
-  canCancel: boolean;
-  onCancel: () => void;
+  poolKey: string;
+  balanceManagerId?: string;
+  allBusy: boolean;
 }) {
-  const { label, base } = parsePair(order.poolKey);
+  const cancel = useTxAction();
+  const busy = cancel.status === 'signing';
+  const done = cancel.status === 'done' && !!cancel.digest;
+  const canCancel = !!balanceManagerId && !busy && !allBusy;
+
+  const { base, pair: label } = splitPool(order.poolKey);
   const pct = fillPct(order);
   const buy = order.isBid;
 
@@ -143,9 +119,9 @@ function Row({
         </span>
       </div>
       <div className="flex flex-[0.9] items-center justify-end">
-        {done && digest ? (
+        {done && cancel.digest ? (
           <a
-            href={SUISCAN_TX(digest)}
+            href={SUISCAN_TX(cancel.digest)}
             target="_blank"
             rel="noreferrer"
             className="font-mono text-[10.5px] text-green hover:underline"
@@ -161,7 +137,7 @@ function Row({
           <button
             type="button"
             disabled={!canCancel}
-            onClick={onCancel}
+            onClick={() => void cancel.run('spot_cancel_order', { poolKey, orderId: order.orderId }, { balanceManagerId })}
             className={`${PILL} transition-colors hover:bg-[#FBF1EC] disabled:opacity-40`}
           >
             Cancel

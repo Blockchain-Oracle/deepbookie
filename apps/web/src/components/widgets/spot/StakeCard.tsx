@@ -6,10 +6,9 @@ import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/w
 import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt';
 import { useSpotAccount, useSpotBalance } from '@/lib/hooks/useSpotRead';
 import { SUISCAN_TX } from '@/lib/constants';
-import { formatUsd } from '@/lib/format';
+import { formatUsd, num, poolLabel } from '@/lib/format';
 
 const DEFAULT_POOL = 'SUI_DBUSDC';
-const num = (v: unknown) => (typeof v === 'number' ? v : 0);
 const deep = (n: number) => formatUsd(n, 0);
 
 /** Stake / unstake DEEP for fee discounts + governance weight. Requires a BalanceManager. */
@@ -38,19 +37,22 @@ export function StakeCard({
     const seed = num(w.proposed.amount);
     return seed > 0 ? String(seed) : '';
   });
-  // The active-stake query is disabled in terminal states, so snapshot the unstaked amount at sign time.
-  const [unstakeSnap, setUnstakeSnap] = useState(0);
+  // Snapshot the EDITED amount at sign time; we also persist it to the tool output (below), so the
+  // receipt — and a History replay after remount — shows what was signed, not the agent's proposal
+  // or an ephemeral 0 (the account/balance reads are disabled in terminal states).
+  const [signedAmt, setSignedAmt] = useState(0);
 
   if (w.dismissed) return null;
 
   const title = isUnstake ? 'Unstake DEEP' : 'Stake DEEP';
   const docNumber = `DB·${part.toolCallId.slice(0, 4).toUpperCase()}·${part.toolCallId.slice(-4)}`;
 
-  // Terminal states render the receipt; line copy matches the design (Pool + Amount).
+  // Terminal states render the receipt; line copy matches the design (Pool + Amount). The signed
+  // figure lives in the durable output (persisted at sign time) so it survives remount + replay.
   if (w.state !== 'proposed') {
-    const amt = isUnstake ? unstakeSnap : num(part.input?.amount) || Number(amount) || 0;
+    const amt = num(part.output?.amount) || signedAmt;
     const lines: ReceiptLine[] = [
-      { label: 'Pool', value: poolKey.replace(/_/g, '/') },
+      { label: 'Pool', value: poolLabel(poolKey) },
       { label: isUnstake ? 'Amount returned' : 'Amount', value: `${deep(amt)} DEEP`, strong: true, accent: !isUnstake },
     ];
     return (
@@ -68,42 +70,72 @@ export function StakeCard({
     );
   }
 
-  // No BalanceManager → staking lives in the spot account; surface the create hint, disable signing.
+  // No BalanceManager → staking lives in the spot account. Resolve the tool call via Dismiss (so the
+  // assistant turn never wedges) and, on a resolver failure, offer Retry instead of implying "create".
   if (!w.hasBalanceManager && !w.bmLoading) {
     return (
-      <div className="flex h-[236px] w-full flex-col justify-center gap-[11px] rounded-card border border-line bg-card p-5">
+      <div className="flex w-full flex-col justify-center gap-[11px] rounded-card border border-line bg-card p-5">
         <div className="text-[9.5px] font-semibold uppercase tracking-[0.13em] text-faint">{title}</div>
-        <div className="text-[16px] font-bold leading-[1.3] tracking-[-0.02em] text-ink">
-          A balance manager
-          <br />
-          is required to stake
+        {w.bmError ? (
+          <>
+            <div className="text-[16px] font-bold leading-[1.3] tracking-[-0.02em] text-ink">Couldn’t reach your account</div>
+            <div className="text-[12px] leading-[1.45] text-muted">
+              A network hiccup checking your balance manager — retry in a moment; don’t create a new one.
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="text-[16px] font-bold leading-[1.3] tracking-[-0.02em] text-ink">
+              A balance manager
+              <br />
+              is required to stake
+            </div>
+            <div className="text-[12px] leading-[1.45] text-muted">
+              Staking lives in your spot account — open one (the spot account card), then stake DEEP from it.
+            </div>
+          </>
+        )}
+        <div className="mt-0.5 flex gap-2.5">
+          {w.bmError && (
+            <button
+              type="button"
+              onClick={w.bmRefetch}
+              className="flex-1 rounded-[9px] border border-line-strong py-3 text-[13px] font-semibold text-ink transition hover:bg-paper"
+            >
+              Retry
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={w.cancel}
+            className="flex-1 rounded-[9px] border border-line-strong py-3 text-[13px] font-semibold text-[#7d7870] transition hover:bg-paper"
+          >
+            Dismiss
+          </button>
         </div>
-        <div className="text-[12px] leading-[1.45] text-muted">
-          Staking lives in your spot account. Create one first, then stake DEEP from it.
-        </div>
-        <button
-          type="button"
-          disabled
-          className="mt-0.5 cursor-not-allowed rounded-[9px] bg-green py-3 text-[13.5px] font-semibold text-white opacity-50"
-        >
-          Create balance manager
-        </button>
       </div>
     );
   }
 
   const amt = Number(amount);
-  const stakeValid = amt > 0 && (wallet <= 0 || amt <= wallet) && w.hasBalanceManager;
-  const canUnstake = active > 0 && w.hasBalanceManager;
+  // While the DEEP balance is loading or errored, don't cap (avoid a false "too much"); once the
+  // balance is known, enforce amt <= wallet so the user can't try to stake more than they hold.
+  const deepKnown = !deepBal.isLoading && !deepBal.isError;
+  const stakeValid = amt > 0 && (!deepKnown || amt <= wallet) && w.hasBalanceManager;
+  // On-chain `unstake` withdraws ALL stake (active + inactive) — fresh same-epoch stake sits in
+  // `inactive` until the next epoch, so gating on `active` alone would block a legitimate unstake.
+  const totalStake = active + inactive;
+  const canUnstake = totalStake > 0 && w.hasBalanceManager;
 
   const onSubmit = () => {
     if (isUnstake) {
       if (canUnstake) {
-        setUnstakeSnap(active);
-        void w.sign({ poolKey });
+        setSignedAmt(totalStake);
+        void w.sign({ poolKey }, { amount: totalStake });
       }
     } else if (stakeValid) {
-      void w.sign({ poolKey, amount: amt });
+      setSignedAmt(amt);
+      void w.sign({ poolKey, amount: amt }, { amount: amt });
     }
   };
 
@@ -112,7 +144,7 @@ export function StakeCard({
       <div className="mb-[13px] flex items-center gap-2">
         <span className="text-sm font-bold text-ink">{title}</span>
         <span className="rounded-pill border border-line bg-[#F6F4EF] px-[9px] py-[3px] font-mono text-[9.5px] text-muted">
-          {poolKey.replace(/_/g, '/')} pool
+          {poolLabel(poolKey)} pool
         </span>
       </div>
 
@@ -122,20 +154,30 @@ export function StakeCard({
       </div>
 
       {isUnstake ? (
-        <>
-          <div className="mb-[13px] flex items-center justify-between rounded-[9px] border border-[#DCEAE2] bg-[#F4F7F4] px-3 py-[11px]">
-            <span className="text-[12px] font-semibold text-green">Unstake all active</span>
-            <span className="font-mono text-[15px] font-bold tabular-nums text-green">{deep(active)} DEEP</span>
-          </div>
+        account.isError ? (
           <button
             type="button"
-            onClick={onSubmit}
-            disabled={!canUnstake}
-            className="w-full rounded-[9px] bg-green py-3 text-[13.5px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => void account.refetch()}
+            className="w-full rounded-[9px] border border-line-strong py-3 text-[13px] font-semibold text-ink transition hover:bg-paper"
           >
-            {canUnstake ? `Unstake all · ${deep(active)}` : 'Nothing staked'}
+            Couldn’t load your stake — retry
           </button>
-        </>
+        ) : (
+          <>
+            <div className="mb-[13px] flex items-center justify-between rounded-[9px] border border-[#DCEAE2] bg-[#F4F7F4] px-3 py-[11px]">
+              <span className="text-[12px] font-semibold text-green">Unstake all (active + inactive)</span>
+              <span className="font-mono text-[15px] font-bold tabular-nums text-green">{deep(totalStake)} DEEP</span>
+            </div>
+            <button
+              type="button"
+              onClick={onSubmit}
+              disabled={!canUnstake}
+              className="w-full rounded-[9px] bg-green py-3 text-[13.5px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {account.isLoading ? 'Loading…' : canUnstake ? `Unstake all · ${deep(totalStake)}` : 'Nothing staked'}
+            </button>
+          </>
+        )
       ) : (
         <>
           <div className="mb-[13px] rounded-[9px] border border-line bg-[#FBFAF7] px-[13px] py-[11px]">

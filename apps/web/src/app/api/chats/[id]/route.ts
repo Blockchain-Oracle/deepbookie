@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isValidSuiAddress } from '@mysten/sui/utils';
 import { getChat, listOutcomes } from '@/lib/db/chats';
 import { logger } from '@/lib/logger.server';
 
@@ -9,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const wallet = new URL(req.url).searchParams.get('wallet');
-  if (!wallet) return NextResponse.json({ error: 'not found' }, { status: 404 });
+  if (!wallet || !isValidSuiAddress(wallet)) return NextResponse.json({ error: 'not found' }, { status: 404 });
   try {
     const chat = await getChat(id, wallet);
     if (!chat) return NextResponse.json({ error: 'not found' }, { status: 404 });

@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { useBalanceManager } from '@/lib/hooks/useBalanceManager';
 import { isUserRejection, reasonFor, useSubmitTx } from '@/lib/hooks/useSubmitTx';
+import { deriveReceiptState } from '@/components/widgets/receiptState';
 import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/widgets/ReceiptController';
-import type { ReceiptState } from '@/components/widgets/SignReceipt';
 
 /**
  * The shared lifecycle for a generative-input spot write card. The user edits values in the card,
@@ -22,28 +22,20 @@ export function useSpotWriteCard(part: WriteToolPart, addToolResult: AddToolResu
   const bm = useBalanceManager(account?.address);
   const [local, setLocal] = useState<'idle' | 'signing' | 'dismissed'>('idle');
 
-  const cancelled = part.state === 'output-available' && part.output?.status === 'cancelled';
-  const state: ReceiptState = cancelled
-    ? 'cancelled'
-    : part.state === 'output-available'
-      ? 'signed'
-      : part.state === 'output-error'
-        ? 'failed'
-        : local === 'signing'
-          ? 'signing'
-          : part.state === 'input-streaming'
-            ? 'loading'
-            : 'proposed';
+  const state = deriveReceiptState(part, local === 'signing');
 
   const toolName = part.type.slice('tool-'.length);
   const balanceManagerId = bm.data?.balanceManagerId ?? null;
 
-  async function sign(input: Record<string, unknown>) {
+  // `output` lets a card persist EDITED figures (e.g. the staked amount) into the durable tool
+  // output, so the terminal receipt — and a History replay after remount — shows what was signed,
+  // not the agent's original proposal or an ephemeral 0.
+  async function sign(input: Record<string, unknown>, output?: Record<string, unknown>) {
     if (local === 'signing') return;
     setLocal('signing');
     try {
       const digest = await submit(toolName, input, { balanceManagerId: balanceManagerId ?? undefined });
-      addToolResult({ tool: toolName, toolCallId: part.toolCallId, output: { digest } });
+      addToolResult({ tool: toolName, toolCallId: part.toolCallId, output: { digest, ...output } });
       onOutcome?.({ toolCallId: part.toolCallId, toolName, status: 'signed', digest });
     } catch (e) {
       // A wallet decline is a cancellation, not a failure (render the void receipt + log it).
@@ -70,6 +62,10 @@ export function useSpotWriteCard(part: WriteToolPart, addToolResult: AddToolResu
     balanceManagerId,
     hasBalanceManager: !!balanceManagerId,
     bmLoading: bm.isLoading,
+    /** Resolver-error flag — true when the BM lookup FAILED (vs genuinely none). Cards show retry,
+     *  not "create one", so a transient failure can't lead to a duplicate shared BalanceManager. */
+    bmError: bm.data?.error ?? false,
+    bmRefetch: () => void bm.refetch(),
     /** Agent-proposed args — seed the form's defaults from these. */
     proposed: part.input ?? {},
     digest: part.output?.digest,

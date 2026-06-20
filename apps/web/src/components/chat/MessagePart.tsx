@@ -87,11 +87,15 @@ function PositionList({ positions }: { positions: Positions }) {
   }
   return (
     <div className="flex flex-col gap-2">
-      {positions.minted.map((p, i) => (
-        <PositionCard key={`m${i}`} position={p} managerId={positions.managerId} />
+      {positions.minted.map((p) => (
+        <PositionCard
+          key={`m-${p.oracleId}-${p.strikeUsd}-${p.direction}-${p.expiry}`}
+          position={p}
+          managerId={positions.managerId}
+        />
       ))}
-      {positions.redeemed.map((p, i) => (
-        <PositionCard key={`r${i}`} position={p} settled />
+      {positions.redeemed.map((p) => (
+        <PositionCard key={`r-${p.oracleId}-${p.strikeUsd}-${p.direction}-${p.expiry}`} position={p} settled />
       ))}
     </div>
   );
@@ -131,9 +135,13 @@ export function MessagePart({
   const tp = part as ToolView;
   const name = tp.type.slice('tool-'.length);
 
-  // Spot generative-input writes → their bespoke card (handles its own states + sign).
+  // Spot generative-input writes → their bespoke card (handles its own states + sign). These cards
+  // seed editable fields from part.input via one-shot useState initializers, so we must wait until the
+  // tool input has finished streaming — mounting mid-stream would capture empty input and drop the
+  // agent's proposed values (the React key is stable, so there's no remount to re-seed).
   const SpotInputCard = SPOT_INPUT[name];
   if (SpotInputCard) {
+    if (tp.state === 'input-streaming') return skeleton('h-40');
     return (
       <SpotInputCard
         part={tp as WriteToolPart}

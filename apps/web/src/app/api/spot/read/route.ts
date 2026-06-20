@@ -52,8 +52,15 @@ export async function POST(req: Request) {
     if (BM_SCOPED.has(tool)) {
       // Prefer the client-provided id (captured at creation, localStorage-backed) — the on-chain
       // resolver can't find shared BalanceManagers. Fall back to it only if the client didn't send one.
+      // NOTE: this is an INSPECTION PROXY over PUBLIC on-chain state — a BalanceManager is a shared
+      // object whose orders/stake/rebates anyone can read directly via devInspect. We intentionally
+      // do not verify the id belongs to `owner` (which is impossible for shared BMs anyway); this is
+      // NOT an authorization boundary and exposes nothing not already public. Writes never run here.
+      // No `.catch` here: a resolver THROW (transient RPC failure) must propagate to the outer
+      // try/catch → 502 'unavailable', distinct from a genuine null (no BM) → 409, so the UI can tell
+      // "couldn't reach the resolver, retry" apart from "you have no spot account".
       balanceManagerId =
-        body.balanceManagerId ?? (body.owner ? await resolveBalanceManagerByOwner(body.owner).catch(() => null) : null);
+        body.balanceManagerId ?? (body.owner ? await resolveBalanceManagerByOwner(body.owner) : null);
       if (!balanceManagerId) return NextResponse.json({ error: 'no balance manager' }, { status: 409 });
     }
     const ctx = createContext({

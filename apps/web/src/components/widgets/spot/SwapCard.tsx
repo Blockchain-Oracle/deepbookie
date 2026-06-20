@@ -9,6 +9,10 @@ import { SUISCAN_TX } from '@/lib/constants';
 import { formatUsd } from '@/lib/format';
 
 const SLIPPAGES = [0.5, 1] as const;
+// DEEP fee headroom on non-whitelisted pools: the quoted deepRequired is computed against the book at
+// quote time, so we budget +5% to absorb a small move between quote and signature; unused DEEP is
+// returned to the wallet by the swap's transferObjects.
+const DEEP_FEE_BUFFER = 1.05;
 // Coin disc tints from the design system (Components-Spot.dc.html §2).
 const COIN_BG: Record<string, string> = { SUI: '#4DA2FF', WAL: '#7d6f3a' };
 const COIN_GLYPH: Record<string, string> = { DBUSDC: '$', DBUSDT: '$', DBTC: '₿' };
@@ -53,19 +57,37 @@ export function SwapCard({
   const [slip, setSlip] = useState<number>(SLIPPAGES[0]);
   const amt = Number(amount) || 0;
 
-  const params = useSpotPoolParams(poolKey || undefined);
-  const whitelisted = params.data?.whitelisted ?? false;
+  // Reads are gated on the proposed state and the signed economics are snapshotted at sign time, so
+  // the terminal receipt shows what was committed — not a live quote that drifts as the book moves.
+  const active = w.state === 'proposed';
+  const [signed, setSigned] = useState<{
+    out: number;
+    minOut: number;
+    deepRequired: number;
+    rate: number;
+    whitelisted: boolean;
+  } | null>(null);
+
+  const params = useSpotPoolParams(active ? poolKey || undefined : undefined);
+  const liveWhitelisted = params.data?.whitelisted ?? false;
   const quote = useSpotSwapQuote(
-    amt > 0 && poolKey
+    active && amt > 0 && poolKey
       ? { poolKey, ...(isSellBase ? { baseQuantity: amt } : { quoteQuantity: amt }) }
       : undefined,
   );
 
-  const out = quote.data ? (isSellBase ? quote.data.quoteOut : quote.data.baseOut) : 0;
-  const deepRequired = quote.data?.deepRequired ?? 0;
-  const minOut = out * (1 - slip / 100);
+  const liveOut = quote.data ? (isSellBase ? quote.data.quoteOut : quote.data.baseOut) : 0;
+  const liveDeep = quote.data?.deepRequired ?? 0;
+  const liveMinOut = liveOut * (1 - slip / 100);
   // Rate label is always "1 {from} = rate {to}" → receive(out) per pay(amt), both directions.
-  const rate = amt > 0 && out > 0 ? out / amt : 0;
+  const liveRate = amt > 0 && liveOut > 0 ? liveOut / amt : 0;
+
+  // Proposed form shows live values; the terminal receipt reads the snapshot taken at sign time.
+  const out = signed?.out ?? liveOut;
+  const deepRequired = signed?.deepRequired ?? liveDeep;
+  const minOut = signed?.minOut ?? liveMinOut;
+  const rate = signed?.rate ?? liveRate;
+  const whitelisted = signed?.whitelisted ?? liveWhitelisted;
   const quoting = quote.isFetching && amt > 0;
   const emptyBook = amt > 0 && quote.data != null && out <= 0;
   const docNumber = `DB·${part.toolCallId.slice(0, 4).toUpperCase()}·${part.toolCallId.slice(-4)}`;
@@ -190,14 +212,24 @@ export function SwapCard({
           This book is empty — place a limit order to make a market.
         </div>
       )}
+      {quote.isError && amt > 0 && (
+        <div className="mb-3 text-center text-[12px] text-muted">Couldn’t fetch a quote right now — try again.</div>
+      )}
 
       <div className="flex gap-2.5">
         <button
           type="button"
           disabled={!canSwap}
-          onClick={() =>
-            w.sign({ poolKey, amount: amt, minOut, deepAmount: whitelisted ? 0 : deepRequired })
-          }
+          onClick={() => {
+            setSigned({
+              out: liveOut,
+              minOut: liveMinOut,
+              deepRequired: liveDeep,
+              rate: liveRate,
+              whitelisted: liveWhitelisted,
+            });
+            w.sign({ poolKey, amount: amt, minOut: liveMinOut, deepAmount: liveWhitelisted ? 0 : liveDeep * DEEP_FEE_BUFFER });
+          }}
           className={`flex-1 rounded-card-in py-[13px] text-[14.5px] font-semibold transition disabled:cursor-not-allowed ${
             canSwap ? 'bg-green text-paper hover:opacity-90' : 'bg-[#E9E5DC] text-faint'
           }`}

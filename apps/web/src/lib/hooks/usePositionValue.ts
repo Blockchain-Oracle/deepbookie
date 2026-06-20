@@ -27,12 +27,17 @@ const DUST_USD = 0.0001;
  */
 export function usePositionValue(position: Position): PositionValue {
   const phase: PositionPhase = position.expiry <= Date.now() ? 'settled' : 'open';
-  const q = useQuote({
-    oracleId: position.oracleId,
-    strikeUsd: position.strikeUsd,
-    direction: position.direction,
-    quantityUsd: position.quantityUsd,
-  });
+  const q = useQuote(
+    {
+      oracleId: position.oracleId,
+      strikeUsd: position.strikeUsd,
+      direction: position.direction,
+      quantityUsd: position.quantityUsd,
+    },
+    // A settled bet's payout is fixed — long-stale it so a History list of settled rows doesn't keep
+    // re-querying the chain; open positions still refresh at the default cadence.
+    { staleTime: phase === 'settled' ? 5 * 60_000 : 5_000 },
+  );
   const valueUsd = q.data?.redeemPayoutUsd;
   const pnlUsd = valueUsd === undefined ? undefined : valueUsd - position.costUsd;
   const won = phase === 'settled' && valueUsd !== undefined ? valueUsd > DUST_USD : undefined;

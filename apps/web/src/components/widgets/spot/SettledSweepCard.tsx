@@ -6,19 +6,13 @@ import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt'
 import { useSpotAccount } from '@/lib/hooks/useSpotRead';
 import type { SpotBalances } from '@/lib/bff/spot-types';
 import { SUISCAN_TX } from '@/lib/constants';
-import { formatUsd } from '@/lib/format';
+import { formatUsd, splitPool } from '@/lib/format';
 
 const DEFAULT_POOL = 'SUI_DBUSDC';
 const ZERO: SpotBalances = { base: 0, quote: 0, deep: 0 };
 
 /** A coin amount worth showing — drops dust below half a display unit. */
 const sig = (n: number) => Math.abs(n) >= 0.005;
-
-/** Pool symbols, e.g. SUI_DBUSDC → ['SUI','DBUSDC']; DEEP always trails as the fee coin. */
-function poolCoins(poolKey: string): [string, string] {
-  const [base, quote] = poolKey.split('_');
-  return [base || 'BASE', quote || 'QUOTE'];
-}
 
 /** Settled-proceeds line ("12.40 DBUSDC · 3.20 SUI · 8.05 DEEP"), in pool order. */
 function proceedsParts(b: SpotBalances, base: string, quote: string): { label: string; value: number }[] {
@@ -51,14 +45,13 @@ export function SettledSweepCard({
 }) {
   const w = useSpotWriteCard(part, addToolResult, onOutcome);
   const poolKey = (typeof w.proposed.poolKey === 'string' && w.proposed.poolKey) || DEFAULT_POOL;
-  const [base, quote] = poolCoins(poolKey);
+  const { base, quote } = splitPool(poolKey);
   const poolLabel = poolKey.replace(/_/g, '/');
 
-  const account = useSpotAccount(w.state === 'proposed' ? poolKey : undefined);
-  const rebates = account.data?.rebates ?? ZERO;
-  const locked = account.data?.locked ?? ZERO;
-  // Rebates are the canonical settled proceeds; fall back to locked if the indexer reports none.
-  const settled = sig(rebates.base) || sig(rebates.quote) || sig(rebates.deep) ? rebates : locked;
+  const account = useSpotAccount(w.state === 'proposed' && w.hasBalanceManager ? poolKey : undefined);
+  // Rebates are the canonical settled proceeds the indexer exposes. `locked` (funds reserved by resting
+  // orders) is NOT proceeds, so we don't use it as a proxy — that mislabeled reserved funds as sweepable.
+  const settled = account.data?.rebates ?? ZERO;
   const parts = proceedsParts(settled, base, quote);
   const proceedsText = parts.length ? fmtProceeds(parts) : '';
 
@@ -87,6 +80,38 @@ export function SettledSweepCard({
     );
   }
 
+  // No BalanceManager → can't sweep. Resolve the tool call via Dismiss so the assistant turn never
+  // wedges (and Retry on a resolver blip, not "create" which could orphan a second manager).
+  if (!w.hasBalanceManager && !w.bmLoading) {
+    return (
+      <div className="flex w-full flex-col gap-3 rounded-card border border-dashed border-[#CBC6BB] bg-[#FBFAF7] px-[15px] py-3.5">
+        <span className="text-[12.5px] text-muted">
+          {w.bmError
+            ? 'Couldn’t reach your account — retry in a moment.'
+            : `Open a DeepBook account first to sweep ${poolLabel} proceeds.`}
+        </span>
+        <div className="flex gap-2.5">
+          {w.bmError && (
+            <button
+              type="button"
+              onClick={w.bmRefetch}
+              className="rounded-[9px] border border-line-strong px-4 py-2 text-[12px] font-semibold text-ink transition hover:bg-paper"
+            >
+              Retry
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={w.cancel}
+            className="rounded-[9px] border border-line-strong px-4 py-2 text-[12px] font-semibold text-[#7d7870] transition hover:bg-paper"
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Still resolving the account read — hold space rather than flash an empty state.
   if (account.isLoading) {
     return (
@@ -100,8 +125,24 @@ export function SettledSweepCard({
     );
   }
 
-  // Nothing settled → the "hidden"/empty state: a quiet, un-actionable note.
-  if (parts.length === 0) {
+  // A failed read must NOT be shown as "nothing to sweep" — that would hide real proceeds + the action.
+  if (account.isError) {
+    return (
+      <button
+        type="button"
+        onClick={() => void account.refetch()}
+        className="flex w-full items-center justify-between gap-2.5 rounded-card border border-dashed border-[#CBC6BB] bg-[#FBFAF7] px-[15px] py-3.5 text-left transition hover:bg-paper"
+      >
+        <span className="text-[12.5px] text-muted">
+          Couldn’t check settled proceeds on <span className="font-semibold text-ink-soft">{poolLabel}</span>.
+        </span>
+        <span className="flex-none text-[11.5px] font-semibold text-ink underline underline-offset-2">Retry</span>
+      </button>
+    );
+  }
+
+  // Nothing settled → the "hidden"/empty state: a quiet, un-actionable note (only on a successful read).
+  if (account.isSuccess && parts.length === 0) {
     return (
       <div className="flex items-center gap-2.5 rounded-card border border-dashed border-[#CBC6BB] bg-[#FBFAF7] px-[15px] py-3.5">
         <span className="flex size-5 flex-none items-center justify-center rounded-full border border-line-strong text-[11px] text-faint">
@@ -114,11 +155,8 @@ export function SettledSweepCard({
     );
   }
 
-  const onSweep = () => {
-    if (w.hasBalanceManager) void w.sign({ poolKey });
-  };
-
-  const needsBm = !w.hasBalanceManager && !w.bmLoading;
+  // No-BM is handled above, so a BalanceManager always exists by here.
+  const onSweep = () => void w.sign({ poolKey });
 
   return (
     <div className="w-full rounded-card border border-[#C9D8CF] bg-[#F8FBF8] px-[15px] py-[13px]">
@@ -144,17 +182,10 @@ export function SettledSweepCard({
       <button
         type="button"
         onClick={onSweep}
-        disabled={needsBm}
-        className="mt-3 w-full rounded-[9px] bg-green py-[11px] text-[13px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="mt-3 w-full rounded-[9px] bg-green py-[11px] text-[13px] font-semibold text-white transition hover:opacity-90"
       >
-        {needsBm ? 'Balance manager required' : 'Sweep to balance manager'}
+        Sweep to balance manager
       </button>
-
-      {needsBm && (
-        <div className="mt-2 text-[10.5px] leading-[1.4] text-faint">
-          Settled proceeds live in your spot account. Create a balance manager first to sweep them.
-        </div>
-      )}
     </div>
   );
 }

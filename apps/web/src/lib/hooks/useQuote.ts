@@ -14,8 +14,9 @@ export interface QuoteInput {
   quantityUsd: number;
 }
 
-/** Exact pre-sign quote — path ③ (on-chain devInspect via the wallet's client; never cached). */
-export function useQuote(input?: QuoteInput) {
+/** Exact pre-sign quote — path ③ (on-chain devInspect via the wallet's client; never cached). A
+ *  longer `staleTime` suits a fixed value (e.g. a settled position's payout doesn't move). */
+export function useQuote(input?: QuoteInput, opts?: { staleTime?: number }) {
   const client = useSuiClient();
   const account = useCurrentAccount();
 
@@ -30,6 +31,6 @@ export function useQuote(input?: QuoteInput) {
       };
       return getToolsForAdapter(allTools, ctx).read('get_quote', input!) as Promise<Quote>;
     },
-    staleTime: 5_000,
+    staleTime: opts?.staleTime ?? 5_000,
   });
 }

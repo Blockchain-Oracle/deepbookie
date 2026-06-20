@@ -1,3 +1,19 @@
+/** Defensive coercers for agent-supplied tool input (shared across the spot write cards). */
+export const num = (v: unknown): number => (typeof v === 'number' ? v : 0);
+export const str = (v: unknown): string => (typeof v === 'string' ? v : '');
+
+/** Receipt doc-number, e.g. DB·A1B2·9F3C — one source for the format used on every sign receipt. */
+export const docNumberFor = (id: string): string => `DB·${id.slice(0, 4).toUpperCase()}·${id.slice(-4)}`;
+
+/** SUI_DBUSDC → { base: "SUI", quote: "DBUSDC", pair: "SUI/DBUSDC" } (pair falls back to the raw key). */
+export function splitPool(poolKey: string): { base: string; quote: string; pair: string } {
+  const [base = '', quote = ''] = poolKey.split('_');
+  return { base, quote, pair: base && quote ? `${base}/${quote}` : poolKey };
+}
+
+/** SUI_DBUSDC → "SUI/DBUSDC" (display label). */
+export const poolLabel = (poolKey: string): string => poolKey.replace(/_/g, '/');
+
 /** 0x7a3f…4e21 — the address/id treatment used everywhere in the design. */
 export function formatAddress(addr?: string | null, lead = 6, tail = 4): string {
   if (!addr) return '';

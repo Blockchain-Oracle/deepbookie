@@ -105,10 +105,12 @@ const account = defineRead({
   read: async (a, ctx) => {
     requireBalanceManager(ctx);
     const db = spotClient(ctx);
-    // A freshly-created manager has no account record in a pool until it first trades there — the
-    // SDK's account() devInspect aborts and crashes parsing an empty result. Gate on accountExists
-    // and return an empty (but valid) account so the read never throws for a new manager.
-    const exists = await db.accountExists(a.poolKey, SPOT_MANAGER_KEY).catch(() => false);
+    // `accountExists` calls Move `account_exists`, which returns a clean `false` for a manager that
+    // hasn't traded this pool yet (it does NOT abort), so a THROW here is always a genuine RPC /
+    // devInspect anomaly — including the SDK's unsafe BCS access on a degraded devInspect. Let it
+    // PROPAGATE so the read proxy returns 502 and the UI shows its retry/unavailable state, instead
+    // of masking real orders/stake/rebates as an empty account (which would disable claim/sweep).
+    const exists = await db.accountExists(a.poolKey, SPOT_MANAGER_KEY);
     if (!exists) {
       return {
         poolKey: a.poolKey,

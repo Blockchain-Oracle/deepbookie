@@ -7,15 +7,11 @@ import { useSpotPoolParams, useSpotCanPlaceLimit } from '@/lib/hooks/useSpotRead
 import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/widgets/ReceiptController';
 import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt';
 import { SUISCAN_TX } from '@/lib/constants';
-import { formatUsd } from '@/lib/format';
+import { docNumberFor, formatUsd, poolLabel, splitPool, str } from '@/lib/format';
 
-const str = (v: unknown) => (typeof v === 'string' ? v : '');
 const fmt = (n: number, dp: number) => n.toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
 const dpOf = (step: number) => (step > 0 && step < 1 ? Math.min(8, Math.round(-Math.log10(step))) : step >= 1 ? 1 : 4);
 const isMult = (v: number, step: number) => (step > 0 ? Math.abs(v / step - Math.round(v / step)) < 1e-6 : true);
-const pair = (poolKey: string) => poolKey.replace(/_/g, '/');
-const baseOf = (poolKey: string) => poolKey.split('_')[0] ?? '';
-const quoteOf = (poolKey: string) => poolKey.split('_')[1] ?? '';
 
 interface FieldErr {
   /** Right-aligned tag inside the field, e.g. "off tick". */
@@ -83,8 +79,7 @@ export function LimitOrderTicket({
 
   const priceDp = dpOf(p?.tickSize ?? 0.0001);
   const qtyDp = dpOf(p?.lotSize ?? 0.1);
-  const base = baseOf(poolKey);
-  const quote = quoteOf(poolKey);
+  const { base, quote } = splitPool(poolKey);
 
   const priceErr: FieldErr | undefined =
     price && p && priceN > 0 && !isMult(priceN, p.tickSize)
@@ -99,13 +94,14 @@ export function LimitOrderTicket({
   const makerFee = notional > 0 && p ? notional * p.makerFee : 0;
 
   const inputsClean = priceN > 0 && qtyN > 0 && !priceErr && !qtyErr;
+  // Only run the pre-flight while the ticket is editable — no point checking in terminal receipt states.
   const can = useSpotCanPlaceLimit(
-    inputsClean ? { poolKey, price: priceN, quantity: qtyN, isBid, payWithDeep } : undefined,
+    w.state === 'proposed' && inputsClean ? { poolKey, price: priceN, quantity: qtyN, isBid, payWithDeep } : undefined,
   );
   const validating = can.isLoading || params.isLoading;
   const canPlace = can.data?.canPlace ?? false;
 
-  const docNumber = `DB·${part.toolCallId.slice(0, 4).toUpperCase()}·${part.toolCallId.slice(-4)}`;
+  const docNumber = docNumberFor(part.toolCallId);
   const title = `${isBid ? 'Buy' : 'Sell'} ${fmt(qtyN || 0, qtyDp)} ${base} @ ${fmt(priceN || 0, priceDp)}`;
   const lines: ReceiptLine[] = useMemo(
     () => [
@@ -153,7 +149,7 @@ export function LimitOrderTicket({
   return (
     <div className="rounded-card border border-line bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-faint">Limit order · {pair(poolKey)}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-faint">Limit order · {poolLabel(poolKey)}</span>
         <span className="font-mono text-[10px] text-faint">{docNumber}</span>
       </div>
 
@@ -198,7 +194,15 @@ export function LimitOrderTicket({
         <span className="font-mono font-medium tabular-nums">{makerFee > 0 ? makerFee.toFixed(2) : '—'}</span>
       </div>
 
-      {inputsClean && !validating && <OrderValidityHint valid={canPlace} className="mb-[11px]" />}
+      {inputsClean && !validating &&
+        (can.isError ? (
+          // The pre-flight read failed (network) — don't assert a false "insufficient balance" reason.
+          <div className="mb-[11px] rounded-[8px] border border-line bg-[#FBFAF7] px-3 py-2 text-[11.5px] font-medium text-muted">
+            Couldn’t pre-check this order right now — try again in a moment.
+          </div>
+        ) : (
+          <OrderValidityHint valid={canPlace} className="mb-[11px]" />
+        ))}
       {!w.hasBalanceManager && !w.bmLoading && (
         <div className="mb-[11px] rounded-[8px] border border-[#E6C9BE] bg-[#FBF1EC] px-3 py-2 text-[11.5px] font-medium text-[#8a2f1c]">
           You need a BalanceManager before placing maker orders.

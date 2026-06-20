@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
+import { isValidSuiAddress } from '@mysten/sui/utils';
 import { ensureChat, getChat, recordOutcome } from '@/lib/db/chats';
+import { allowRequest, clientIp } from '@/lib/rate-limit';
+import { CHAT_RATE_PER_IP, CHAT_RATE_WINDOW_MS } from '@/lib/constants';
 import { logger } from '@/lib/logger.server';
 
 export const runtime = 'nodejs';
@@ -7,8 +10,15 @@ export const dynamic = 'force-dynamic';
 
 const STATUSES = new Set(['signed', 'cancelled', 'failed']);
 
-/** Record a sign outcome the instant it happens (belt-and-suspenders, independent of the stream). */
+/**
+ * Record a sign outcome the instant it happens (belt-and-suspenders, independent of the stream).
+ * `walletAddress` here is an unverified identity claim, NOT authorization — the session row is keyed
+ * by a secret random chatId. The per-IP rate-limit caps abuse; SIWS session auth is the fast-follow.
+ */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!allowRequest(`outcome:${clientIp(req)}`, CHAT_RATE_PER_IP, CHAT_RATE_WINDOW_MS)) {
+    return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
+  }
   const { id } = await params;
   try {
     const b = (await req.json()) as {
@@ -18,7 +28,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       status?: string;
       digest?: string | null;
     };
-    if (!b.toolCallId || !b.walletAddress || !b.status || !STATUSES.has(b.status)) {
+    if (!b.toolCallId || !b.walletAddress || !isValidSuiAddress(b.walletAddress) || !b.status || !STATUSES.has(b.status)) {
       return NextResponse.json({ error: 'bad request' }, { status: 400 });
     }
     // Claim the session for this wallet if new, then verify ownership — a chatId already owned by

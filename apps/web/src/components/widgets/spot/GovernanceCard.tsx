@@ -6,12 +6,13 @@ import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/w
 import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt';
 import { useSpotAccount, useSpotPoolParams } from '@/lib/hooks/useSpotRead';
 import { SUISCAN_TX } from '@/lib/constants';
-import { formatAddress, formatUsd } from '@/lib/format';
+import { docNumberFor, formatAddress, formatUsd, num, poolLabel, str } from '@/lib/format';
 
 const DEFAULT_POOL = 'SUI_DBUSDC';
-const num = (v: unknown) => (typeof v === 'number' ? v : 0);
-const str = (v: unknown) => (typeof v === 'string' ? v : '');
 const seed = (v: unknown) => (num(v) > 0 ? String(num(v)) : '');
+/** Fee fields edit PERCENT; the agent proposes a FRACTION (0.0008 = 0.08%) — seed as percent so an
+ *  un-edited proposal signs the agent's intended fee, not 1/100 of it (toFrac divides by 100 again). */
+const seedPct = (v: unknown) => (num(v) > 0 ? String(num(v) * 100) : '');
 /** Pool fees are stored as fractions (0.001 = 0.10%); the form edits PERCENT and signs the fraction. */
 const pct = (frac: number) => `${(frac * 100).toFixed(2)}%`;
 /** Percent input → on-chain fraction (0.08% → 0.0008). The proposal tool wants the fraction. */
@@ -40,22 +41,22 @@ export function GovernanceCard({
   const params = useSpotPoolParams(active && mode === 'propose' ? poolKey : undefined);
   const account = useSpotAccount(active && mode !== 'propose' ? poolKey : undefined);
 
-  const [taker, setTaker] = useState(() => seed(w.proposed.takerFee));
-  const [maker, setMaker] = useState(() => seed(w.proposed.makerFee));
+  const [taker, setTaker] = useState(() => seedPct(w.proposed.takerFee));
+  const [maker, setMaker] = useState(() => seedPct(w.proposed.makerFee));
   const [stake, setStake] = useState(() => seed(w.proposed.stakeRequired));
   const [proposalId, setProposalId] = useState(() => str(w.proposed.proposalId));
 
   if (w.dismissed) return null;
 
-  const docNumber = `DB·${part.toolCallId.slice(0, 4).toUpperCase()}·${part.toolCallId.slice(-4)}`;
-  const poolLabel = poolKey.replace(/_/g, '/');
+  const docNumber = docNumberFor(part.toolCallId);
+  const poolName = poolLabel(poolKey);
 
   if (w.state !== 'proposed') {
     return (
       <SignReceipt
         state={w.state}
         title={terminalTitle(mode, part)}
-        lines={terminalLines(mode, poolLabel, part)}
+        lines={terminalLines(mode, poolName, part)}
         docNumber={docNumber}
         digest={w.digest}
         suiscanUrl={w.digest ? SUISCAN_TX(w.digest) : undefined}
@@ -69,7 +70,11 @@ export function GovernanceCard({
   const cur = params.data;
   const rebates = account.data?.rebates ?? { base: 0, quote: 0, deep: 0 };
   const totalRebate = rebates.base + rebates.quote + rebates.deep;
-  const emptyRebate = !account.isLoading && totalRebate <= 0;
+  // Only "empty" on a SUCCESSFUL read — a failed read must not disable a legitimate claim.
+  const emptyRebate = account.isSuccess && totalRebate <= 0;
+  // Gate the retry affordance to a real transient (a no-BM user's 409 is handled by the no-BM note,
+  // not an endless "couldn't reach your account" retry).
+  const accountErr = mode !== 'propose' && account.isError && w.hasBalanceManager;
 
   return (
     <div className="w-full rounded-card border border-line bg-card p-4">
@@ -100,8 +105,15 @@ export function GovernanceCard({
           </div>
           <button
             type="button"
-            disabled={!w.hasBalanceManager || !(Number(taker) > 0 || Number(maker) > 0)}
-            onClick={() => void w.sign({ poolKey, takerFee: toFrac(taker), makerFee: toFrac(maker), stakeRequired: Number(stake) })}
+            // Require BOTH fees — a blank field would otherwise sign a real on-chain 0% fee.
+            disabled={!w.hasBalanceManager || !(Number(taker) > 0 && Number(maker) > 0)}
+            onClick={() =>
+              void w.sign(
+                { poolKey, takerFee: toFrac(taker), makerFee: toFrac(maker), stakeRequired: Number(stake) },
+                // Persist the EDITED values so the terminal receipt shows what was signed, not the proposal.
+                { takerFee: toFrac(taker), makerFee: toFrac(maker), stakeRequired: Number(stake) },
+              )
+            }
             className={DARK_BTN}
           >
             Submit proposal
@@ -117,13 +129,13 @@ export function GovernanceCard({
           <div className="mb-[13px] flex items-center justify-between rounded-[9px] border border-[#DCEAE2] bg-[#F4F7F4] px-3 py-[10px]">
             <span className="text-xs font-semibold text-green">Your vote weight</span>
             <span className="font-mono text-sm font-bold tabular-nums text-green">
-              {account.isLoading ? '—' : `${formatUsd(account.data?.stake.active ?? 0, 0)} DEEP`}
+              {account.isLoading || account.isError ? '—' : `${formatUsd(account.data?.stake.active ?? 0, 0)} DEEP`}
             </span>
           </div>
           <button
             type="button"
             disabled={!w.hasBalanceManager || proposalId.trim().length < 3}
-            onClick={() => void w.sign({ poolKey, proposalId: proposalId.trim() })}
+            onClick={() => void w.sign({ poolKey, proposalId: proposalId.trim() }, { proposalId: proposalId.trim() })}
             className={DARK_BTN}
           >
             Cast vote
@@ -138,23 +150,34 @@ export function GovernanceCard({
         <>
           <div className="mb-2 text-[9.5px] font-semibold uppercase tracking-[0.1em] text-faint">Accrued rebates</div>
           <div className={`mb-[13px] flex flex-col gap-px ${emptyRebate ? 'opacity-60' : ''}`}>
-            <RebateRow sym={poolLabel.split('/')[0] || 'SUI'} tag="base" bg="#4DA2FF" glyph={(poolLabel.split('/')[0] || 'S').charAt(0)} value={rebates.base} loading={account.isLoading} empty={emptyRebate} />
-            <RebateRow sym={poolLabel.split('/')[1] || 'DBUSDC'} tag="quote" bg="#1A1714" glyph="$" value={rebates.quote} loading={account.isLoading} empty={emptyRebate} />
+            <RebateRow sym={poolName.split('/')[0] || 'SUI'} tag="base" bg="#4DA2FF" glyph={(poolName.split('/')[0] || 'S').charAt(0)} value={rebates.base} loading={account.isLoading} empty={emptyRebate} />
+            <RebateRow sym={poolName.split('/')[1] || 'DBUSDC'} tag="quote" bg="#1A1714" glyph="$" value={rebates.quote} loading={account.isLoading} empty={emptyRebate} />
             <RebateRow sym="DEEP" bg="#2C5E4A" glyph="◈" value={rebates.deep} loading={account.isLoading} empty={emptyRebate} last />
           </div>
           <button
             type="button"
-            disabled={emptyRebate || !w.hasBalanceManager || account.isLoading}
+            disabled={emptyRebate || accountErr || !w.hasBalanceManager || account.isLoading}
             onClick={() => void w.sign({ poolKey })}
             className="w-full rounded-card-in bg-green py-3 text-[13.5px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {emptyRebate ? 'Nothing to claim' : 'Claim rebates'}
+            {accountErr ? 'Couldn’t load rebates' : emptyRebate ? 'Nothing to claim' : 'Claim rebates'}
           </button>
+          {accountErr && (
+            <button
+              type="button"
+              onClick={() => void account.refetch()}
+              className="mt-2 w-full text-center text-[11px] font-semibold text-muted underline underline-offset-2"
+            >
+              Couldn’t reach your account — retry
+            </button>
+          )}
         </>
       )}
 
       {!w.hasBalanceManager && (
-        <div className="mt-2 text-center text-[11px] text-faint">Create a DeepBook account first to use governance.</div>
+        <div className="mt-2 text-center text-[11px] text-faint">
+          {w.bmError ? 'Couldn’t reach your account — retry in a moment.' : 'Create a DeepBook account first to use governance.'}
+        </div>
       )}
       <button
         type="button"
@@ -246,14 +269,14 @@ function RebateRow({
 }
 
 function terminalTitle(mode: Mode, part: WriteToolPart): string {
-  const i = part.input ?? {};
+  const i = { ...(part.input ?? {}), ...(part.output ?? {}) }; // output (edited, signed) wins over input (proposal)
   if (mode === 'propose') return `Propose fees ${(num(i.takerFee) * 100).toFixed(2)}% / ${(num(i.makerFee) * 100).toFixed(2)}%`;
   if (mode === 'vote') return 'Vote on proposal';
   return 'Claim rebates';
 }
 
 function terminalLines(mode: Mode, poolLabel: string, part: WriteToolPart): ReceiptLine[] {
-  const i = part.input ?? {};
+  const i = { ...(part.input ?? {}), ...(part.output ?? {}) }; // output (edited, signed) wins over input (proposal)
   if (mode === 'propose') {
     return [
       { label: 'Pool', value: poolLabel },

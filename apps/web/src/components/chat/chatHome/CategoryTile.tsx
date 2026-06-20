@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { TileIcon } from './tileIcons';
+import { CURVE } from './motifs';
 import type { Category } from './categories';
 
 const TILE =
   'mtile group flex flex-col rounded-[13px] border bg-card p-[12px_13px] text-left transition-[transform,border-color,box-shadow] duration-150 hover:border-ink hover:shadow-[0_8px_20px_-12px_rgb(26_23_20/0.3)] active:scale-[0.975]';
-const CURVE = 'M2 30 C30 28 48 14 72 16 C100 18 120 6 150 8 C170 9 186 5 198 4';
 
 /** Mobile launcher tile. `hero` = the promoted Markets & odds card (curve + 62%); `tile` = a compact
  *  icon + title + terse description. Navigates (History) or sends its prompt; disabled → connect. */

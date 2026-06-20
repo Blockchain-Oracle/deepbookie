@@ -2,20 +2,29 @@
 
 import { useState } from 'react';
 import { useCurrentAccount } from '@mysten/dapp-kit';
-import { SignReceipt, type ReceiptLine, type ReceiptState } from './SignReceipt';
+import { SignReceipt, type ReceiptLine } from './SignReceipt';
+import { deriveReceiptState } from './receiptState';
 import { useSubmitTx, reasonFor, isUserRejection } from '@/lib/hooks/useSubmitTx';
 import { useQuote } from '@/lib/hooks/useQuote';
 import { usePositions } from '@/lib/hooks/usePositions';
 import { useBalanceManager } from '@/lib/hooks/useBalanceManager';
 import { SUISCAN_TX } from '@/lib/constants';
-import { formatUsd, shortenDigest } from '@/lib/format';
+import { docNumberFor, formatUsd, num, shortenDigest, str } from '@/lib/format';
 import type { Direction } from '@/lib/bff/types';
 
 export interface WriteToolPart {
   type: string;
   state?: string;
   input?: Record<string, unknown>;
-  output?: { digest?: string; status?: string };
+  output?: {
+    digest?: string;
+    status?: string;
+    amount?: number;
+    takerFee?: number;
+    makerFee?: number;
+    stakeRequired?: number;
+    proposalId?: string;
+  };
   toolCallId: string;
   errorText?: string;
 }
@@ -35,10 +44,6 @@ export interface SignOutcome {
   digest?: string;
 }
 export type OnSignOutcome = (o: SignOutcome) => void;
-
-const num = (v: unknown) => (typeof v === 'number' ? v : 0);
-const str = (v: unknown) => (typeof v === 'string' ? v : '');
-const docNumberFor = (id: string) => `DB·${id.slice(0, 4).toUpperCase()}·${id.slice(-4)}`;
 
 export function ReceiptController({
   part,
@@ -72,20 +77,8 @@ export function ReceiptController({
 
   if (local === 'dismissed') return null;
 
-  // Terminal part states (signed / cancelled / failed) win over transient local state, so a
-  // reload/remount renders the right thing — cancellation is encoded in part.output, not local.
-  const cancelled = part.state === 'output-available' && part.output?.status === 'cancelled';
-  const state: ReceiptState = cancelled
-    ? 'cancelled'
-    : part.state === 'output-available'
-      ? 'signed'
-      : part.state === 'output-error'
-        ? 'failed'
-        : local === 'signing'
-          ? 'signing'
-          : part.state === 'input-streaming'
-            ? 'loading'
-            : 'proposed';
+  // Terminal part states win over the transient local 'signing' flag (shared with the spot cards).
+  const state = deriveReceiptState(part, local === 'signing');
 
   const onAuthorize = async () => {
     if (local === 'signing') return; // re-entry / double-submit guard

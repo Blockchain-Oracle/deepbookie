@@ -18,7 +18,6 @@ const orderBase = z.object({
   quantity: z.number().positive(),
   isBid: z.boolean(),
   payWithDeep: z.boolean().optional(),
-  clientOrderId: z.string().optional(),
 });
 
 const createBalanceManager = defineWrite({
@@ -112,7 +111,7 @@ const placeLimitOrder = defineWrite({
     spotClient(ctx).deepBook.placeLimitOrder({
       poolKey: a.poolKey,
       balanceManagerKey: SPOT_MANAGER_KEY,
-      clientOrderId: a.clientOrderId ?? String(Date.now()),
+      clientOrderId: String(Date.now()),
       price: a.price,
       quantity: a.quantity,
       isBid: a.isBid,
@@ -134,7 +133,7 @@ const placeMarketOrder = defineWrite({
     spotClient(ctx).deepBook.placeMarketOrder({
       poolKey: a.poolKey,
       balanceManagerKey: SPOT_MANAGER_KEY,
-      clientOrderId: a.clientOrderId ?? String(Date.now()),
+      clientOrderId: String(Date.now()),
       quantity: a.quantity,
       isBid: a.isBid,
       payWithDeep: a.payWithDeep ?? true,
