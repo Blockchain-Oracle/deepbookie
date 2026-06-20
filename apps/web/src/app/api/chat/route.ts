@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger.server';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const MAX_STEPS = 5;
+const MAX_STEPS = 8;
 
 /**
  * The genUI chat. All per-user state is request-scoped (§5.1 isolation): one streamText per
@@ -32,9 +32,16 @@ export async function POST(req: Request) {
     ? await resolveManagerByOwner(walletAddress).catch(() => null)
     : null;
 
+  // Tell the agent the account status it can't otherwise see (the managerId lives in the tool ctx,
+  // not the conversation) — so it goes straight to the trade for existing users and only proposes
+  // create_manager for genuinely new ones.
+  const accountStatus = managerId
+    ? '\n\nAccount status: the user ALREADY has a PredictManager. Do NOT call create_manager — go straight to the trade (mint/redeem/supply/withdraw).'
+    : '\n\nAccount status: the user has NO PredictManager yet. Before any bet, propose create_manager first, then the trade next turn.';
+
   const result = streamText({
     model: getModel(),
-    system: SYSTEM_PROMPT,
+    system: SYSTEM_PROMPT + accountStatus,
     messages: await convertToModelMessages(messages),
     tools: buildAiTools({ walletAddress, managerId: managerId ?? undefined }),
     stopWhen: stepCountIs(MAX_STEPS),
@@ -45,5 +52,13 @@ export async function POST(req: Request) {
     onError: ({ error }) => logger.error({ err: String(error) }, 'chat stream error'),
   });
 
-  return result.toUIMessageStreamResponse();
+  // Surface real tool/stream error messages (default masks to "An error occurred.") so the agent can
+  // self-correct (e.g. pick another market) and the user sees an honest reason — and we log them.
+  return result.toUIMessageStreamResponse({
+    onError: (error) => {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error({ err: msg }, 'chat tool error');
+      return msg;
+    },
+  });
 }

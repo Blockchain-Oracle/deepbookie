@@ -42,7 +42,10 @@ export function useSubmitTx() {
         sender: account.address,
         managerId,
       };
-      const tx = await getToolsForAdapter(allTools, ctx).build(toolName, input);
+      // Never trust an agent-supplied managerId (it sometimes proposes "AUTO"); the wallet-resolved
+      // ctx.managerId is authoritative. Strip it from the proposed input before building.
+      const { managerId: _ignored, ...safeInput } = input;
+      const tx = await getToolsForAdapter(allTools, ctx).build(toolName, safeInput);
       const { digest } = await signAndExecute({ transaction: tx });
       await client.waitForTransaction({ digest });
 
