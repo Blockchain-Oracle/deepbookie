@@ -9,7 +9,7 @@ import { useQuote } from '@/lib/hooks/useQuote';
 import { usePositions } from '@/lib/hooks/usePositions';
 import { useBalanceManager } from '@/lib/hooks/useBalanceManager';
 import { SUISCAN_TX } from '@/lib/constants';
-import { docNumberFor, formatUsd, num, shortenDigest, str } from '@/lib/format';
+import { docNumberFor, formatUsd, num, poolLabel, shortenDigest, str } from '@/lib/format';
 import type { Direction } from '@/lib/bff/types';
 
 export interface WriteToolPart {
@@ -166,15 +166,15 @@ export function ReceiptController({
     },
     spot_place_market_order: {
       title: `${input.isBid ? 'Buy' : 'Sell'} ${formatUsd(num(input.quantity))} (market)`,
-      lines: [{ label: 'Pool', value: str(input.poolKey) }, { label: 'Quantity', value: formatUsd(num(input.quantity)), strong: true }],
+      lines: [{ label: 'Pool', value: poolLabel(str(input.poolKey)) }, { label: 'Quantity', value: formatUsd(num(input.quantity)), strong: true }],
     },
     spot_cancel_order: {
       title: 'Cancel order',
-      lines: [{ label: 'Pool', value: str(input.poolKey) }, { label: 'Order', value: shortenDigest(str(input.orderId)) }],
+      lines: [{ label: 'Pool', value: poolLabel(str(input.poolKey)) }, { label: 'Order', value: shortenDigest(str(input.orderId)) }],
     },
     spot_cancel_all_orders: {
       title: 'Cancel all orders',
-      lines: [{ label: 'Pool', value: str(input.poolKey) }],
+      lines: [{ label: 'Pool', value: poolLabel(str(input.poolKey)) }],
     },
   };
   const action = actions[toolName] ?? { title: toolName, lines: [] };

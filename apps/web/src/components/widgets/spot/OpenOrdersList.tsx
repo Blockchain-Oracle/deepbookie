@@ -63,6 +63,12 @@ export function OpenOrdersList({ orders }: { orders: SpotOpenOrder[] }) {
         </a>
       )}
 
+      {cancelAll.status === 'error' && cancelAll.reason && (
+        <div className="border-b border-[#F2EEE6] bg-[#FBF1EC] px-4 py-2 text-[11.5px] font-medium text-clay">
+          {cancelAll.reason}
+        </div>
+      )}
+
       <div className="flex border-b border-[#F2EEE6] px-4 py-2.5">
         <span className={`${TH} flex-[1.6]`}>Order</span>
         <span className={`${TH} flex-1 text-right`}>Price</span>
@@ -133,6 +139,17 @@ function Row({
             <span className="h-[13px] w-[13px] animate-spin rounded-full border-[1.5px] border-line border-t-clay" />
             <span className="font-mono text-[10.5px] text-muted">cancelling</span>
           </span>
+        ) : cancel.status === 'error' ? (
+          // Surface the failure (don't silently revert to "Cancel") — reason on hover, click to retry.
+          <button
+            type="button"
+            title={cancel.reason ?? undefined}
+            disabled={!canCancel}
+            onClick={() => void cancel.run('spot_cancel_order', { poolKey, orderId: order.orderId }, { balanceManagerId })}
+            className={`${PILL} transition-colors hover:bg-[#FBF1EC] disabled:opacity-40`}
+          >
+            ✗ Retry
+          </button>
         ) : (
           <button
             type="button"

@@ -84,6 +84,14 @@ export async function POST(req: Request) {
   if (walletAddress && !isValidSuiAddress(walletAddress)) {
     return new Response('bad request', { status: 400 });
   }
+  // Validate client-supplied object ids too (parity with /api/spot/read) — a malformed id would
+  // otherwise reach the SDK/devInspect as a masked error instead of a clean 400.
+  if (
+    (clientManagerId && !isValidSuiAddress(clientManagerId)) ||
+    (clientBalanceManagerId && !isValidSuiAddress(clientBalanceManagerId))
+  ) {
+    return new Response('bad request', { status: 400 });
+  }
   // Bound the transcript size so a single request can't blow up LLM token cost or jsonb storage.
   if (!Array.isArray(messages) || messages.length > CHAT_MAX_MESSAGES) {
     return new Response('bad request', { status: 400 });

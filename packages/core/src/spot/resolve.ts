@@ -20,9 +20,10 @@ type ObjChange = { type: string; objectType?: string; objectId?: string };
  * from being told they have no account (which would invite a duplicate BM + orphan funds).
  */
 export async function resolveBalanceManagerIds(ctx: ToolContext, owner: string): Promise<string[]> {
-  const registered = await spotClient(ctx)
-    .getBalanceManagerIds(owner)
-    .catch(() => [] as string[]);
+  // NOTE: do NOT swallow RPC errors here — a transient failure must PROPAGATE (callers wrap this in
+  // timeout+retry and treat a throw as "unknown", distinct from an empty result = "genuinely none").
+  // Returning [] on a network blip would falsely report "no account" and invite a duplicate BM.
+  const registered = await spotClient(ctx).getBalanceManagerIds(owner);
   if (registered.length) return registered;
   return scanCreatedBalanceManagers(ctx, owner);
 }
@@ -32,16 +33,13 @@ async function scanCreatedBalanceManagers(ctx: ToolContext, owner: string): Prom
   const ids: string[] = [];
   let cursor: string | null | undefined;
   for (let page = 0; page < TX_SCAN_PAGES; page++) {
-    const res = await ctx.client
-      .queryTransactionBlocks({
-        filter: { FromAddress: owner },
-        options: { showObjectChanges: true },
-        order: 'descending',
-        cursor: cursor ?? null,
-        limit: TX_SCAN_PAGE_SIZE,
-      })
-      .catch(() => null);
-    if (!res) break;
+    const res = await ctx.client.queryTransactionBlocks({
+      filter: { FromAddress: owner },
+      options: { showObjectChanges: true },
+      order: 'descending',
+      cursor: cursor ?? null,
+      limit: TX_SCAN_PAGE_SIZE,
+    });
     for (const tx of res.data ?? []) {
       for (const c of (tx.objectChanges ?? []) as ObjChange[]) {
         if (c.type === 'created' && c.objectId && c.objectType?.includes(BALANCE_MANAGER_TYPE)) {

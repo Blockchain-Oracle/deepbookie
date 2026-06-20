@@ -49,9 +49,9 @@ export function SettledSweepCard({
   const poolLabel = poolKey.replace(/_/g, '/');
 
   const account = useSpotAccount(w.state === 'proposed' && w.hasBalanceManager ? poolKey : undefined);
-  // Rebates are the canonical settled proceeds the indexer exposes. `locked` (funds reserved by resting
-  // orders) is NOT proceeds, so we don't use it as a proxy — that mislabeled reserved funds as sweepable.
-  const settled = account.data?.rebates ?? ZERO;
+  // spot_withdraw_settled_amounts sweeps the account's SETTLED balances (filled-order proceeds) — NOT
+  // fee rebates (those are claimed separately via spot_claim_rebates in GovernanceCard).
+  const settled = account.data?.settled ?? ZERO;
   const parts = proceedsParts(settled, base, quote);
   const proceedsText = parts.length ? fmtProceeds(parts) : '';
 

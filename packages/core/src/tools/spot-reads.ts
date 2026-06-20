@@ -1,9 +1,20 @@
 import { z } from 'zod';
 import { defineRead } from '../tool.js';
 import { spotClient, requireBalanceManager } from '../spot/client.js';
-import { SPOT_MANAGER_KEY, SPOT_POOLS } from '../spot/constants.js';
+import { SPOT_COINS, SPOT_MANAGER_KEY, SPOT_POOLS } from '../spot/constants.js';
 
 const poolInput = z.object({ poolKey: z.string() });
+
+/** DeepBook price float scaling (matches the SDK's FLOAT_SCALAR). */
+const FLOAT_SCALAR = 1e9;
+
+/** Base/quote coin scalars for a pool (10^decimals), for human-scaling raw on-chain order figures. */
+function poolScalars(poolKey: string): { base: number; quote: number } {
+  const pool = SPOT_POOLS[poolKey as keyof typeof SPOT_POOLS];
+  const base = pool ? (SPOT_COINS[pool.baseCoin as keyof typeof SPOT_COINS]?.scalar ?? 1) : 1;
+  const quote = pool ? (SPOT_COINS[pool.quoteCoin as keyof typeof SPOT_COINS]?.scalar ?? 1) : 1;
+  return { base, quote };
+}
 
 /** Zip the SDK's parallel price/quantity arrays into {price,size} rows. */
 function zipLevels(prices: number[], sizes: number[]): { price: number; size: number }[] {
@@ -119,6 +130,7 @@ const account = defineRead({
         stake: { active: 0, inactive: 0 },
         volume: { taker: 0, maker: 0 },
         rebates: { base: 0, quote: 0, deep: 0 },
+        settled: { base: 0, quote: 0, deep: 0 },
       };
     }
     const [acct, locked] = await Promise.all([
@@ -132,6 +144,7 @@ const account = defineRead({
       stake: { active: acct.active_stake, inactive: acct.inactive_stake },
       volume: { taker: acct.taker_volume, maker: acct.maker_volume },
       rebates: acct.unclaimed_rebates,
+      settled: acct.settled_balances,
     };
   },
 });
@@ -145,6 +158,10 @@ const openOrders = defineRead({
     requireBalanceManager(ctx);
     const db = spotClient(ctx);
     // One call for all open orders; decode price/side locally (avoids an N+1 per-order round-trip).
+    // getAccountOrderDetails returns RAW on-chain units — human-scale them the SAME way the SDK's
+    // getOrderNormalized does, so the figures match every other spot read AND so a signed modify
+    // (which re-applies the scalar) isn't double-scaled into an on-chain abort.
+    const { base, quote } = poolScalars(a.poolKey);
     const orders = await db.getAccountOrderDetails(a.poolKey, SPOT_MANAGER_KEY);
     return (orders ?? []).map((o) => {
       const decoded = db.decodeOrderId(BigInt(o.order_id));
@@ -152,9 +169,9 @@ const openOrders = defineRead({
         poolKey: a.poolKey,
         orderId: o.order_id,
         isBid: decoded.isBid,
-        price: decoded.price,
-        quantity: o.quantity,
-        filledQuantity: o.filled_quantity,
+        price: (decoded.price * base) / quote / FLOAT_SCALAR,
+        quantity: Number(o.quantity) / base,
+        filledQuantity: Number(o.filled_quantity) / base,
         status: o.status,
         expireTs: o.expire_timestamp,
       };

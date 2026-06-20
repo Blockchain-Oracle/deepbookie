@@ -89,7 +89,10 @@ export interface SpotAccount {
   locked: SpotBalances;
   stake: { active: number; inactive: number };
   volume: { taker: number; maker: number };
+  /** Accrued fee rebates (claimed via spot_claim_rebates). */
   rebates: SpotBalances;
+  /** Settled proceeds from filled orders (swept via spot_withdraw_settled_amounts). */
+  settled: SpotBalances;
 }
 
 /** spot_open_orders — one open limit order. */
