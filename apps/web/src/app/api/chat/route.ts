@@ -62,10 +62,13 @@ export async function POST(req: Request) {
   const accountStatus = managerId
     ? '\n\nAccount status: the user ALREADY has a PredictManager. Do NOT call create_manager — go straight to the trade (mint/redeem/supply/withdraw).'
     : '\n\nAccount status: the user has NO PredictManager yet. Before any bet, propose create_manager first, then the trade next turn.';
+  const spotStatus = balanceManagerId
+    ? '\n\nSpot account: the user ALREADY has a DeepBook BalanceManager. Do NOT call spot_create_balance_manager — go straight to the spot action (deposit/swap/order/stake).'
+    : '\n\nSpot account: the user has NO DeepBook BalanceManager yet. Before any spot deposit/trade, propose spot_create_balance_manager first, then the action next turn.';
 
   const result = streamText({
     model: getModel(),
-    system: SYSTEM_PROMPT + accountStatus,
+    system: SYSTEM_PROMPT + accountStatus + spotStatus,
     messages: await convertToModelMessages(messages),
     tools: buildAiTools({
       walletAddress,
