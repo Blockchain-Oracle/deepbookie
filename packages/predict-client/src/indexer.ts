@@ -1,10 +1,13 @@
 import { INDEXER_URL, ORACLE_STATUS, PREDICT_OBJECT } from './constants.js';
 import type {
   ManagerPnl,
+  ManagerPositions,
   ManagerSummary,
   OracleRow,
   OracleState,
+  PositionEntry,
   SviParams,
+  VaultPerformance,
   VaultSummary,
 } from './types.js';
 
@@ -47,4 +50,17 @@ export function getManagerSummary(managerId: string): Promise<ManagerSummary> {
 
 export function getManagerPnl(managerId: string): Promise<ManagerPnl> {
   return get(`/managers/${managerId}/pnl`);
+}
+
+export function getManagerPositions(managerId: string): Promise<ManagerPositions> {
+  return get(`/managers/${managerId}/positions`);
+}
+
+export function getVaultPerformance(predictId: string = PREDICT_OBJECT): Promise<VaultPerformance> {
+  return get(`/predicts/${predictId}/vault/performance`);
+}
+
+/** Recent minted positions across all markets — the live activity tape. */
+export function getRecentMints(): Promise<PositionEntry[]> {
+  return get('/positions/minted');
 }

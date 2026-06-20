@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { allTools } from '../src/registry.js';
 
 describe('registry', () => {
-  it('exposes 14 Predict tools (6 read / 8 write) with unique names', () => {
-    expect(allTools).toHaveLength(14);
-    expect(allTools.filter((t) => t.kind === 'read')).toHaveLength(6);
+  it('exposes 18 Predict tools (10 read / 8 write) with unique names', () => {
+    expect(allTools).toHaveLength(18);
+    expect(allTools.filter((t) => t.kind === 'read')).toHaveLength(10);
     expect(allTools.filter((t) => t.kind === 'write')).toHaveLength(8);
     expect(allTools.every((t) => t.surface === 'predict')).toBe(true);
-    expect(new Set(allTools.map((t) => t.name)).size).toBe(14);
+    expect(new Set(allTools.map((t) => t.name)).size).toBe(18);
   });
 
   it('every tool has a description and an object input schema', () => {

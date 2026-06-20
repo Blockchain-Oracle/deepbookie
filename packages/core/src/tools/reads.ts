@@ -5,16 +5,35 @@ import {
   getActiveOracles,
   getLatestSvi,
   getManagerPnl,
+  getManagerPositions,
   getManagerSummary,
   getOracleState,
+  getRangeTradeAmounts,
+  getRecentMints,
   getTradeAmounts,
+  getVaultPerformance,
   getVaultSummary,
   toDusdc,
   upProbability,
 } from '@deepbookie/predict-client';
+import type { PositionEntry } from '@deepbookie/predict-client';
 import { z } from 'zod';
 import { defineRead } from '../tool.js';
 import { resolveMarket } from './helpers.js';
+
+function mapPosition(p: PositionEntry) {
+  return {
+    oracleId: p.oracle_id,
+    expiry: p.expiry,
+    strikeUsd: fromScaled(p.strike),
+    direction: p.is_up ? 'UP' : 'DOWN',
+    quantityUsd: fromDusdc(p.quantity),
+    costUsd: fromDusdc(p.cost),
+    probabilityAtTrade: fromScaled(p.ask_price),
+    digest: p.digest,
+    at: p.checkpoint_timestamp_ms,
+  };
+}
 
 const ZERO_ADDRESS = `0x${'0'.repeat(64)}`;
 
@@ -164,4 +183,94 @@ const getPortfolio = defineRead({
   },
 });
 
-export const readTools = [listMarkets, getMarket, getOdds, getQuote, getVault, getPortfolio];
+const getPositions = defineRead({
+  name: 'get_positions',
+  description: 'Detailed list of a manager’s open (minted) and closed (redeemed) Predict positions.',
+  surface: 'predict',
+  inputSchema: z.object({ managerId: z.string().optional() }),
+  read: async (a, ctx) => {
+    const managerId = a.managerId ?? ctx.managerId;
+    if (!managerId) throw new Error('get_positions requires a managerId');
+    const pos = await getManagerPositions(managerId);
+    return { managerId, minted: pos.minted.map(mapPosition), redeemed: pos.redeemed.map(mapPosition) };
+  },
+});
+
+const getRangeQuote = defineRead({
+  name: 'get_range_quote',
+  description: 'Exact on-chain cost to buy, and payout to sell, a price-band (range) position.',
+  surface: 'predict',
+  inputSchema: z.object({
+    oracleId: z.string(),
+    lowerStrikeUsd: z.number().positive(),
+    higherStrikeUsd: z.number().positive(),
+    quantityUsd: z.number().positive(),
+  }),
+  read: async (a, ctx) => {
+    if (a.lowerStrikeUsd >= a.higherStrikeUsd) {
+      throw new Error('lowerStrikeUsd must be < higherStrikeUsd');
+    }
+    const { expiry, snap } = await resolveMarket(a.oracleId);
+    const lower = snap(a.lowerStrikeUsd);
+    const higher = snap(a.higherStrikeUsd);
+    const quantity = toDusdc(a.quantityUsd);
+    if (quantity === 0n) throw new Error('quantityUsd too small — minimum tradable size is 0.000001 dUSDC');
+    const { mintCost, redeemPayout } = await getRangeTradeAmounts(ctx.client, {
+      oracleId: a.oracleId,
+      expiry,
+      lower,
+      higher,
+      quantity,
+      sender: ctx.sender ?? ZERO_ADDRESS,
+    });
+    return {
+      lowerStrikeUsd: fromScaled(lower),
+      higherStrikeUsd: fromScaled(higher),
+      quantityUsd: a.quantityUsd,
+      mintCostUsd: fromDusdc(mintCost),
+      redeemPayoutUsd: fromDusdc(redeemPayout),
+    };
+  },
+});
+
+const getVaultHistory = defineRead({
+  name: 'get_vault_history',
+  description: 'Vault share-price and total value over time (for the vault performance chart).',
+  surface: 'predict',
+  inputSchema: z.object({}),
+  read: async () => {
+    const v = await getVaultPerformance();
+    return {
+      range: v.range,
+      points: v.points.map((p) => ({
+        at: p.timestamp_ms,
+        sharePrice: p.share_price,
+        vaultValueUsd: fromDusdc(p.vault_value),
+      })),
+    };
+  },
+});
+
+const getRecentBets = defineRead({
+  name: 'get_recent_bets',
+  description: 'Recent bets across all markets — the live activity tape.',
+  surface: 'predict',
+  inputSchema: z.object({ limit: z.number().int().min(1).max(100).optional() }),
+  read: async (a) => {
+    const mints = await getRecentMints();
+    return mints.slice(0, a.limit ?? 20).map(mapPosition);
+  },
+});
+
+export const readTools = [
+  listMarkets,
+  getMarket,
+  getOdds,
+  getQuote,
+  getRangeQuote,
+  getVault,
+  getVaultHistory,
+  getPortfolio,
+  getPositions,
+  getRecentBets,
+];
