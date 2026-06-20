@@ -88,7 +88,7 @@ export function ReceiptController({
     if (local === 'signing') return; // re-entry / double-submit guard
     setLocal('signing');
     try {
-      const digest = await submit(toolName, input, positionsQ.data?.managerId ?? undefined);
+      const digest = await submit(toolName, input, { managerId: positionsQ.data?.managerId ?? undefined });
       addToolResult({ tool: toolName, toolCallId: part.toolCallId, output: { digest } });
       onOutcome?.({ toolCallId: part.toolCallId, toolName, status: 'signed', digest });
     } catch (e) {

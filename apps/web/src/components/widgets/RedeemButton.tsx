@@ -26,7 +26,7 @@ export function RedeemButton({ position, managerId }: { position: Position; mana
       <button
         type="button"
         title={reason ?? undefined}
-        onClick={() => void run('redeem', toArgs(position), managerId)}
+        onClick={() => void run('redeem', toArgs(position), { managerId })}
         className="rounded-[7px] border border-clay px-3 py-1.5 text-[12px] font-semibold text-clay transition hover:bg-clay/5"
       >
         Retry
@@ -39,7 +39,7 @@ export function RedeemButton({ position, managerId }: { position: Position; mana
     <button
       type="button"
       disabled={signing}
-      onClick={() => void run('redeem', toArgs(position), managerId)}
+      onClick={() => void run('redeem', toArgs(position), { managerId })}
       className="rounded-[7px] bg-green px-3.5 py-1.5 text-[12px] font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
     >
       {signing ? 'Signing…' : 'Redeem →'}

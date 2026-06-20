@@ -7,6 +7,7 @@ import { useCurrentAccount } from '@mysten/dapp-kit';
 import { Composer } from './Composer';
 import { MessageList } from './MessageList';
 import { usePositions } from '@/lib/hooks/usePositions';
+import { useBalanceManager } from '@/lib/hooks/useBalanceManager';
 import type { AddToolResult, SignOutcome } from '@/components/widgets/ReceiptController';
 
 export function Chat() {
@@ -18,15 +19,18 @@ export function Chat() {
   // server doesn't re-resolve via the lagging indexer on every request (which caused balance to
   // flip between "here it is" and "no account"). Auth still never trusts this — writes are signed.
   const managerId = usePositions(account?.address).data?.managerId ?? null;
+  // The wallet's DeepBook spot account, resolved + cached the same way (so spot tools see it without
+  // re-resolving per request). Auth still never trusts it — spot writes are signed in the wallet.
+  const balanceManagerId = useBalanceManager(account?.address).data?.balanceManagerId ?? null;
 
-  // Recreated when the address or resolved manager changes; carries both to the route.
+  // Recreated when the address or resolved managers change; carries all to the route.
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: '/api/chat',
-        body: { walletAddress: account?.address, managerId, chatId },
+        body: { walletAddress: account?.address, managerId, balanceManagerId, chatId },
       }),
-    [account?.address, managerId, chatId],
+    [account?.address, managerId, balanceManagerId, chatId],
   );
 
   const { messages, sendMessage, status, addToolResult } = useChat({

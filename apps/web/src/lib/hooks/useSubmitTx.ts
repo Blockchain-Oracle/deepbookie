@@ -39,24 +39,29 @@ export function useSubmitTx() {
   const qc = useQueryClient();
 
   return useCallback(
-    async (toolName: string, input: Record<string, unknown>, managerId?: string): Promise<string> => {
+    async (
+      toolName: string,
+      input: Record<string, unknown>,
+      ids: { managerId?: string; balanceManagerId?: string } = {},
+    ): Promise<string> => {
       if (!account) throw new Error('wallet not connected');
       // The browser client (SuiClient) exposes the same getCoins/devInspect surface the builders need.
       const ctx: ToolContext = {
         client: client as unknown as SuiJsonRpcClient,
         network: NETWORK,
         sender: account.address,
-        managerId,
+        managerId: ids.managerId,
+        balanceManagerId: ids.balanceManagerId,
       };
-      // Never trust an agent-supplied managerId (it sometimes proposes "AUTO"); the wallet-resolved
-      // ctx.managerId is authoritative. Strip it from the proposed input before building.
-      const { managerId: _ignored, ...safeInput } = input;
+      // Never trust an agent-supplied manager id (it sometimes proposes "AUTO"); the wallet-resolved
+      // ctx ids are authoritative. Strip both from the proposed input before building.
+      const { managerId: _m, balanceManagerId: _b, ...safeInput } = input;
       const tx = await getToolsForAdapter(allTools, ctx).build(toolName, safeInput);
       const { digest } = await signAndExecute({ transaction: tx });
       await client.waitForTransaction({ digest });
 
-      // Bust server tags + client caches so balances/positions reflect chain immediately.
-      const tags = ['markets', 'activity', ...(managerId ? [`manager:${managerId}`] : [])];
+      // Bust server tags + client caches so balances/positions/spot reflect chain immediately.
+      const tags = ['markets', 'activity', 'spot', ...(ids.managerId ? [`manager:${ids.managerId}`] : [])];
       void fetch('/api/revalidate', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -64,6 +69,10 @@ export function useSubmitTx() {
       }).catch(() => {});
       qc.invalidateQueries({ queryKey: ['balance'] });
       qc.invalidateQueries({ queryKey: ['positions'] });
+      // A just-created BalanceManager (or a deposit/order) changes spot account state — refetch it.
+      qc.invalidateQueries({ queryKey: ['balanceManager'] });
+      qc.invalidateQueries({ queryKey: ['spotAccount'] });
+      qc.invalidateQueries({ queryKey: ['spot'] });
 
       return digest;
     },

@@ -17,11 +17,15 @@ export function useTxAction() {
   const [reason, setReason] = useState<string | null>(null);
 
   const run = useCallback(
-    async (tool: string, input: Record<string, unknown>, managerId?: string): Promise<string | null> => {
+    async (
+      tool: string,
+      input: Record<string, unknown>,
+      ids?: { managerId?: string; balanceManagerId?: string },
+    ): Promise<string | null> => {
       setStatus('signing');
       setReason(null);
       try {
-        const d = await submit(tool, input, managerId);
+        const d = await submit(tool, input, ids);
         setDigest(d);
         setStatus('done');
         return d;

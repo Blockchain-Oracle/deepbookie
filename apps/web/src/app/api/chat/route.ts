@@ -3,6 +3,7 @@ import { getModel, isAnthropic } from '@/lib/ai/model';
 import { buildAiTools } from '@/lib/ai/tools';
 import { SYSTEM_PROMPT } from '@/lib/ai/prompt';
 import { resolveManagerByOwner } from '@/lib/bff/positions';
+import { resolveBalanceManagerByOwner } from '@/lib/bff/spot';
 import { upsertChat } from '@/lib/db/chats';
 import { logger } from '@/lib/logger.server';
 
@@ -27,27 +28,33 @@ export async function POST(req: Request) {
   let messages: UIMessage[];
   let walletAddress: string | undefined;
   let clientManagerId: string | undefined;
+  let clientBalanceManagerId: string | undefined;
   let chatId: string | undefined;
   try {
     const body = (await req.json()) as {
       messages: UIMessage[];
       walletAddress?: string;
       managerId?: string;
+      balanceManagerId?: string;
       chatId?: string;
     };
     messages = body.messages;
     walletAddress = body.walletAddress;
     clientManagerId = body.managerId;
+    clientBalanceManagerId = body.balanceManagerId;
     chatId = body.chatId;
   } catch {
     return new Response('bad request', { status: 400 });
   }
 
-  // Prefer the client-resolved manager (React-Query-cached, stable). Only hit the indexer when the
-  // client hasn't resolved one yet — avoids the per-request lag flip-flop ("balance" vs "no account").
+  // Prefer the client-resolved ids (React-Query-cached, stable). Only hit chain when the client
+  // hasn't resolved one yet — avoids the per-request lag flip-flop ("balance" vs "no account").
   const managerId =
     clientManagerId ??
     (walletAddress ? await resolveManagerByOwner(walletAddress).catch(() => null) : null);
+  const balanceManagerId =
+    clientBalanceManagerId ??
+    (walletAddress ? await resolveBalanceManagerByOwner(walletAddress).catch(() => null) : null);
 
   // Tell the agent the account status it can't otherwise see (the managerId lives in the tool ctx,
   // not the conversation) — so it goes straight to the trade for existing users and only proposes
@@ -60,7 +67,11 @@ export async function POST(req: Request) {
     model: getModel(),
     system: SYSTEM_PROMPT + accountStatus,
     messages: await convertToModelMessages(messages),
-    tools: buildAiTools({ walletAddress, managerId: managerId ?? undefined }),
+    tools: buildAiTools({
+      walletAddress,
+      managerId: managerId ?? undefined,
+      balanceManagerId: balanceManagerId ?? undefined,
+    }),
     stopWhen: stepCountIs(MAX_STEPS),
     // One proposed trade per turn (the propose→sign UI signs one tx per step).
     providerOptions: isAnthropic()

@@ -36,6 +36,9 @@ export const REVALIDATE = {
   vaultPerf: 30,
   manager: 5,
   activity: 4,
+  // Spot (DeepBook V3): pool/param catalogs are near-static; the order book moves fast.
+  spotPools: 60,
+  spotBook: 3,
 } as const;
 
 /** Client poll cadences (ms) for TanStack Query refetchInterval. */
