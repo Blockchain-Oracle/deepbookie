@@ -1,0 +1,18 @@
+node_modules/
+dist/
+build/
+.next/
+.turbo/
+coverage/
+*.tsbuildinfo
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+.idea/
+.vscode/
+# local wallet keystore / secrets — never commit
+.deepbookie/
+.secrets/
+*.keystore

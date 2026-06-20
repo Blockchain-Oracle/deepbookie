@@ -1,0 +1,43 @@
+# Tool → Generative-UI Widget Map
+
+About 80 DeepBook tools across V3 spot, margin, and Predict collapse onto 8 reusable widgets. The locked architecture (AI SDK UI useChat plus tool parts) splits tools two ways: write tools have no execute and all render one ConfirmSignCard (about 45 tools); read tools return JSON in a few shapes covered by 7 data widgets. GenUI work is bounded to 8 components built once; a new tool of a known shape is zero new UI. ConfirmSignCard makes agent-proposes, user-signs, agent-holds-no-key demoable, and data widgets being primary wins the 20 percent UX weight.
+
+
+## Reusable widget set
+
+| Widget | Description | Reused by |
+|---|---|---|
+| **ConfirmSignCard** | Universal write widget: human summary, unsigned PTB, signer control. No execute; the tool-part returns PTB params as data and this client component holds the wallet hooks, dapp-kit on web and local key for MCP or CLI. Embodies agent-proposes, user-signs, agent-holds-no-key. | every write-sign tool on all three surfaces: spot orders, swaps, balance-manager, flashloan, governance; margin manager and pool writes; Predict create_manager, mint, redeem, mint_range, redeem_range, supply, withdraw |
+| **OrderBookDepth** | Bid and ask cumulative depth bars with a mid line, from aggregated price and quantity arrays; doubles as a pool liquidity readout. | spot reads getLevel2Range, getLevel2TicksFromMid, midPrice, poolBookParams, vaultBalances |
+| **VolSurfaceOddsChart** | Predict centerpiece: the SVI implied-probability smile across the strike grid for one expiry, plus spot and forward markers. The one Predict-specific, novelty-winning widget. | Predict reads oracle SVI params, build_curve sampler, prices, oracle status and expiry |
+| **PayoffDiagram** | Trade payoff at expiry versus settlement price: a binary step or a vertical-range box, with breakevens, max payout, and cost. Paired with ConfirmSignCard before a Predict sign. | Predict trade previews mint, redeem, mint_range, redeem_range; fed by get_trade_amounts and get_range_trade_amounts |
+| **PositionPnLCard** | Per-account portfolio: open positions and orders, realized and unrealized PnL, exposure, account value, and an optional PnL sparkline. Same shape for CLOB, margin, or Predict positions. | spot account, accountOpenOrders, getAccountOrderDetails, lockedBalance; margin position and health; Predict manager summary, pnl, positions, ranges |
+| **BalancesVaultCard** | A coin-balance list or a pool and vault summary with liquidity, utilization, share price, and total supply. One layout serves user custody balances and a protocol vault. | spot checkManagerBalance, vaultBalances, getPoolDeepPrice, whitelisted; margin pool state; Predict vault summary |
+| **QuotePreview** | A dry-run receipt: input in to estimated output out, fee in DEEP or input coin, min-received slippage, and effective price. Feeds the ConfirmSignCard cost line. | spot getQuantityOut, getQuoteQuantityOut, getBaseQuantityOut, poolTradeParams; Predict get_trade_amounts cost and payout |
+| **DataTable** | A generic key-value or rows table; the universal fallback for any read whose shape is a list, a set of IDs, a config struct, or a boolean. Keeps the bespoke count low by absorbing long-tail reads. | spot getBalanceManagerIds, getOrder, getOrders, getOrderNormalized, poolId, getPoolIdByAssets, accountExists, canPlaceLimitOrder; Predict oracles, config, status; margin registry listings |
+
+## Tool → widget mapping
+
+| Tool / category | Widget | Kind | Data source |
+|---|---|---|---|
+| spot orders placeLimitOrder, placeMarketOrder, modifyOrder, cancelOrder, cancelOrders, cancelAllOrders, withdrawSettledAmounts, claimRebates | ConfirmSignCard plus QuotePreview | confirm-sign | unsigned PTB params, no execute; price context from poolTradeParams and getQuantityOut |
+| spot swaps swapExactBaseForQuote, swapExactQuoteForBase, swapExactQuantity, with-manager variants | QuotePreview then ConfirmSignCard | confirm-sign | QuotePreview from getQuantityOut and getQuoteQuantityOut; ConfirmSignCard from swap PTB |
+| spot balance-manager writes createAndShareBalanceManager, depositIntoManager, withdrawFromManager, withdrawAllFromManager, mintTradeCap, revokeTradeCap, generateProof | ConfirmSignCard | confirm-sign | unsigned PTB params from contract builder |
+| spot flashloan and governance borrowBaseAsset, returnBaseAsset, stake, unstake, submitProposal, vote | ConfirmSignCard | confirm-sign | unsigned PTB, often multi-call; governance shows proposed fees and stake |
+| spot balance reads checkManagerBalance, vaultBalances, getPoolDeepPrice, lockedBalance | BalancesVaultCard | rich-dataviz | devInspect ManagerBalance, VaultBalances, PoolDeepPrice, LockedBalances |
+| spot book and price reads midPrice, getLevel2Range, getLevel2TicksFromMid, poolBookParams | OrderBookDepth | rich-dataviz | devInspect Level2Range, Level2TicksFromMid, PoolBookParams arrays |
+| spot quote reads getQuantityOut, getQuoteQuantityOut, getBaseQuantityOut, poolTradeParams | QuotePreview | rich-dataviz | devInspect QuantityOut, QuoteQuantityOut, BaseQuantityOut with baseOut, quoteOut, deepRequired |
+| spot account reads account, accountOpenOrders, getAccountOrderDetails | PositionPnLCard | rich-dataviz | devInspect AccountInfo plus normalized open orders |
+| spot lookups and flags getBalanceManagerIds, getOrder, getOrders, getOrderNormalized, poolId, getPoolIdByAssets, whitelisted, accountExists, canPlaceLimitOrder, canPlaceMarketOrder | DataTable | table-text | devInspect Order structs, ID strings, boolean flags |
+| margin writes margin_manager new, deposit, withdraw, borrow_base, borrow_quote, repay, liquidate; margin_pool supply, withdraw; pool_proxy order placement | ConfirmSignCard | confirm-sign | unsigned PTB against deepbook_margin package |
+| margin reads margin_manager health and position, margin_pool utilization and supply and borrow, registry | PositionPnLCard, BalancesVaultCard, DataTable | rich-dataviz | devInspect getters on MarginManager, MarginPool, MarginRegistry |
+| Predict trade writes mint, redeem, mint_range, redeem_range | PayoffDiagram plus QuotePreview then ConfirmSignCard | confirm-sign | get_trade_amounts and get_range_trade_amounts for preview; unsigned tx.moveCall PTB for sign |
+| Predict account and LP writes create_manager, supply, withdraw, redeem_permissionless | ConfirmSignCard plus BalancesVaultCard | confirm-sign | unsigned predict supply and withdraw PTB; vault context from vault summary |
+| Predict market and oracle reads oracle state, SVI, prices, build_curve, ask-bounds | VolSurfaceOddsChart | rich-dataviz | indexer oracles state, svi latest, prices latest, plus on-chain build_curve CurvePoint |
+| Predict portfolio reads manager summary, pnl, positions, ranges | PositionPnLCard | rich-dataviz | predict-server indexer manager summary and PnL time-series |
+| Predict vault and PLP reads vault summary, vault performance | BalancesVaultCard | rich-dataviz | predict-server vault summary with plp_share_price, utilization, available_liquidity |
+| Predict market list and config oracles, config, status | DataTable | table-text | predict-server indexer market rows and protocol config |
+
+## Why this is tractable (not 30 bespoke components)
+
+Two structural facts drive the collapse, not visual luck. FIRST: about 45 of 80 tools are write-sign, and in the locked architecture (useChat plus tool parts) write tools have no execute, so their entire UI contract is show-me-what-I-sign-then-sign-it, identically ConfirmSignCard for placeLimitOrder, a margin borrow, and a Predict mint_range. So about 60 percent of the surface is one component. SECOND: the about 35 read tools return JSON in only a few shapes: a depth ladder, an odds and vol curve, a payoff at expiry, an account and PnL roll-up, a balances and vault roll-up, a dry-run quote receipt, and everything else is a list or struct or boolean. Map widgets to shapes not tools and 7 cover every read. The same widget crosses surfaces: PositionPnLCard renders a CLOB account, a margin health position, and a Predict portfolio, because all three are balances plus exposure plus PnL; BalancesVaultCard renders a spot vault, a margin pool, and the Predict PLP vault. Only VolSurfaceOddsChart is genuinely Predict-specific, the headline novelty surface, worth bespoke effort. Net: 8 components built once; a new tool of an existing shape is zero new UI, reusing the matching widget by returning the same data shape. The cost curve is front-loaded and flat, the opposite of one-component-per-tool, which de-risks the 20 percent UX judging weight under hackathon time pressure.

@@ -1,0 +1,31 @@
+{
+  "name": "deepbookie-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r --if-present run build",
+    "lint": "eslint .",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "test": "pnpm -r --if-present run test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "derisk": "tsx scripts/derisk-predict-mint.ts"
+  },
+  "devDependencies": {
+    "@mysten/sui": "^2.19.0",
+    "@eslint/js": "^9.16.0",
+    "@types/node": "^22.10.0",
+    "eslint": "^9.16.0",
+    "prettier": "^3.4.0",
+    "tsup": "^8.3.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.18.0",
+    "vitest": "^2.1.0"
+  }
+}
