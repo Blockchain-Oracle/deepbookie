@@ -1,4 +1,4 @@
-import { INDEXER_URL, PREDICT_OBJECT } from './constants.js';
+import { INDEXER_URL, ORACLE_STATUS, PREDICT_OBJECT } from './constants.js';
 import type {
   ManagerPnl,
   ManagerSummary,
@@ -20,7 +20,7 @@ export function getOracles(): Promise<OracleRow[]> {
 
 export async function getActiveOracles(): Promise<OracleRow[]> {
   const all = await getOracles();
-  return all.filter((o) => o.status === 'active');
+  return all.filter((o) => o.status === ORACLE_STATUS.active);
 }
 
 export function getOracleState(oracleId: string): Promise<OracleState> {

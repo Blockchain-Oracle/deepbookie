@@ -22,6 +22,14 @@ export const FLOAT_SCALING = 1_000_000_000;
 /** dUSDC token decimals. */
 export const DUSDC_DECIMALS = 6;
 
+/** OracleSVI lifecycle statuses (the indexer `status` field). */
+export const ORACLE_STATUS = {
+  inactive: 'inactive',
+  active: 'active',
+  pendingSettlement: 'pending_settlement',
+  settled: 'settled',
+} as const;
+
 /** Fully-qualified Move call targets (the only entrypoints this client builds). */
 export const TARGET = {
   createManager: `${PREDICT_PACKAGE}::predict::create_manager`,

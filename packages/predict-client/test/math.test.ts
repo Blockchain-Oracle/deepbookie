@@ -34,6 +34,16 @@ describe('upProbability', () => {
     const otm = upProbability(svi, forward, Math.round(forward * 1.02));
     expect(otm).toBeLessThan(atm);
   });
+
+  it('is a steep but smooth digital smile — locks the ×1e9 scaling', () => {
+    // Verified against on-chain get_trade_amounts (scripts/verify-svi.ts): client P(up)
+    // tracks the ask within ~1pt. A scale error would flatten this to ~0.5 everywhere.
+    const up = upProbability(svi, forward, Math.round(forward * 1.003));
+    const down = upProbability(svi, forward, Math.round(forward * 0.997));
+    expect(up).toBeLessThan(0.3);
+    expect(down).toBeGreaterThan(0.7);
+    expect(down - up).toBeGreaterThan(0.5);
+  });
 });
 
 describe('buildCurve', () => {

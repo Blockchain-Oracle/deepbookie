@@ -68,6 +68,9 @@ function callBinary(tx: Transaction, target: string, p: BinaryParams): void {
 }
 
 function callRange(tx: Transaction, target: string, p: RangeParams): void {
+  if (Number(p.lowerStrike) >= Number(p.higherStrike)) {
+    throw new RangeError('range bet requires lowerStrike < higherStrike');
+  }
   const key = rangeKey(tx, p.oracleId, p.expiry, p.lowerStrike, p.higherStrike);
   tx.moveCall({
     target,

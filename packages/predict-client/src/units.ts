@@ -9,6 +9,7 @@ export function fromScaled(value: number | bigint): number {
 
 /** human number -> ×1e9 fixed-point bigint. */
 export function toScaled(value: number): bigint {
+  if (!Number.isFinite(value) || value < 0) throw new RangeError(`toScaled: invalid value ${value}`);
   return BigInt(Math.round(value * FLOAT_SCALING));
 }
 
@@ -19,5 +20,6 @@ export function fromDusdc(value: number | bigint): number {
 
 /** human dollars -> dUSDC base units (6dp) bigint. */
 export function toDusdc(value: number): bigint {
+  if (!Number.isFinite(value) || value < 0) throw new RangeError(`toDusdc: invalid value ${value}`);
   return BigInt(Math.round(value * DUSDC_UNIT));
 }
