@@ -7,7 +7,8 @@ import { SPOT_MANAGER_KEY } from '../spot/constants.js';
 const swapInput = z.object({
   poolKey: z.string(),
   amount: z.number().positive(),
-  minOut: z.number().nonnegative().default(0),
+  // Required slippage floor (minimum output) — get the expected output from spot_swap_quote first.
+  minOut: z.number().nonnegative(),
   // DEEP fee budget; leave 0 on whitelisted pools (fees taken from the input coin).
   deepAmount: z.number().nonnegative().default(0),
 });
@@ -101,7 +102,8 @@ const swapQuoteForBase = defineWrite({
 
 const placeLimitOrder = defineWrite({
   name: 'spot_place_limit_order',
-  description: 'Place a limit order (maker) on a spot pool via your balance manager.',
+  description:
+    'Place a limit order (maker) on a spot pool via your balance manager. Fees pay with DEEP by default — on a whitelisted pool set payWithDeep:false to pay fees from the traded coin (no DEEP needed).',
   surface: 'spot',
   inputSchema: orderBase.extend({ price: z.number().positive() }),
   build: async (a, ctx) => {
@@ -122,7 +124,8 @@ const placeLimitOrder = defineWrite({
 
 const placeMarketOrder = defineWrite({
   name: 'spot_place_market_order',
-  description: 'Place a market order (taker) on a spot pool via your balance manager.',
+  description:
+    'Place a market order (taker) on a spot pool via your balance manager. Fees pay with DEEP by default — on a whitelisted pool set payWithDeep:false to pay fees from the traded coin (no DEEP needed).',
   surface: 'spot',
   inputSchema: orderBase,
   build: async (a, ctx) => {
@@ -166,6 +169,108 @@ const cancelAllOrders = defineWrite({
   },
 });
 
+const modifyOrder = defineWrite({
+  name: 'spot_modify_order',
+  description: 'Reduce the quantity of one of your open orders (new quantity must be below the original).',
+  surface: 'spot',
+  inputSchema: z.object({ poolKey: z.string(), orderId: z.string(), newQuantity: z.number().positive() }),
+  build: async (a, ctx) => {
+    requireBalanceManager(ctx);
+    const tx = new Transaction();
+    spotClient(ctx).deepBook.modifyOrder(a.poolKey, SPOT_MANAGER_KEY, a.orderId, a.newQuantity)(tx);
+    return tx;
+  },
+});
+
+const withdrawSettled = defineWrite({
+  name: 'spot_withdraw_settled_amounts',
+  description: 'Sweep settled proceeds from filled orders in a pool back into your balance manager.',
+  surface: 'spot',
+  inputSchema: z.object({ poolKey: z.string() }),
+  build: async (a, ctx) => {
+    requireBalanceManager(ctx);
+    const tx = new Transaction();
+    spotClient(ctx).deepBook.withdrawSettledAmounts(a.poolKey, SPOT_MANAGER_KEY)(tx);
+    return tx;
+  },
+});
+
+const stake = defineWrite({
+  name: 'spot_stake',
+  description: 'Stake DEEP into a pool for lower trading fees + governance voting power.',
+  surface: 'spot',
+  inputSchema: z.object({ poolKey: z.string(), amount: z.number().positive() }),
+  build: async (a, ctx) => {
+    requireBalanceManager(ctx);
+    const tx = new Transaction();
+    spotClient(ctx).governance.stake(a.poolKey, SPOT_MANAGER_KEY, a.amount)(tx);
+    return tx;
+  },
+});
+
+const unstake = defineWrite({
+  name: 'spot_unstake',
+  description: 'Unstake your DEEP from a pool.',
+  surface: 'spot',
+  inputSchema: z.object({ poolKey: z.string() }),
+  build: async (a, ctx) => {
+    requireBalanceManager(ctx);
+    const tx = new Transaction();
+    spotClient(ctx).governance.unstake(a.poolKey, SPOT_MANAGER_KEY)(tx);
+    return tx;
+  },
+});
+
+const submitProposal = defineWrite({
+  name: 'spot_submit_proposal',
+  description: 'Submit a governance proposal for a pool (proposed taker/maker fee + stake required).',
+  surface: 'spot',
+  inputSchema: z.object({
+    poolKey: z.string(),
+    takerFee: z.number().nonnegative(),
+    makerFee: z.number().nonnegative(),
+    stakeRequired: z.number().nonnegative(),
+  }),
+  build: async (a, ctx) => {
+    requireBalanceManager(ctx);
+    const tx = new Transaction();
+    spotClient(ctx).governance.submitProposal({
+      poolKey: a.poolKey,
+      balanceManagerKey: SPOT_MANAGER_KEY,
+      takerFee: a.takerFee,
+      makerFee: a.makerFee,
+      stakeRequired: a.stakeRequired,
+    })(tx);
+    return tx;
+  },
+});
+
+const vote = defineWrite({
+  name: 'spot_vote',
+  description: 'Vote your staked DEEP on a governance proposal for a pool.',
+  surface: 'spot',
+  inputSchema: z.object({ poolKey: z.string(), proposalId: z.string() }),
+  build: async (a, ctx) => {
+    requireBalanceManager(ctx);
+    const tx = new Transaction();
+    spotClient(ctx).governance.vote(a.poolKey, SPOT_MANAGER_KEY, a.proposalId)(tx);
+    return tx;
+  },
+});
+
+const claimRebates = defineWrite({
+  name: 'spot_claim_rebates',
+  description: 'Claim your accrued maker/taker fee rebates in a pool.',
+  surface: 'spot',
+  inputSchema: z.object({ poolKey: z.string() }),
+  build: async (a, ctx) => {
+    requireBalanceManager(ctx);
+    const tx = new Transaction();
+    spotClient(ctx).deepBook.claimRebates(a.poolKey, SPOT_MANAGER_KEY)(tx);
+    return tx;
+  },
+});
+
 export const spotWriteTools = [
   createBalanceManager,
   deposit,
@@ -174,6 +279,13 @@ export const spotWriteTools = [
   swapQuoteForBase,
   placeLimitOrder,
   placeMarketOrder,
+  modifyOrder,
   cancelOrder,
   cancelAllOrders,
+  withdrawSettled,
+  stake,
+  unstake,
+  submitProposal,
+  vote,
+  claimRebates,
 ];

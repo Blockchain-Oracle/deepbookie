@@ -128,20 +128,68 @@ const openOrders = defineRead({
   read: async (a, ctx) => {
     requireBalanceManager(ctx);
     const db = spotClient(ctx);
-    const ids = await db.accountOpenOrders(a.poolKey, SPOT_MANAGER_KEY);
-    const orders = await Promise.all(ids.map((id) => db.getOrderNormalized(a.poolKey, id)));
-    return orders
-      .filter((o): o is NonNullable<typeof o> => o !== null)
-      .map((o) => ({
+    // One call for all open orders; decode price/side locally (avoids an N+1 per-order round-trip).
+    const orders = await db.getAccountOrderDetails(a.poolKey, SPOT_MANAGER_KEY);
+    return (orders ?? []).map((o) => {
+      const decoded = db.decodeOrderId(BigInt(o.order_id));
+      return {
         poolKey: a.poolKey,
         orderId: o.order_id,
-        isBid: o.isBid,
-        price: o.normalized_price,
+        isBid: decoded.isBid,
+        price: decoded.price,
         quantity: o.quantity,
         filledQuantity: o.filled_quantity,
         status: o.status,
         expireTs: o.expire_timestamp,
-      }));
+      };
+    });
+  },
+});
+
+const canPlaceLimit = defineRead({
+  name: 'spot_can_place_limit_order',
+  description: 'Pre-flight: is this limit order valid (price/size/balance) before you sign it?',
+  surface: 'spot',
+  inputSchema: poolInput.extend({
+    price: z.number().positive(),
+    quantity: z.number().positive(),
+    isBid: z.boolean(),
+    payWithDeep: z.boolean().optional(),
+  }),
+  read: async (a, ctx) => {
+    requireBalanceManager(ctx);
+    const canPlace = await spotClient(ctx).canPlaceLimitOrder({
+      poolKey: a.poolKey,
+      balanceManagerKey: SPOT_MANAGER_KEY,
+      price: a.price,
+      quantity: a.quantity,
+      isBid: a.isBid,
+      payWithDeep: a.payWithDeep ?? true,
+      expireTimestamp: Number.MAX_SAFE_INTEGER, // pre-flight check assumes a non-expiring (GTC) order
+    });
+    return { poolKey: a.poolKey, canPlace };
+  },
+});
+
+const canPlaceMarket = defineRead({
+  name: 'spot_can_place_market_order',
+  description: 'Pre-flight: is this market order valid (size/balance) before you sign it?',
+  surface: 'spot',
+  inputSchema: poolInput.extend({
+    quantity: z.number().positive(),
+    isBid: z.boolean(),
+    payWithDeep: z.boolean().optional(),
+  }),
+  read: async (a, ctx) => {
+    requireBalanceManager(ctx);
+    const canPlace = await spotClient(ctx).canPlaceMarketOrder({
+      poolKey: a.poolKey,
+      balanceManagerKey: SPOT_MANAGER_KEY,
+      quantity: a.quantity,
+      isBid: a.isBid,
+      payWithDeep: a.payWithDeep ?? true,
+    });
+    return { poolKey: a.poolKey, canPlace };
   },
 });
 
@@ -154,4 +202,6 @@ export const spotReadTools = [
   balance,
   account,
   openOrders,
+  canPlaceLimit,
+  canPlaceMarket,
 ];

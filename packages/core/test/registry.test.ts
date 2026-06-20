@@ -2,16 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { allTools } from '../src/registry.js';
 
 describe('registry', () => {
-  it('exposes Predict + Spot tools (18 read / 17 write) with unique names', () => {
-    expect(allTools).toHaveLength(35);
-    expect(allTools.filter((t) => t.kind === 'read')).toHaveLength(18);
-    expect(allTools.filter((t) => t.kind === 'write')).toHaveLength(17);
-    expect(new Set(allTools.map((t) => t.name)).size).toBe(35);
+  it('exposes Predict + Spot tools (20 read / 24 write) with unique names', () => {
+    expect(allTools).toHaveLength(44);
+    expect(allTools.filter((t) => t.kind === 'read')).toHaveLength(20);
+    expect(allTools.filter((t) => t.kind === 'write')).toHaveLength(24);
+    expect(new Set(allTools.map((t) => t.name)).size).toBe(44);
   });
 
-  it('has both predict and spot surfaces (18 predict + 17 spot)', () => {
+  it('has both predict and spot surfaces (18 predict + 26 spot)', () => {
     expect(allTools.filter((t) => t.surface === 'predict')).toHaveLength(18);
-    expect(allTools.filter((t) => t.surface === 'spot')).toHaveLength(17);
+    expect(allTools.filter((t) => t.surface === 'spot')).toHaveLength(26);
     expect(allTools.every((t) => t.surface === 'predict' || t.surface === 'spot')).toBe(true);
   });
 
