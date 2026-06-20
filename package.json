@@ -17,6 +17,7 @@
     "derisk": "tsx scripts/derisk-predict-mint.ts"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@mysten/sui": "^2.19.0",
     "@eslint/js": "^9.16.0",
     "@types/node": "^22.10.0",

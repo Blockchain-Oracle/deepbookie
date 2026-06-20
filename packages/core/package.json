@@ -1,0 +1,27 @@
+{
+  "name": "@deepbookie/core",
+  "version": "0.0.1",
+  "description": "Neutral, transport-free tool registry for DeepBookie — reads execute, writes return unsigned Sui transactions.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@deepbookie/predict-client": "workspace:*",
+    "@mysten/sui": "^2.19.0",
+    "zod": "^4.0.0"
+  }
+}

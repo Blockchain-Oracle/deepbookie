@@ -147,15 +147,16 @@ export function buildRedeemRange(p: RangeParams): Transaction {
   return tx;
 }
 
-/** supply — deposit a dUSDC coin into the vault, receive PLP (transferred to `recipient`). */
-export function buildSupply(coinId: string, recipient: string): Transaction {
+/** supply — split `amount` dUSDC from a wallet coin into the vault, receive PLP (sent to `recipient`). */
+export function buildSupply(p: { fundCoinId: string; amount: Num; recipient: string }): Transaction {
   const tx = new Transaction();
+  const [coin] = tx.splitCoins(tx.object(p.fundCoinId), [tx.pure.u64(p.amount)]);
   const lp = tx.moveCall({
     target: TARGET.supply,
     typeArguments: [DUSDC_TYPE],
-    arguments: [tx.object(PREDICT_OBJECT), tx.object(coinId), tx.object(CLOCK_OBJECT)],
+    arguments: [tx.object(PREDICT_OBJECT), coin, tx.object(CLOCK_OBJECT)],
   });
-  tx.transferObjects([lp], tx.pure.address(recipient));
+  tx.transferObjects([lp], tx.pure.address(p.recipient));
   return tx;
 }
 

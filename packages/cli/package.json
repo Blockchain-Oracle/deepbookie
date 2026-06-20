@@ -1,0 +1,22 @@
+{
+  "name": "@deepbookie/cli",
+  "version": "0.0.1",
+  "description": "DeepBookie CLI — trade DeepBook Predict from the terminal; the tool builds the tx, your local key signs it.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "deepbookie": "./dist/cli.js"
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@deepbookie/core": "workspace:*",
+    "@deepbookie/node": "workspace:*",
+    "@deepbookie/predict-client": "workspace:*",
+    "@mysten/sui": "^2.19.0",
+    "commander": "^14.0.0"
+  }
+}

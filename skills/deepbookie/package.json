@@ -1,0 +1,6 @@
+{
+  "name": "@deepbookie/skill",
+  "version": "0.0.1",
+  "description": "DeepBookie agent skill — the SKILL.md playbook for trading DeepBook Predict.",
+  "private": true
+}

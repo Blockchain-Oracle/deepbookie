@@ -8,4 +8,5 @@ export * from './types.js';
 export * from './units.js';
 export * from './math.js';
 export * from './indexer.js';
+export * from './quotes.js';
 export * from './ptb.js';
