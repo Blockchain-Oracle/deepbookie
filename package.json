@@ -14,7 +14,8 @@
     "test": "pnpm -r --if-present run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "derisk": "tsx scripts/derisk-predict-mint.ts"
+    "derisk": "tsx scripts/derisk-predict-mint.ts",
+    "derisk:spot": "pnpm --filter @deepbookie/core build && tsx scripts/derisk-spot.ts"
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

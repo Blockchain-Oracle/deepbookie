@@ -9,10 +9,12 @@ export interface ToolContext {
   sender?: string;
   /** The user's PredictManager object id — most writes/reads about positions need it. */
   managerId?: string;
+  /** The user's DeepBook V3 BalanceManager object id — spot writes/reads about the account need it. */
+  balanceManagerId?: string;
 }
 
 export function createContext(
-  opts: { network?: Network; sender?: string; managerId?: string } = {},
+  opts: { network?: Network; sender?: string; managerId?: string; balanceManagerId?: string } = {},
 ): ToolContext {
   const network = opts.network ?? 'testnet';
   // Honesty guard: the Predict indexer + deployment are testnet-only, so a non-testnet context
@@ -25,5 +27,6 @@ export function createContext(
     network,
     sender: opts.sender,
     managerId: opts.managerId,
+    balanceManagerId: opts.balanceManagerId,
   };
 }
