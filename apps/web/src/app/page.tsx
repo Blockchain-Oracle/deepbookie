@@ -1,28 +1,28 @@
-import { BrandMark } from '@/components/ui/BrandMark';
+import { Hero } from '@/components/landing/Hero';
+import { DemoPhone } from '@/components/landing/DemoPhone';
+import { HowItWorks } from '@/components/landing/HowItWorks';
+import { TrustBand } from '@/components/landing/TrustBand';
+import { OddsGlimpse } from '@/components/landing/OddsGlimpse';
+import { OpenProtocol } from '@/components/landing/OpenProtocol';
+import { CtaFooter } from '@/components/landing/CtaFooter';
 
-/** Placeholder splash — the real landing ships in Phase 7. Confirms tokens + fonts render. */
+/**
+ * The landing page (SSR, provider-free — no wallet hooks). Sections are built to the designer's
+ * Landing.dc.html; the hero pairs the text column with the scripted DemoPhone (the one animated,
+ * chain-free piece). Order mirrors the design: hero → how → trust → odds → protocol → cta.
+ */
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
-      <div className="mb-6 flex items-center gap-3">
-        <BrandMark size={40} />
-        <span className="text-2xl font-bold tracking-[-0.03em]">DeepBookie</span>
-        <span className="rounded-card-in border border-line-strong px-2 py-1 font-mono text-[10px] tracking-[0.08em] text-muted">
-          SUI TESTNET
-        </span>
-      </div>
-      <h1 className="max-w-2xl text-5xl font-extrabold leading-[1.02] tracking-[-0.04em]">
-        The agent proposes. You sign.
-        <br />
-        <span className="text-green">It holds no key.</span>
-      </h1>
-      <p className="mt-5 max-w-md text-lg text-ink-soft">
-        Talk to an AI that prices short-term price bets off a live volatility model — you authorize
-        every one yourself.
-      </p>
-      <p className="mt-10 font-mono text-xs uppercase tracking-[0.1em] text-faint">
-        Foundation ready · building the app
-      </p>
+    <main className="min-h-screen bg-paper text-ink">
+      <section className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-12 gap-y-14 px-6 py-16 lg:py-24">
+        <Hero />
+        <DemoPhone />
+      </section>
+      <HowItWorks />
+      <TrustBand />
+      <OddsGlimpse />
+      <OpenProtocol />
+      <CtaFooter />
     </main>
   );
 }
