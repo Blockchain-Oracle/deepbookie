@@ -1,0 +1,25 @@
+{
+  "name": "@deepbookie/node",
+  "version": "0.0.1",
+  "description": "DeepBookie Node-side runtime: Pino logger (stderr) + auto-provisioned local-key signer for the MCP and CLI.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mysten/sui": "^2.19.0",
+    "pino": "^9.5.0"
+  }
+}
