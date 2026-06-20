@@ -6,17 +6,21 @@ import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } fro
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { Composer } from './Composer';
 import { MessageList } from './MessageList';
+import { usePositions } from '@/lib/hooks/usePositions';
 import type { AddToolResult } from '@/components/widgets/ReceiptController';
 
 export function Chat() {
   const account = useCurrentAccount();
   const [input, setInput] = useState('');
+  // The wallet's manager, resolved + cached client-side (React Query). Passed to the route so the
+  // server doesn't re-resolve via the lagging indexer on every request (which caused balance to
+  // flip between "here it is" and "no account"). Auth still never trusts this — writes are signed.
+  const managerId = usePositions(account?.address).data?.managerId ?? null;
 
-  // Recreated only when the connected address changes; carries walletAddress to the route
-  // (quote sender only — never trusted for auth, per §5.1).
+  // Recreated when the address or resolved manager changes; carries both to the route.
   const transport = useMemo(
-    () => new DefaultChatTransport({ api: '/api/chat', body: { walletAddress: account?.address } }),
-    [account?.address],
+    () => new DefaultChatTransport({ api: '/api/chat', body: { walletAddress: account?.address, managerId } }),
+    [account?.address, managerId],
   );
 
   const { messages, sendMessage, status, addToolResult } = useChat({

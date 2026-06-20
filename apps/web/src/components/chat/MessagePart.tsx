@@ -87,6 +87,28 @@ export function MessagePart({
   }
 
   if (tp.state === 'output-error') {
+    // No PredictManager yet → a friendly "open your account" card, not a raw error.
+    const noManager =
+      (name === 'get_portfolio' || name === 'get_positions') &&
+      (tp.errorText ?? '').toLowerCase().includes('manager');
+    if (noManager) {
+      return (
+        <Card className="p-4">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.13em] text-faint">Your account</div>
+          <div className="mt-1 text-[15px] font-semibold">No trading account yet</div>
+          <p className="mt-1 text-[13px] leading-snug text-muted">
+            Open a PredictManager — you sign it in your wallet — to place bets and see your balance.
+          </p>
+          <button
+            type="button"
+            onClick={() => onAction('Open my trading account.')}
+            className="mt-3 inline-flex rounded-card-in bg-ink px-4 py-2 text-[13px] font-semibold text-paper transition hover:opacity-90"
+          >
+            Open account →
+          </button>
+        </Card>
+      );
+    }
     return <Card className="border-[#E6C9BE] p-3 text-xs text-clay">Couldn’t load {name.replace(/_/g, ' ')}.</Card>;
   }
   const ready = tp.state === 'output-available';

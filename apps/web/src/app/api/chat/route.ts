@@ -18,19 +18,21 @@ const MAX_STEPS = 8;
 export async function POST(req: Request) {
   let messages: UIMessage[];
   let walletAddress: string | undefined;
+  let clientManagerId: string | undefined;
   try {
-    const body = (await req.json()) as { messages: UIMessage[]; walletAddress?: string };
+    const body = (await req.json()) as { messages: UIMessage[]; walletAddress?: string; managerId?: string };
     messages = body.messages;
     walletAddress = body.walletAddress;
+    clientManagerId = body.managerId;
   } catch {
     return new Response('bad request', { status: 400 });
   }
 
-  // Resolve the connected wallet's shared PredictManager so portfolio/positions "just work" — the
-  // manager is auto-derived (owner→manager via the indexer), never asked of the user. Best-effort.
-  const managerId = walletAddress
-    ? await resolveManagerByOwner(walletAddress).catch(() => null)
-    : null;
+  // Prefer the client-resolved manager (React-Query-cached, stable). Only hit the indexer when the
+  // client hasn't resolved one yet — avoids the per-request lag flip-flop ("balance" vs "no account").
+  const managerId =
+    clientManagerId ??
+    (walletAddress ? await resolveManagerByOwner(walletAddress).catch(() => null) : null);
 
   // Tell the agent the account status it can't otherwise see (the managerId lives in the tool ctx,
   // not the conversation) — so it goes straight to the trade for existing users and only proposes
