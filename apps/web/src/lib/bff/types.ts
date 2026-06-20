@@ -96,3 +96,20 @@ export interface AccountView {
   portfolio: Portfolio | null;
   positions: Positions | null;
 }
+
+export interface Quote {
+  requestedStrikeUsd: number;
+  strikeUsd: number;
+  quantityUsd: number;
+  mintCostUsd: number;
+  redeemPayoutUsd: number;
+  askProbability: number;
+}
+
+export interface RangeQuote {
+  lowerStrikeUsd: number;
+  higherStrikeUsd: number;
+  quantityUsd: number;
+  mintCostUsd: number;
+  redeemPayoutUsd: number;
+}

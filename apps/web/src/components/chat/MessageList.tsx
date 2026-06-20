@@ -4,8 +4,19 @@ import { useEffect, useRef } from 'react';
 import type { UIMessage } from 'ai';
 import { BrandMark } from '@/components/ui/BrandMark';
 import { MessagePart } from './MessagePart';
+import type { AddToolResult } from '@/components/widgets/ReceiptController';
 
-export function MessageList({ messages, status }: { messages: UIMessage[]; status: string }) {
+export function MessageList({
+  messages,
+  status,
+  addToolResult,
+  onAction,
+}: {
+  messages: UIMessage[];
+  status: string;
+  addToolResult: AddToolResult;
+  onAction: (text: string) => void;
+}) {
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -27,7 +38,13 @@ export function MessageList({ messages, status }: { messages: UIMessage[]; statu
         {messages.map((m) => (
           <div key={m.id} className="flex flex-col gap-2">
             {m.parts.map((part, i) => (
-              <MessagePart key={`${m.id}-${i}`} role={m.role} part={part} />
+              <MessagePart
+                key={`${m.id}-${i}`}
+                role={m.role}
+                part={part}
+                addToolResult={addToolResult}
+                onAction={onAction}
+              />
             ))}
           </div>
         ))}

@@ -6,13 +6,21 @@ import { formatUsd, shortenDigest } from '@/lib/format';
 
 export type ReceiptState = 'loading' | 'proposed' | 'signing' | 'signed' | 'failed' | 'cancelled';
 
+export interface ReceiptLine {
+  label: string;
+  value: string;
+  strong?: boolean;
+  accent?: boolean;
+}
+
 export interface SignReceiptProps {
   state: ReceiptState;
   title: string; // e.g. "BTC above $63,000"
-  direction: Direction;
-  quantity: number;
-  costUsd: number;
-  maxPayoutUsd: number;
+  direction?: Direction; // omit for non-bet actions (supply, create_manager)
+  quantity?: number;
+  costUsd?: number;
+  maxPayoutUsd?: number;
+  lines?: ReceiptLine[]; // override the default bet rows (for non-bet actions)
   docNumber: string; // e.g. DB·7F3A·0112
   settleNote?: string; // e.g. "Binary · settles in 27 minutes"
   signedAt?: string;
@@ -83,7 +91,7 @@ export function SignReceipt(p: SignReceiptProps) {
           <span className="rounded-pill border border-line-strong px-2 py-0.5 font-mono text-[9.5px] text-[#a8a298]">CANCELLED</span>
         </div>
         <div className="flex items-baseline gap-2">
-          <DirectionBadge direction={p.direction} muted />
+          {p.direction && <DirectionBadge direction={p.direction} muted />}
           <span className="text-base font-bold text-[#7d7870] line-through">{p.title}</span>
         </div>
         <div className="mt-2 text-xs text-[#a8a298]">You declined this proposal — nothing was signed.</div>
@@ -112,13 +120,26 @@ export function SignReceipt(p: SignReceiptProps) {
 
       <div className={`px-4 pb-1 pt-3.5 ${p.state === 'signing' || p.state === 'failed' ? 'opacity-60' : ''}`}>
         <div className="mb-1.5 flex items-baseline gap-2">
-          <DirectionBadge direction={p.direction} />
+          {p.direction && <DirectionBadge direction={p.direction} />}
           <span className="text-[17px] font-bold tracking-[-0.02em]">{p.title}</span>
         </div>
         {p.settleNote && <div className="mb-2 text-xs text-muted">{p.settleNote}</div>}
-        <Row label={p.state === 'signed' ? 'Quantity · paid' : 'Quantity'} value={p.state === 'signed' ? `${formatUsd(p.quantity)} · ${formatUsd(p.costUsd)}` : `${formatUsd(p.quantity)} contracts`} />
-        {p.state !== 'signed' && <Row label="Cost + fee" value={`${formatUsd(p.costUsd)} dUSDC`} />}
-        <Row label="Max payout if right" value={`${formatUsd(p.maxPayoutUsd)} dUSDC`} strong accent />
+        {p.lines ? (
+          p.lines.map((r, i) => <Row key={i} label={r.label} value={r.value} strong={r.strong} accent={r.accent} />)
+        ) : (
+          <>
+            <Row
+              label={p.state === 'signed' ? 'Quantity · paid' : 'Quantity'}
+              value={
+                p.state === 'signed'
+                  ? `${formatUsd(p.quantity ?? 0)} · ${formatUsd(p.costUsd ?? 0)}`
+                  : `${formatUsd(p.quantity ?? 0)} contracts`
+              }
+            />
+            {p.state !== 'signed' && <Row label="Cost + fee" value={`${formatUsd(p.costUsd ?? 0)} dUSDC`} />}
+            <Row label="Max payout if right" value={`${formatUsd(p.maxPayoutUsd ?? 0)} dUSDC`} strong accent />
+          </>
+        )}
       </div>
 
       {p.state === 'signing' && (
