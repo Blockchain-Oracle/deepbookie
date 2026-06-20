@@ -5,6 +5,10 @@ import { NETWORK } from '@/lib/constants';
 // redeem_permissionless is a keeper tool, not a user action — exclude it from the agent.
 const EXCLUDED = new Set(['redeem_permissionless']);
 
+// Tools whose managerId must come from the connected wallet, never the model. We force the resolved
+// id (or undefined) so a hallucinated "unknown" can't override it — the #1 "can't read balance" bug.
+const MANAGER_SCOPED = new Set(['get_portfolio', 'get_positions']);
+
 /**
  * Adapt the shared core registry into AI SDK tools (built per request, never module-scoped, so no
  * cross-user state leaks). Read tools get an `execute` (run server-side, streamed back as widgets);
@@ -12,8 +16,8 @@ const EXCLUDED = new Set(['redeem_permissionless']);
  * signs it, and submits the result. `walletAddress` (from the request body) is used only as the
  * devInspect quote sender — never for authorization.
  */
-export function buildAiTools(opts: { walletAddress?: string }): ToolSet {
-  const ctx = createContext({ network: NETWORK, sender: opts.walletAddress });
+export function buildAiTools(opts: { walletAddress?: string; managerId?: string }): ToolSet {
+  const ctx = createContext({ network: NETWORK, sender: opts.walletAddress, managerId: opts.managerId });
   const api = getToolsForAdapter(allTools, ctx);
   const tools: ToolSet = {};
 
@@ -24,7 +28,12 @@ export function buildAiTools(opts: { walletAddress?: string }): ToolSet {
         ? tool({
             description: t.description,
             inputSchema: t.inputSchema,
-            execute: (args) => api.read(t.name, args),
+            execute: (args) =>
+              api.read(
+                t.name,
+                // Override any model-supplied managerId with the wallet-resolved one (or undefined).
+                MANAGER_SCOPED.has(t.name) ? { ...args, managerId: opts.managerId } : args,
+              ),
           })
         : tool({
             description: t.description,

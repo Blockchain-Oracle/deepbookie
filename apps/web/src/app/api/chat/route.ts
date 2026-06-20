@@ -2,6 +2,7 @@ import { convertToModelMessages, stepCountIs, streamText, type UIMessage } from 
 import { getModel, isAnthropic } from '@/lib/ai/model';
 import { buildAiTools } from '@/lib/ai/tools';
 import { SYSTEM_PROMPT } from '@/lib/ai/prompt';
+import { resolveManagerByOwner } from '@/lib/bff/positions';
 import { logger } from '@/lib/logger.server';
 
 export const runtime = 'nodejs';
@@ -25,11 +26,17 @@ export async function POST(req: Request) {
     return new Response('bad request', { status: 400 });
   }
 
+  // Resolve the connected wallet's shared PredictManager so portfolio/positions "just work" — the
+  // manager is auto-derived (owner→manager via the indexer), never asked of the user. Best-effort.
+  const managerId = walletAddress
+    ? await resolveManagerByOwner(walletAddress).catch(() => null)
+    : null;
+
   const result = streamText({
     model: getModel(),
     system: SYSTEM_PROMPT,
     messages: await convertToModelMessages(messages),
-    tools: buildAiTools({ walletAddress }),
+    tools: buildAiTools({ walletAddress, managerId: managerId ?? undefined }),
     stopWhen: stepCountIs(MAX_STEPS),
     // One proposed trade per turn (the propose→sign UI signs one tx per step).
     providerOptions: isAnthropic()
