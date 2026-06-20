@@ -3,12 +3,20 @@ import { getModel, isAnthropic } from '@/lib/ai/model';
 import { buildAiTools } from '@/lib/ai/tools';
 import { SYSTEM_PROMPT } from '@/lib/ai/prompt';
 import { resolveManagerByOwner } from '@/lib/bff/positions';
+import { upsertChat } from '@/lib/db/chats';
 import { logger } from '@/lib/logger.server';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const MAX_STEPS = 8;
+
+/** First user line → session title (History list label). */
+function titleFrom(messages: UIMessage[]): string {
+  const firstUser = messages.find((m) => m.role === 'user');
+  const text = firstUser?.parts.find((p) => p.type === 'text');
+  return (text && 'text' in text ? text.text.trim() : '') || 'New chat';
+}
 
 /**
  * The genUI chat. All per-user state is request-scoped (§5.1 isolation): one streamText per
@@ -19,11 +27,18 @@ export async function POST(req: Request) {
   let messages: UIMessage[];
   let walletAddress: string | undefined;
   let clientManagerId: string | undefined;
+  let chatId: string | undefined;
   try {
-    const body = (await req.json()) as { messages: UIMessage[]; walletAddress?: string; managerId?: string };
+    const body = (await req.json()) as {
+      messages: UIMessage[];
+      walletAddress?: string;
+      managerId?: string;
+      chatId?: string;
+    };
     messages = body.messages;
     walletAddress = body.walletAddress;
     clientManagerId = body.managerId;
+    chatId = body.chatId;
   } catch {
     return new Response('bad request', { status: 400 });
   }
@@ -57,10 +72,20 @@ export async function POST(req: Request) {
   // Surface real tool/stream error messages (default masks to "An error occurred.") so the agent can
   // self-correct (e.g. pick another market) and the user sees an honest reason — and we log them.
   return result.toUIMessageStreamResponse({
+    originalMessages: messages,
     onError: (error) => {
       const msg = error instanceof Error ? error.message : String(error);
       logger.error({ err: msg }, 'chat tool error');
       return msg;
+    },
+    // Persist the full transcript per turn — History. Wallet-keyed; no-op without a DB or wallet.
+    onFinish: async ({ messages: finalMessages }) => {
+      if (!chatId || !walletAddress) return;
+      try {
+        await upsertChat({ id: chatId, wallet: walletAddress, title: titleFrom(messages), messages: finalMessages });
+      } catch (err) {
+        logger.error({ err: err instanceof Error ? err.message : String(err) }, 'chat persist failed');
+      }
     },
   });
 }

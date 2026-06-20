@@ -12,6 +12,8 @@ import type { AddToolResult } from '@/components/widgets/ReceiptController';
 export function Chat() {
   const account = useCurrentAccount();
   const [input, setInput] = useState('');
+  // Stable per session — keys this conversation in History (persisted server-side per turn).
+  const [chatId] = useState(() => crypto.randomUUID());
   // The wallet's manager, resolved + cached client-side (React Query). Passed to the route so the
   // server doesn't re-resolve via the lagging indexer on every request (which caused balance to
   // flip between "here it is" and "no account"). Auth still never trusts this — writes are signed.
@@ -19,8 +21,12 @@ export function Chat() {
 
   // Recreated when the address or resolved manager changes; carries both to the route.
   const transport = useMemo(
-    () => new DefaultChatTransport({ api: '/api/chat', body: { walletAddress: account?.address, managerId } }),
-    [account?.address, managerId],
+    () =>
+      new DefaultChatTransport({
+        api: '/api/chat',
+        body: { walletAddress: account?.address, managerId, chatId },
+      }),
+    [account?.address, managerId, chatId],
   );
 
   const { messages, sendMessage, status, addToolResult } = useChat({
