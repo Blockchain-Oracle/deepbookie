@@ -9,6 +9,7 @@ const ITEMS = [
   { href: '/positions', label: 'Positions' },
   { href: '/vault', label: 'Vault' },
   { href: '/history', label: 'History' },
+  { href: '/docs', label: 'Docs' },
 ];
 
 export function DesktopNav() {
