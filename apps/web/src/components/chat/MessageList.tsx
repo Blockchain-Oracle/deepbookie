@@ -6,11 +6,12 @@ import { BrandMark } from '@/components/ui/BrandMark';
 import { MessagePart } from './MessagePart';
 import type { AddToolResult } from '@/components/widgets/ReceiptController';
 
-const SUGGESTIONS = [
-  'What are the live BTC odds?',
-  'What’s my balance?',
-  'Walk me through placing a bet',
-  'How does the vault work?',
+// Category carousel for the chat home screen — each card sends its starter prompt on click.
+const CATEGORIES = [
+  { title: 'Markets & odds', blurb: 'Live BTC markets and the probability curve.', prompt: 'What are the live BTC odds right now?', dot: 'bg-green' },
+  { title: 'Place a bet', blurb: 'Price and propose an UP/DOWN bet you sign.', prompt: 'Walk me through a $1 UP bet on BTC.', dot: 'bg-ink' },
+  { title: 'Your account', blurb: 'Balance, open positions, and PnL.', prompt: 'What’s my balance?', dot: 'bg-wallet' },
+  { title: 'Vault & liquidity', blurb: 'Provide liquidity and earn the maker spread.', prompt: 'How does the vault work?', dot: 'bg-mint' },
 ];
 
 /** Livelier welcome: gentle staggered entrance + clickable starter prompts (they send on click). */
@@ -26,18 +27,25 @@ function EmptyState({ onAction }: { onAction: (text: string) => void }) {
       <div className="animate-fade-up max-w-xs text-sm text-muted [animation-delay:120ms]">
         I read the live vol surface, propose a bet, and you sign it yourself — I never hold a key.
       </div>
-      <div className="mt-2 flex flex-wrap justify-center gap-2">
-        {SUGGESTIONS.map((s, i) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => onAction(s)}
-            className="animate-fade-up rounded-pill border border-line-strong bg-card px-3.5 py-2 text-[13px] text-ink-soft transition hover:border-ink hover:text-ink"
-            style={{ animationDelay: `${180 + i * 70}ms` }}
-          >
-            {s}
-          </button>
-        ))}
+      <div className="mt-4 w-full">
+        <div className="flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {CATEGORIES.map((c, i) => (
+            <button
+              key={c.title}
+              type="button"
+              onClick={() => onAction(c.prompt)}
+              style={{ animationDelay: `${160 + i * 70}ms` }}
+              className="animate-fade-up group flex w-56 shrink-0 snap-start flex-col rounded-card border border-line bg-card p-4 text-left transition hover:border-ink hover:shadow-[var(--shadow-raised)]"
+            >
+              <span className={`size-2 rounded-[3px] ${c.dot}`} />
+              <span className="mt-2.5 text-[14px] font-bold">{c.title}</span>
+              <span className="mt-1 text-[12px] leading-snug text-muted">{c.blurb}</span>
+              <span className="mt-3 text-[12px] font-medium text-ink-soft transition group-hover:text-green">
+                “{c.prompt}” →
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import { PortfolioRollup } from '@/components/widgets/PortfolioRollup';
 import { PositionCard } from '@/components/widgets/PositionCard';
 import { ActivityTape } from '@/components/widgets/ActivityTape';
 import { Markdown } from '@/components/chat/Markdown';
+import { MessageList } from '@/components/chat/MessageList';
 import type { Market, MarketState, Odds, Portfolio, Position, Quote, RangeQuote, Vault } from '@/lib/bff/types';
 
 const MOCK_MD = `Here's the **BTC binary** settling at 2:30 PM.
@@ -130,6 +131,11 @@ export default function WidgetGallery() {
             {LONG_USER_MSG}
           </div>
         </Cell>
+      </div>
+
+      <Section title="Chat home — category carousel" />
+      <div className="h-[440px] w-full max-w-[720px] overflow-hidden rounded-card border border-line bg-canvas">
+        <MessageList messages={[]} status="ready" addToolResult={() => {}} onAction={() => {}} />
       </div>
     </main>
   );
