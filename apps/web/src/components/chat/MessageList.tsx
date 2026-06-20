@@ -36,8 +36,8 @@ export function MessageList({
   return (
     <div className="flex-1 overflow-y-auto px-4 py-6">
       <div className="mx-auto flex max-w-2xl flex-col gap-4">
-        {messages.map((m) => (
-          <div key={m.id} className="flex flex-col gap-2">
+        {messages.map((m, mi) => (
+          <div key={`${m.id}-${mi}`} className="flex flex-col gap-2">
             {m.parts.map((part, i) => (
               <MessagePart
                 key={`${m.id}-${i}`}
