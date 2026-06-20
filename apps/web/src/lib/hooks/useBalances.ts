@@ -1,10 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCurrentAccount, useCurrentClient } from '@mysten/dapp-kit-react';
-import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc';
 import { fromDusdc } from '@deepbookie/predict-client';
-import { DUSDC_TYPE, POLL } from '@/lib/constants';
-
-const SUI_DECIMALS = 9;
+import { DUSDC_TYPE, POLL, SUI_DECIMALS } from '@/lib/constants';
 
 /**
  * Live wallet balances — path ③ (direct chain, never cached). Polls so the chip never looks
@@ -12,7 +9,7 @@ const SUI_DECIMALS = 9;
  */
 export function useBalances() {
   const account = useCurrentAccount();
-  const client = useCurrentClient() as unknown as SuiJsonRpcClient;
+  const client = useCurrentClient();
   const owner = account?.address;
 
   const dusdc = useQuery({
@@ -20,7 +17,7 @@ export function useBalances() {
     enabled: !!owner,
     queryFn: async () => {
       const res = await client.getBalance({ owner: owner!, coinType: DUSDC_TYPE });
-      return fromDusdc(Number(res.totalBalance));
+      return fromDusdc(BigInt(res.totalBalance));
     },
     refetchInterval: POLL.balance,
     staleTime: 0,
@@ -31,7 +28,7 @@ export function useBalances() {
     enabled: !!owner,
     queryFn: async () => {
       const res = await client.getBalance({ owner: owner! });
-      return Number(res.totalBalance) / 10 ** SUI_DECIMALS;
+      return Number(BigInt(res.totalBalance)) / 10 ** SUI_DECIMALS;
     },
     refetchInterval: POLL.balance,
     staleTime: 0,

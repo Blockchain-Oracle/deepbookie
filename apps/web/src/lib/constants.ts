@@ -66,3 +66,8 @@ export const FAUCET_AMOUNT_USD = 10;
 export const FAUCET_MIN_BALANCE_USD = 1; // only grant dUSDC if recipient is below this
 export const FAUCET_MIN_SUI = 0.05; // request gas SUI if recipient is below this
 export const SUI_GAS_FAUCET_URL = 'https://faucet.testnet.sui.io/v2/gas';
+export const SUI_DECIMALS = 9;
+// Faucet abuse guard (in-memory; per-process — DB-backed grant log is the Phase 6 hardening).
+export const FAUCET_RATE_PER_IP = 5;
+export const FAUCET_RATE_GLOBAL = 40;
+export const FAUCET_RATE_WINDOW_MS = 60 * 60 * 1000;
