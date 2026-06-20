@@ -182,6 +182,66 @@ restores "exactly as signed").
 
 ---
 
+## 5.1 Conversational memory & per-user isolation
+
+**Within-session memory is automatic — it *is* the message thread, replayed every turn.** `useChat`
+holds the full `UIMessage[]` and `DefaultChatTransport` POSTs the **entire** array each turn; the
+route does `convertToModelMessages(messages)` → `streamText({ messages })`, so the model re-reads the
+whole conversation on every call. The flow "send $10 → *what address?* → `0x…` → done" works **by
+default** — the model sees its own earlier question + the original intent + the new value together.
+The broken "why are you giving me an address?" only happens if an app fails to resend history, which
+we never do. **No Redis/DB is needed for coherence** — the thread is the memory.
+
+- **Tool-pair integrity (load-bearing):** assistant tool-call parts and their tool-result parts stay
+  paired and in chronological order in the thread, so a half-finished sign (e.g. "minting 100 UP")
+  still knows what it was doing on the next turn. `convertToModelMessages` requires the pairing;
+  `validateUIMessages` enforces it on restore.
+- **Long-thread safety:** there is **no auto-truncation**. Before `streamText`, run `pruneMessages`
+  (v6 helper — strips old reasoning/tool chunks, by message count) and/or slice to last N + a
+  summarization pass once per-call `usage` nears the context window. Limits live in `constants.ts`.
+
+**Per-user isolation — guaranteed by construction, enforced by hard rules.** The backend is
+stateless: each request carries only that wallet's `messages`; `streamText`, the tool closures, and
+identity are all created **inside the handler** and die with the response. Two users = two
+independent invocations with zero shared state. The *only* way to cause catastrophic cross-user bleed
+(User B's pasted address surfacing in User A's chat) is to break one of these rules — so they are
+non-negotiable in `app/api/chat/route.ts`:
+
+1. **No per-user state in module/global scope** — never a module-level `let history` / mutable `ctx`
+   / "current user" singleton / reused `streamText` instance. A route module is shared across all
+   requests on a server instance → last-writer-wins bleed.
+2. **One `streamText` per request**, constructed in the handler.
+3. **Key every persisted row by wallet** (`chats.wallet_address`, …).
+4. **Scope every query by the authenticated wallet, never client id alone**
+   (`WHERE chat_id=$1 AND wallet_address=$authed`) — id-only load is an IDOR.
+5. **Ownership check before load/save/continue** (`chat.wallet_address === authed`, else 404).
+6. **Tools close over the request's wallet**, not a shared context object; write tools encode it as
+   the PTB sender.
+7. **Stamp `wallet_address` from the server session** on write; ignore any client-sent `wallet` for
+   authorization.
+
+The §3 split already minimizes exposure: balances and the exact pre-sign quote are read **direct from
+the browser** (path ③), so the most sensitive per-user data never transits shared server memory.
+
+**Wallet binding (auth tiers):** chatId namespaced by wallet + per-request ownership check is the
+pragmatic testnet bar — it stops accidental bleed and casual IDOR, and a forged identity can at worst
+read/seed a chat but **cannot move funds** (writes are user-signed PTBs). The real bar, required
+before any real-value deploy, is **signed-message auth**: server nonce → `signPersonalMessage` via
+dapp-kit → verify against the claimed address → short-lived session bound to it; identity then comes
+from the verified session, never the request body.
+
+**Deferred (see §16):**
+- **Cross-session "working memory"** (remembering "my friend's address" across days): **not needed** —
+  session-scoped is sufficient and lower-risk. If wanted later: a per-wallet
+  `user_facts(wallet_address, key, value)` table injected into the system prompt for that wallet
+  only, behind signed-message auth.
+- **Redis / resumable streams** (reconnecting to an *in-progress* generation after a mid-stream
+  disconnect): orthogonal to memory; our turns are short tool-driven generations, so the window is
+  tiny. Strictly additive later (Redis pub/sub + a `GET` stream route) with zero change to
+  persistence.
+
+---
+
 ## 6. Wallet + onboarding (new dapp-kit)
 
 - `createDAppKit({ networks:['testnet'], defaultNetwork:'testnet', createClient: (n)=> new
@@ -371,4 +431,7 @@ Review cadence per `CLAUDE.md`: `pr-review-toolkit` over each phase's diff + man
 ## 16. Out of scope (v1)
 
 Margin/maintainer/admin tools (testnet-blocked), spot swap-to-fund (dUSDC not spot-tradeable),
-non-wallet auth, multi-device transcript sync, WebSocket streaming (polling suffices).
+non-wallet auth, multi-device transcript sync, WebSocket streaming (polling suffices),
+**Redis-backed resumable in-progress-stream reconnect** and **cross-session working memory**
+(per-wallet remembered facts) — both deferred, rationale in §5.1. Signed-message wallet auth is a
+fast-follow required before any real-value deploy (§5.1).
