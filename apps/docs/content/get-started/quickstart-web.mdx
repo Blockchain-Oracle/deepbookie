@@ -1,0 +1,51 @@
+---
+title: "Quickstart: Web app"
+description: Connect a Sui wallet, get test dUSDC, ask for odds, and sign your first bet in under five minutes.
+---
+
+# Quickstart: Web app
+
+The web app is a **generative-UI chat** — you ask in plain English and the chat builds the transaction for you. Reading markets is free. When you place a bet, the chat builds an **unsigned** Sui transaction and you sign it in your own browser wallet. The agent never holds your keys.
+
+This takes under five minutes on Sui **testnet**.
+
+## How it flows
+
+1. **Connect** your wallet.
+2. **Get dUSDC** so you have money to bet with — or just start asking. The AI looks up your existing balance and PredictManager from your address on its own.
+3. **Ask** a question like *"What are the odds BTC is above $70k Friday?"*
+4. The AI **quotes** it — the exact cost and payout. No signature yet.
+5. The AI **builds a write** — an unsigned transaction for the bet.
+6. **You sign** it in your wallet.
+
+<Steps items={[
+  { title: 'Connect a Sui wallet', body: 'Tap Connect and approve in a testnet wallet (Slush or Sui Wallet). Set the wallet to testnet — the markets run there.' },
+  { title: 'Get test dUSDC', body: 'A funding strip appears if your balance is empty. Tap "Get dUSDC" for a small starter grant. Gas SUI is requested for you too.' },
+  { title: 'Ask for odds', body: 'Type "what are the odds BTC is above $70k Friday?" The AI returns the probability and the exact cost. Nothing is signed yet.' },
+  { title: 'Review the receipt', body: 'A receipt shows direction, quantity, cost plus fee, and the max payout if you are right. Nothing happens until you act.' },
+  { title: 'Sign', body: 'Tap "Authorize & sign" and confirm in your wallet. The receipt stamps SIGNED with the digest and a Suiscan link.' }
+]} />
+
+## Getting dUSDC
+
+dUSDC is test money — no real value. It is **operator-gated**: there is no public faucet, and you never mint coins yourself. The in-app **Get dUSDC** button sends a small starter grant from an operator wallet. It is rate-limited per session.
+
+If the grant is unavailable, the strip shows a **Request via form** link to the operator tally form as a fallback.
+
+<Callout type="warning">
+Wait for the grant to confirm on-chain before you ask about your balance or portfolio. Those reads fail until the dUSDC actually lands in your wallet.
+</Callout>
+
+<Callout type="note">
+The grant only fires when your balance is empty. Once you hold dUSDC, the strip stays out of your way.
+</Callout>
+
+## Why you sign, not the AI
+
+Reading markets, odds, and quotes never touches your wallet. Only placing a bet is a **write**, and a write is just an unsigned transaction. You sign it in your own browser wallet — the AI never signs and never holds your key.
+
+Decline the receipt and nothing moves. The proposal is marked cancelled.
+
+<Callout type="tip">
+Try it now: **"Bet $50 that BTC is above $70k Friday."** The AI quotes the cost, builds the receipt, and hands it to your wallet to sign.
+</Callout>

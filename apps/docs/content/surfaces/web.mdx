@@ -1,0 +1,86 @@
+---
+title: Web app
+description: The headline surface — a chat where the AI builds a trade for you and you sign it in your browser wallet.
+---
+
+# Web app
+
+The web app is DeepBookie's main surface. You chat in plain English. The AI reads
+the live market, prices your trade, and builds it for you. You sign each trade in
+your own browser wallet — the agent holds no key.
+
+It's a **generative-UI chat**: the AI's answers come back as live cards — a market
+view, an odds curve, a quote, a trade to sign — not just text.
+
+## Propose, sign, receipt
+
+Every trade follows the same two steps, in one chat turn:
+
+<Steps
+  items={[
+    { title: 'The AI prices it, then proposes', body: 'It first calls a read (like get_quote) so you see the exact cost, the implied probability, and the most you can win. Then it proposes the trade as a card you can sign.' },
+    { title: 'You sign', body: 'Review the card and tap Authorize. Your browser builds the unsigned transaction and your wallet pops up to sign it. On success the card shows the transaction digest and a Suiscan link.' },
+  ]}
+/>
+
+If you decline the wallet popup, the card shows a cancelled trade. No funds move
+until you sign.
+
+## Reads run on the server; writes are signed in your browser
+
+DeepBookie has 44 tools. They split into two kinds, and the web app handles each
+differently (wired in `apps/web/src/lib/ai/tools.ts`):
+
+- **Reads run on the server.** They fetch live data and stream it back as a
+  widget card — a market view, an odds curve, a quote. Catalog reads are cached.
+  Reads tied to your wallet (`get_portfolio`, `get_positions`, the `spot_*`
+  account reads) run against your wallet's data each time.
+- **Writes are built and signed in your browser.** A write tool has no server
+  handler, so the AI forwards it to the browser. There your browser builds the
+  unsigned transaction with the *same* core builder, your wallet signs it, and the
+  result (the digest) goes back into the chat.
+
+```ts
+// read  → runs on the server, streams a widget card
+tool({ description, inputSchema, execute: (args) => cachedAiRead(name, args) })
+
+// write → no execute; the browser builds + signs, then returns the result
+tool({ description, inputSchema })
+```
+
+<Callout type="note">
+  Your wallet address is sent to the server **only** to price quotes — never to
+  authorize a trade. If the AI guesses a `managerId`, it's thrown out and replaced
+  with the real one resolved from your connected wallet.
+</Callout>
+
+## Routes
+
+The app is wallet-gated. The landing page is open; everything else needs a
+connected testnet wallet.
+
+| Route | What it does |
+| --- | --- |
+| `/` | Landing page. Open before you connect. |
+| `/chat` | The main chat. You see a launcher first, then connect to start. |
+| `/markets` | Browse live Predict markets; filter and sort. |
+| `/markets/[id]` | One market — odds curve, recent trades, stats. |
+| `/positions` | Your open and settled bets, from your PredictManager. |
+| `/vault` | Liquidity vault stats; supply and withdraw. |
+| `/history` | Your past conversations, saved after every turn. |
+| `/tools` | The full **44-tool catalog**, grouped by family. |
+
+## Your history is saved
+
+Conversations are durable. Each chat turn saves the full transcript, keyed by your
+wallet — that's what powers `/history`.
+
+Signed trades get a second save for safety. The moment a trade resolves, the app
+POSTs the outcome (`signed`, `cancelled`, or `failed`, plus the digest) to
+`/api/chats/[id]/outcome`, separate from the chat stream. So a signed trade is
+recorded even if you close the tab or the connection drops.
+
+<Callout type="tip">
+  New here? Walk the full setup in the
+  [web quickstart](/get-started/quickstart-web).
+</Callout>

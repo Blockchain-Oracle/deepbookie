@@ -1,0 +1,34 @@
+---
+title: Architecture
+description: One tool registry, four surfaces, and one rule — the agent never signs.
+---
+
+# Architecture
+
+DeepBookie is built around one idea: **write each tool once, use it everywhere.**
+
+<ArchDiagram />
+
+## One registry
+
+Every tool lives in a single list in `@deepbookie/core` — the `allTools` array,
+44 tools in all. Each tool is either a **read** or a **write**:
+
+- **Reads** run on the server and return data — market odds, your balances, the order book.
+- **Writes** build an **unsigned** Sui transaction and stop there. The core never signs or sends anything.
+
+## Four surfaces
+
+The same registry powers the **web app**, the **MCP server**, the **CLI**, and
+the **Claude skill**. Each surface shows only the tools its users need, but they
+all call the exact same code.
+
+## Sign at the edge
+
+Signing always happens as close to you as possible — never in the cloud:
+
+- **Web** — your browser wallet signs.
+- **CLI and MCP** — a local key on your machine signs (handled by `@deepbookie/node`).
+
+The agent proposes; you sign. It never holds your key. More in
+[the sign-at-the-edge model](/concepts/sign-at-edge).

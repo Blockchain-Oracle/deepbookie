@@ -1,0 +1,61 @@
+---
+title: How a trade works
+description: From a plain-English ask to a signed bet in your wallet — how DeepBookie prices a trade, proposes it, and lets you sign.
+---
+
+# How a trade works
+
+You ask in words. DeepBookie does the pricing and builds the transaction. You
+sign. The agent holds no key, so a trade is never live until **your** wallet
+signs it. Here is the full loop, from question to confirmation.
+
+<Steps
+  items={[
+    { title: 'You ask in plain language', body: '“Bet $50 that BTC is above $70k Friday.” No order forms, no strike pickers. The AI turns your words into a Predict market: which price, which expiry, how much to stake.' },
+    { title: 'It prices the trade', body: 'DeepBookie reads the live market odds and computes the exact cost and payout. This is a free read — nothing is committed yet.' },
+    { title: 'It proposes a transaction', body: 'You get an unsigned Sui transaction with a plain receipt: stake, price, expiry, the odds, and what you stand to win. Review it before anything moves.' },
+    { title: 'You sign in your wallet', body: 'Approve in your browser wallet (web), or with a local key on your machine (CLI/MCP). Signing is the only step that touches the chain. The receipt updates the moment it lands.' },
+  ]}
+/>
+
+## See it live
+
+This is the exact widget the agent renders in chat. Ask for odds, and you get the
+probability curve across strikes:
+
+<PromptDemo prompt="What are the odds BTC closes above $70k Friday?" tool="get_odds" label="OddsCurveCard">
+  <OddsCurve />
+</PromptDemo>
+
+## Reading the receipt
+
+Every receipt has a colored bar across the top. The color tells you the trade's
+state at a glance:
+
+- **Ink** — *proposed*. Priced and ready, not signed yet.
+- **Green** — *signed*. The transaction landed on-chain.
+- **Dashed** — *the trade did not happen, and nothing left your wallet.* You see
+  this when:
+  1. You declined the transaction in your wallet, or
+  2. It failed on-chain (for example, not enough dUSDC to cover the bet), or
+  3. You asked for a new bet before signing the old one, so the old proposal was
+     replaced.
+
+A dashed receipt is safe to ignore. Just ask again, or sign the latest one. Here
+is the receipt in all six states, from loading to signed:
+
+<SignReceiptStates />
+
+<Callout type="note">
+  Steps 1–2 are free reads. Only step 4 — your signature — writes to the chain.
+</Callout>
+
+## Why it works this way
+
+The price is not a guess. DeepBookie computes it from a live volatility model —
+see [Pricing](/concepts/pricing) if you want the math.
+
+And the agent never holds your key. It builds the transaction; you sign it
+yourself, in your wallet or on your machine — never in the cloud. That split is
+the whole design. Read [Sign at the edge](/concepts/sign-at-edge) for how it
+keeps your funds yours.

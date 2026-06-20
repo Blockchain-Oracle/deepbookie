@@ -1,0 +1,90 @@
+---
+title: Claude skill
+description: A SKILL.md folder that teaches Claude when to use DeepBookie and in what order to call the tools. Install it, then wire up the tools separately.
+---
+
+# Claude skill
+
+A skill is a folder with a `SKILL.md` file inside it — `skills/deepbookie/`. The file teaches Claude *when* to reach for DeepBookie and *in what order* to call the tools. It carries no code and no keys. The tools live elsewhere (the MCP server or CLI). You install the skill, then wire up the tools separately.
+
+## What a SKILL.md is
+
+`SKILL.md` is plain markdown with a short YAML header (`name`, `description`, `version`) and a body of instructions. Claude reads the `description` to decide if the skill is relevant, then follows the body as a playbook. DeepBookie's header:
+
+```yaml
+name: deepbookie
+description: Trade DeepBook Predict (Sui's testnet prediction market) —
+  read live odds, place binary or price-band bets, and provide liquidity.
+version: 0.0.1
+```
+
+## When it activates
+
+The skill fires when the user wants to bet on short-term BTC moves, check prediction-market odds, or manage Predict positions on Sui:
+
+- *"What are the odds BTC is above $63k soon?"* → `get_odds` / `get_quote`
+- *"Bet $5 that BTC stays above $63k"* → `mint`
+- *"Show my positions and PnL"* → `get_portfolio`
+
+This skill covers Predict only — the binary and price-band bets. It stands down for spot trading and for mainnet, since Predict is testnet-only right now.
+
+## The playbook it encodes
+
+The body gives Claude one flow to follow end to end:
+
+<Steps items={[
+  { title: 'Open an account', body: 'create_manager once — opens your PredictManager.' },
+  { title: 'List markets', body: 'list_markets to see active BTC markets and expiries.' },
+  { title: 'Read the odds', body: 'get_odds for the probability curve; pick a strike.' },
+  { title: 'Quote the cost', body: 'get_quote to confirm exact cost and payout first.' },
+  { title: 'Place / settle the bet', body: 'mint (or mint_range) to bet; later redeem to settle.' },
+  { title: 'Confirm', body: 'get_portfolio to verify the position and PnL.' }
+]} />
+
+You enter strikes in **dollars**; DeepBookie snaps them to the nearest valid grid strike. Bets are funded in **dUSDC**. Reads are free. Writes return an unsigned transaction — nothing happens until you sign it.
+
+## How to install it
+
+Installing has two parts: put the skill folder where Claude can find it, then point Claude at the tools it names.
+
+### Step 1 — Install the skill
+
+The easiest way is the [Vercel `skills` CLI](https://vercel.com/changelog/introducing-skills-the-open-agent-skills-ecosystem) — the open "npm for agent skills." It installs straight from this repo into your agent's skills folder. Nothing to clone, nothing to publish.
+
+```bash
+# install the DeepBookie skill into your agent
+npx skills add Blockchain-Oracle/deepbookie --skill deepbookie
+
+# or target Claude Code specifically
+npx skills add Blockchain-Oracle/deepbookie --skill deepbookie -a claude-code
+```
+
+It works with Claude Code, Cursor, Codex, and 60+ other agents. Manage it later
+with `npx skills list`, `npx skills update deepbookie`, or `npx skills remove deepbookie`.
+
+<Callout type="tip">
+Prefer to do it by hand? Copy `skills/deepbookie/` into `~/.claude/skills/` (or
+`.claude/skills/` for one project), then run `/reload-plugins` in Claude Code.
+</Callout>
+
+### Step 2 — Wire up the tools
+
+The skill is just the playbook. Claude still needs the tools to call. Provide them with **either** the MCP server **or** the CLI:
+
+```bash
+# MCP path: expose the tools over stdio, then add to your MCP client
+npx -y @deepbookie/mcp        # bin: deepbookie-mcp
+
+# CLI path: same tools from the shell
+deepbookie call get_odds '{ "oracleId": "..." }'
+```
+
+On first run the MCP server or CLI creates a local wallet and prints its address. Fund that address with testnet SUI (for gas) and dUSDC (for bets) before placing a trade.
+
+<Callout type="warning">
+There is no `@deepbookie/skill` npm package — the skill is a folder, not a dependency. `@deepbookie/mcp` and `@deepbookie/cli` are the real packages that carry the tools.
+</Callout>
+
+<Callout type="note">
+Without the MCP server or CLI mounted alongside it, Claude knows the route but has no tools to walk it. Install the skill, then wire the tools — both halves are required.
+</Callout>

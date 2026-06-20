@@ -1,0 +1,46 @@
+---
+title: Glossary
+description: Plain-English definitions of the DeepBook, Sui, and DeepBookie terms used across these docs. One line each.
+---
+
+# Glossary
+
+The words you'll meet across DeepBookie — the markets it trades, the Sui transaction model, and the parts of the agent itself. One line each. Deeper pages are linked from Concepts and Surfaces.
+
+## Markets & instruments
+
+| Term | Definition |
+| --- | --- |
+| **Predict** | Sui's on-chain prediction market, and one of the two markets DeepBookie trades. You bet yes/no on a price by an expiry. On testnet it's BTC-only, settled in dUSDC. |
+| **Spot** | DeepBook V3's order book, the other market DeepBookie trades. Real swaps and limit orders — not an automated pool. |
+| **Oracle / market** | An oracle is the price feed a market settles against. A market is one oracle plus a strike and an expiry. |
+| **Strike** | The price a bet is measured against. It wins *up* if the oracle is above the strike at expiry, *down* if below. |
+| **Expiry** | The time a market settles (epoch milliseconds, matching Sui's `Clock`). At expiry it reads the oracle and pays out. |
+| **Binary vs range** | Binary: one side of a single price (up or down). Range: the price lands in a band (e.g. $68k–$72k). |
+| **dUSDC** | The test settlement token (6 decimals). Operator-gated — get it from the in-app "Get dUSDC" button or the tally form, not a public faucet. |
+
+## Liquidity & pricing
+
+| Term | Definition |
+| --- | --- |
+| **PredictManager** | Your on-chain account that holds your dUSDC and positions. You create one before betting or supplying liquidity. |
+| **PLP vault** | The liquidity pool that takes the other side of every bet, so you trade against the pool instead of another person. |
+| **SVI** | A math model of how option prices change across strikes. DeepBookie uses it to compute fair odds for any bet. |
+| **N(d2)** | A standard formula (from Black-Scholes) that turns volatility into a 0–100% probability — e.g. "the chance BTC is above $70k." |
+
+## Transactions & the agent
+
+| Term | Definition |
+| --- | --- |
+| **PTB (programmable transaction block)** | Sui's transaction format — several on-chain calls run as one. Every DeepBookie write returns one of these, **unsigned**. |
+| **Sign at the edge** | DeepBookie builds the unsigned transaction but never holds a key. You sign in your wallet (web) or on your machine (CLI/MCP) — never in the cloud. |
+| **Receipt** | The record returned after a signed transaction runs (digest and effects) — your proof a bet, deposit, or claim landed on-chain. |
+| **MCP** | Model Context Protocol — the standard that exposes DeepBookie's tools to clients like Claude Desktop, via the `@deepbookie/mcp` package. |
+
+<Callout type="note">
+Prices and strikes are stored as integers ×1e9 (`FLOAT_SCALING`); dUSDC uses 6 decimals (×1e6). Different scales — see [Scaling & units](/concepts/scaling) before converting.
+</Callout>
+
+<Callout type="tip">
+Reads are free and need no signature. Only **writes** return an unsigned transaction — nothing leaves your wallet until you sign it.
+</Callout>

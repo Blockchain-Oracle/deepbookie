@@ -1,0 +1,79 @@
+---
+title: Scaling & units
+description: You type dollars; the chain stores integers. How DeepBookie converts between the two — and the predict-client helpers that do it.
+---
+
+# Scaling & units
+
+You type `$65,000`. The chain can't store that — it stores whole numbers only. So DeepBookie multiplies it up to a big integer, sends that, and converts it back for you. This page shows the math and the helpers that run it.
+
+You rarely touch this. The app and the AI handle it. Read on if you're building with the SDK.
+
+## Prices, strikes, and probabilities: ×1e9
+
+These three are scaled by a constant called `FLOAT_SCALING`, which is `1_000_000_000` (1e9). To scale, you multiply:
+
+```text
+$65,000 × 1e9 = 65,000,000,000,000
+```
+
+So a strike of $65,000 is stored on-chain as `65000000000000`. A probability of `0.55` is stored as `550000000`. To read a value back, you divide by 1e9.
+
+<Callout type="note">
+Probabilities are **0 to 1** in the math — `0.55` means a 55% chance. On-chain they're that same number scaled, so `0` to `1_000_000_000`. The app shows you a percentage; the raw value is never a `0–100` number.
+</Callout>
+
+## dUSDC: 6 decimals
+
+dUSDC is the settlement token. It has 6 decimals, so one dollar is `1_000_000` base units:
+
+```text
+$1.50 × 1e6 = 1,500,000
+```
+
+This is a **different scale** from the ×1e9 fields above. Use the right divisor for each.
+
+<Callout type="warning">
+Prices and probabilities divide by 1e9. dUSDC amounts divide by 1e6. Mixing the two is the most common units bug.
+</Callout>
+
+## Strikes snap to a grid
+
+You enter any dollar amount. DeepBookie snaps it to the nearest valid grid strike for that market automatically — markets only list strikes at fixed steps. So `$64,950` may become `$65,000`. The receipt always shows the exact strike you'll trade.
+
+## Timestamps: epoch milliseconds
+
+Expiries and other timestamps are epoch **milliseconds**, matching Sui's `Clock`. Pass them straight to `new Date(ms)` — no `× 1000`.
+
+## The four helpers
+
+`@deepbookie/predict-client` ships one pair per scale. `to*` multiplies up for the chain; `from*` divides back for display.
+
+```ts
+import { fromScaled, toScaled, fromDusdc, toDusdc } from '@deepbookie/predict-client';
+
+toScaled(0.55);          // 550000000n   (human number  -> ×1e9 bigint)
+fromScaled(550_000_000); // 0.55         (×1e9 integer  -> human number)
+
+toDusdc(1.5);            // 1500000n     (human dollars  -> 6dp bigint)
+fromDusdc(1_500_000);    // 1.5          (6dp base units -> human dollars)
+```
+
+- **`toScaled` / `toDusdc`** take a human number and return a `bigint` for building a transaction.
+- **`fromScaled` / `fromDusdc`** take a `number | bigint` and return a `number` for display.
+
+Both `to*` helpers throw a `RangeError` on negative or non-finite input.
+
+## At a glance
+
+| Quantity | Scale | Convert with |
+| --- | --- | --- |
+| Price | ×1e9 (`FLOAT_SCALING`) | `toScaled` / `fromScaled` |
+| Strike | ×1e9 (`FLOAT_SCALING`) | `toScaled` / `fromScaled` |
+| Probability (0–1) | ×1e9 (`FLOAT_SCALING`) | `toScaled` / `fromScaled` |
+| dUSDC amount | ×1e6 (6 decimals) | `toDusdc` / `fromDusdc` |
+| Expiry / timestamp | ×1 (milliseconds) | `new Date(ms)` |
+
+<Callout type="tip">
+Convert at the edge. Read scaled integers from the indexer, call `fromScaled` / `fromDusdc` to show them, and call `toScaled` / `toDusdc` when you feed values back into an unsigned transaction.
+</Callout>
