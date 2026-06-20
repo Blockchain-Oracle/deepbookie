@@ -75,3 +75,32 @@ export interface ManagerPnl {
   current_unrealized_pnl: number;
   current_total_pnl: number;
 }
+
+/** A minted/redeemed binary position event. strike/ask_price are ×1e9; quantity/cost are 6dp. */
+export interface PositionEntry {
+  oracle_id: string;
+  expiry: number;
+  strike: number;
+  is_up: boolean;
+  quantity: number;
+  cost: number;
+  ask_price: number;
+  digest: string;
+  checkpoint_timestamp_ms: number;
+}
+
+export interface ManagerPositions {
+  minted: PositionEntry[];
+  redeemed: PositionEntry[];
+}
+
+export interface VaultPerformancePoint {
+  timestamp_ms: number;
+  share_price: number;
+  vault_value: number;
+}
+
+export interface VaultPerformance {
+  range: string;
+  points: VaultPerformancePoint[];
+}

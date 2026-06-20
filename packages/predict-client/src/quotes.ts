@@ -59,3 +59,39 @@ export async function getTradeAmounts(
   }
   return { mintCost: decodeU64(rv[0][0]), redeemPayout: decodeU64(rv[1][0]) };
 }
+
+/** Exact on-chain quote for a vertical-range position (devInspect `get_range_trade_amounts`). */
+export async function getRangeTradeAmounts(
+  client: SuiJsonRpcClient,
+  params: { oracleId: string; expiry: Num; lower: Num; higher: Num; quantity: Num; sender: string },
+): Promise<TradeAmounts> {
+  const tx = new Transaction();
+  const key = tx.moveCall({
+    target: TARGET.rangeKeyNew,
+    arguments: [
+      tx.pure.address(params.oracleId),
+      tx.pure.u64(params.expiry),
+      tx.pure.u64(params.lower),
+      tx.pure.u64(params.higher),
+    ],
+  });
+  tx.moveCall({
+    target: TARGET.getRangeTradeAmounts,
+    arguments: [
+      tx.object(PREDICT_OBJECT),
+      tx.object(params.oracleId),
+      key,
+      tx.pure.u64(params.quantity),
+      tx.object(CLOCK_OBJECT),
+    ],
+  });
+  const res = await client.devInspectTransactionBlock({
+    sender: params.sender,
+    transactionBlock: tx,
+  });
+  const rv = res.results?.[1]?.returnValues;
+  if (!rv || !rv[0]?.[0]?.length || !rv[1]?.[0]?.length) {
+    throw new Error(`get_range_trade_amounts returned no quote (${res.error ?? 'unknown error'})`);
+  }
+  return { mintCost: decodeU64(rv[0][0]), redeemPayout: decodeU64(rv[1][0]) };
+}
