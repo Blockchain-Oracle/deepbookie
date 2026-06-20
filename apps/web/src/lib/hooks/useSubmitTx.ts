@@ -83,7 +83,8 @@ export function useSubmitTx() {
       // + reloads. Retry on a flaky/cold-start RPC so a transient waitForTransaction failure can't
       // silently strand the id and later guide the user into creating a duplicate (orphaning funds).
       if (toolName === 'spot_create_balance_manager') {
-        for (let attempt = 0; attempt < 3; attempt++) {
+        let captured = false;
+        for (let attempt = 0; attempt < 3 && !captured; attempt++) {
           try {
             const tb = await client.waitForTransaction({ digest, options: { showObjectChanges: true } });
             const created = (tb.objectChanges as ObjChange[] | undefined)?.find(
@@ -92,12 +93,16 @@ export function useSubmitTx() {
             if (created?.objectId) {
               setStoredBalanceManager(owner, created.objectId);
               qc.setQueryData(['balanceManager', owner], { balanceManagerId: created.objectId });
-              break;
+              captured = true;
             }
           } catch {
-            /* retry; the resolver refetch below is the last (best-effort) resort */
+            /* retry */
           }
         }
+        // Capture failed on every attempt → the shared BM id is unknown AND the on-chain resolver can't
+        // recover it, so do NOT let the UI fall through to "no account → Create" (which would mint a
+        // duplicate + orphan funds). Seed an error so the panel shows Retry, not Create.
+        if (!captured) qc.setQueryData(['balanceManager', owner], { balanceManagerId: null, error: true });
       }
 
       // Refresh now (responsive), then again after finality lands (fresh chain state). Both non-blocking.

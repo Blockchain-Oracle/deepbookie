@@ -76,11 +76,13 @@ export function StakeCard({
     return (
       <div className="flex w-full flex-col justify-center gap-[11px] rounded-card border border-line bg-card p-5">
         <div className="text-[9.5px] font-semibold uppercase tracking-[0.13em] text-faint">{title}</div>
-        {w.bmError ? (
+        {w.bmError || w.storageBlocked ? (
           <>
-            <div className="text-[16px] font-bold leading-[1.3] tracking-[-0.02em] text-ink">Couldn’t reach your account</div>
+            <div className="text-[16px] font-bold leading-[1.3] tracking-[-0.02em] text-ink">Couldn’t detect your account</div>
             <div className="text-[12px] leading-[1.45] text-muted">
-              A network hiccup checking your balance manager — retry in a moment; don’t create a new one.
+              {w.storageBlocked
+                ? 'Your browser is blocking storage, so we can’t tell if you already have an account — don’t create a second one.'
+                : 'A network hiccup checking your balance manager — retry in a moment; don’t create a new one.'}
             </div>
           </>
         ) : (

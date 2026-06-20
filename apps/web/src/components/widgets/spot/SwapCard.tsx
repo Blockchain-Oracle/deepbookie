@@ -165,7 +165,7 @@ export function SwapCard({
       </div>
 
       {/* You receive */}
-      <div className="mb-[13px] rounded-card-in border border-line bg-paper px-[13px] py-[11px]">
+      <div className={`mb-[13px] ${fieldFrom}`}>
         <div className="mb-1.5 text-[10px] uppercase tracking-[0.1em] text-faint">You receive ≈</div>
         <div className="flex items-center justify-between gap-3">
           {quoting ? (

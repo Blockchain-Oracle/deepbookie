@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { reasonFor, useSubmitTx } from './useSubmitTx';
+import { isUserRejection, reasonFor, useSubmitTx } from './useSubmitTx';
 
 export type TxStatus = 'idle' | 'signing' | 'done' | 'error';
 
@@ -30,6 +30,11 @@ export function useTxAction() {
         setStatus('done');
         return d;
       } catch (e) {
+        // A wallet decline is a cancellation, not a failure — reset to idle (don't show error styling).
+        if (isUserRejection(e)) {
+          setStatus('idle');
+          return null;
+        }
         setReason(reasonFor(e));
         setStatus('error');
         return null;

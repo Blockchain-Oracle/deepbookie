@@ -58,6 +58,7 @@ export async function POST(req: Request) {
   let walletAddress: string | undefined;
   let clientManagerId: string | undefined;
   let clientBalanceManagerId: string | undefined;
+  let clientBalanceManagerUnknown: boolean | undefined;
   let chatId: string | undefined;
   try {
     const body = (await req.json()) as {
@@ -65,12 +66,14 @@ export async function POST(req: Request) {
       walletAddress?: string;
       managerId?: string;
       balanceManagerId?: string;
+      balanceManagerUnknown?: boolean;
       chatId?: string;
     };
     messages = body.messages;
     walletAddress = body.walletAddress;
     clientManagerId = body.managerId;
     clientBalanceManagerId = body.balanceManagerId;
+    clientBalanceManagerUnknown = body.balanceManagerUnknown;
     chatId = body.chatId;
   } catch {
     return new Response('bad request', { status: 400 });
@@ -103,9 +106,12 @@ export async function POST(req: Request) {
     : mgr.failed
       ? '\n\nAccount status: UNKNOWN — could not check right now. Do NOT proactively propose create_manager; attempt the action and only if it fails for a missing account, then propose create_manager.'
       : '\n\nAccount status: the user has NO PredictManager yet. Before any bet, propose create_manager first, then the trade next turn.';
+  // `clientBalanceManagerUnknown` = the client couldn't read its captured id (storage blocked); since
+  // the on-chain resolver can't find shared BMs either, existence is genuinely UNKNOWN, not "none".
+  const spotUnknown = bmr.failed || (clientBalanceManagerUnknown ?? false);
   const spotStatus = balanceManagerId
     ? '\n\nSpot account: the user ALREADY has a DeepBook BalanceManager. Do NOT call spot_create_balance_manager — go straight to the spot action (deposit/swap/order/stake).'
-    : bmr.failed
+    : spotUnknown
       ? '\n\nSpot account: UNKNOWN — could not check right now. Do NOT proactively propose spot_create_balance_manager; attempt the action and only if it fails for a missing account, then propose it.'
       : '\n\nSpot account: the user has NO DeepBook BalanceManager yet. Before any spot deposit/trade, propose spot_create_balance_manager first, then the action next turn.';
 

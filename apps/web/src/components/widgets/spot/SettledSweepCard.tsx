@@ -88,7 +88,9 @@ export function SettledSweepCard({
         <span className="text-[12.5px] text-muted">
           {w.bmError
             ? 'Couldn’t reach your account — retry in a moment.'
-            : `Open a DeepBook account first to sweep ${poolLabel} proceeds.`}
+            : w.storageBlocked
+              ? 'Your browser is blocking storage — we can’t detect your account; don’t create a second one.'
+              : `Open a DeepBook account first to sweep ${poolLabel} proceeds.`}
         </span>
         <div className="flex gap-2.5">
           {w.bmError && (

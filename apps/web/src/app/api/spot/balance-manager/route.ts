@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isValidSuiAddress } from '@mysten/sui/utils';
 import { resolveBalanceManagerByOwner } from '@/lib/bff/spot';
 import { logger } from '@/lib/logger.server';
 
@@ -8,7 +9,8 @@ export const dynamic = 'force-dynamic'; // wallet-scoped — never shared-cache
 /** Resolve `owner` → DeepBook BalanceManager id (or null if none yet). Powers the spot onboarding gate. */
 export async function GET(req: Request) {
   const owner = new URL(req.url).searchParams.get('owner');
-  if (!owner) return NextResponse.json({ balanceManagerId: null });
+  // Validate shape (matches /api/spot/read) — a malformed owner is a clean "none", not a wasted RPC.
+  if (!owner || !isValidSuiAddress(owner)) return NextResponse.json({ balanceManagerId: null });
   try {
     const balanceManagerId = await resolveBalanceManagerByOwner(owner);
     return NextResponse.json({ balanceManagerId });

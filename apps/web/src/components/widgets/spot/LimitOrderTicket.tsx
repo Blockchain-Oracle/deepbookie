@@ -205,7 +205,9 @@ export function LimitOrderTicket({
         ))}
       {!w.hasBalanceManager && !w.bmLoading && (
         <div className="mb-[11px] rounded-[8px] border border-[#E6C9BE] bg-[#FBF1EC] px-3 py-2 text-[11.5px] font-medium text-[#8a2f1c]">
-          You need a BalanceManager before placing maker orders.
+          {w.storageBlocked
+            ? 'Your browser is blocking storage — we can’t detect your account; don’t create a second one.'
+            : 'You need a BalanceManager before placing maker orders.'}
         </div>
       )}
 

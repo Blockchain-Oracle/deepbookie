@@ -58,6 +58,11 @@ export async function POST(req: Request) {
     if (body.owner && !isValidSuiAddress(body.owner)) {
       return NextResponse.json({ error: 'invalid owner' }, { status: 400 });
     }
+    // A client-supplied balanceManagerId flows into the SDK devInspect — validate its shape too so a
+    // malformed id yields a clean 400 instead of a masked 502 from the SDK.
+    if (body.balanceManagerId && !isValidSuiAddress(body.balanceManagerId)) {
+      return NextResponse.json({ error: 'invalid balance manager' }, { status: 400 });
+    }
     let balanceManagerId: string | null = null;
     if (BM_SCOPED.has(tool)) {
       // Prefer the client-provided id (captured at creation, localStorage-backed) — the on-chain

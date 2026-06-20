@@ -22,16 +22,20 @@ export function Chat() {
   const managerId = usePositions(account?.address).data?.managerId ?? null;
   // The wallet's DeepBook spot account, resolved + cached the same way (so spot tools see it without
   // re-resolving per request). Auth still never trusts it — spot writes are signed in the wallet.
-  const balanceManagerId = useBalanceManager(account?.address).data?.balanceManagerId ?? null;
+  const bmData = useBalanceManager(account?.address).data;
+  const balanceManagerId = bmData?.balanceManagerId ?? null;
+  // Storage blocked → we genuinely can't tell if a shared BM exists; tell the route NOT to proactively
+  // propose creating one (which would mint a duplicate + orphan funds for a returning user).
+  const balanceManagerUnknown = bmData?.storageBlocked ?? false;
 
   // Recreated when the address or resolved managers change; carries all to the route.
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: '/api/chat',
-        body: { walletAddress: account?.address, managerId, balanceManagerId, chatId },
+        body: { walletAddress: account?.address, managerId, balanceManagerId, balanceManagerUnknown, chatId },
       }),
-    [account?.address, managerId, balanceManagerId, chatId],
+    [account?.address, managerId, balanceManagerId, balanceManagerUnknown, chatId],
   );
 
   const { messages, sendMessage, status, addToolResult } = useChat({

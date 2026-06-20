@@ -96,6 +96,9 @@ export function ModifyOrderCard({
   // A BalanceManager is required to read/modify orders. On a resolver failure show retry (don't imply
   // "create one"); each Notice resolves the tool call via Dismiss so the assistant turn never wedges.
   if (!w.hasBalanceManager && !w.bmLoading) {
+    if (w.storageBlocked) {
+      return <Notice title={TITLE} text="Your browser is blocking storage — we can’t detect your account; don’t create a second one." onCancel={w.cancel} />;
+    }
     return w.bmError ? (
       <Notice title={TITLE} text="Couldn’t reach your account — retry, don’t create a new one." onCancel={w.cancel} onRetry={w.bmRefetch} />
     ) : (

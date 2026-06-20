@@ -2,10 +2,11 @@ import type { ToolContext } from '../context.js';
 import { spotClient } from './client.js';
 
 /**
- * Resolve the DeepBook BalanceManager object ids a wallet owns. Uses the SDK's live
- * `simulateTransaction` (devInspect) — NOT a lagging indexer — so a manager created moments ago is
- * returned on the next call. The web threads `balanceManagerId` from the first id (mirrors how the
- * Predict `managerId` is resolved from `/managers?owner=`). Returns `[]` when the wallet has none.
+ * Resolve the DeepBook BalanceManager object ids a wallet owns via the SDK's `getBalanceManagerIds`.
+ * IMPORTANT: this does NOT return a BalanceManager created via `createAndShareBalanceManager` — that is
+ * a SHARED object, not owner-indexed — so it is a FALLBACK only. The authoritative source is the
+ * captured-at-creation id persisted client-side in localStorage (see apps/web bmStore). Returns `[]`
+ * when none are found (which, for a shared BM, is the expected result — not proof the user has none).
  */
 export async function resolveBalanceManagerIds(ctx: ToolContext, owner: string): Promise<string[]> {
   return spotClient(ctx).getBalanceManagerIds(owner);

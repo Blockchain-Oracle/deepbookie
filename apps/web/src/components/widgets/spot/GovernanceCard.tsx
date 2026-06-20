@@ -105,8 +105,8 @@ export function GovernanceCard({
           </div>
           <button
             type="button"
-            // Require BOTH fees — a blank field would otherwise sign a real on-chain 0% fee.
-            disabled={!w.hasBalanceManager || !(Number(taker) > 0 && Number(maker) > 0)}
+            // Require both fees AND a stake — a blank field would otherwise sign a real on-chain 0.
+            disabled={!w.hasBalanceManager || !(Number(taker) > 0 && Number(maker) > 0 && Number(stake) > 0)}
             onClick={() =>
               void w.sign(
                 { poolKey, takerFee: toFrac(taker), makerFee: toFrac(maker), stakeRequired: Number(stake) },
@@ -176,7 +176,11 @@ export function GovernanceCard({
 
       {!w.hasBalanceManager && (
         <div className="mt-2 text-center text-[11px] text-faint">
-          {w.bmError ? 'Couldn’t reach your account — retry in a moment.' : 'Create a DeepBook account first to use governance.'}
+          {w.bmError
+            ? 'Couldn’t reach your account — retry in a moment.'
+            : w.storageBlocked
+              ? 'Storage is blocked — we can’t detect your account; don’t create a second one.'
+              : 'Create a DeepBook account first to use governance.'}
         </div>
       )}
       <button
