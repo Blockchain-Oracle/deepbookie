@@ -7,11 +7,16 @@ import { MessagePart } from './MessagePart';
 import type { AddToolResult, OnSignOutcome } from '@/components/widgets/ReceiptController';
 
 // Category carousel for the chat home screen — each card sends its starter prompt on click.
+// Predict + Spot (DeepBook V3) flows; each maps to a real tool the agent can run.
 const CATEGORIES = [
   { title: 'Markets & odds', blurb: 'Live BTC markets and the probability curve.', prompt: 'What are the live BTC odds right now?', dot: 'bg-green' },
   { title: 'Place a bet', blurb: 'Price and propose an UP/DOWN bet you sign.', prompt: 'Walk me through a $1 UP bet on BTC.', dot: 'bg-ink' },
-  { title: 'Your account', blurb: 'Balance, open positions, and PnL.', prompt: 'What’s my balance?', dot: 'bg-wallet' },
+  { title: 'Swap', blurb: 'Swap tokens on the DeepBook order book.', prompt: 'Swap 10 SUI to DBUSDC.', dot: 'bg-green' },
+  { title: 'Order book', blurb: 'See live depth, place a limit order.', prompt: 'Show me the SUI/DBUSDC order book.', dot: 'bg-ink' },
+  { title: 'Your account', blurb: 'Balance, open positions, and PnL.', prompt: 'What’s my balance and open positions?', dot: 'bg-wallet' },
   { title: 'Vault & liquidity', blurb: 'Provide liquidity and earn the maker spread.', prompt: 'How does the vault work?', dot: 'bg-mint' },
+  { title: 'Stake DEEP', blurb: 'Stake DEEP for fee discounts + voting.', prompt: 'Stake 100 DEEP in the SUI/DBUSDC pool.', dot: 'bg-mint' },
+  { title: 'Governance', blurb: 'Propose fees, vote, claim rebates.', prompt: 'Show governance for the SUI/DBUSDC pool.', dot: 'bg-wallet' },
 ];
 
 /** Livelier welcome: gentle staggered entrance + clickable starter prompts (they send on click). */

@@ -1,6 +1,20 @@
 'use client';
 
 import { Providers } from '@/components/providers/Providers';
+import { SpotPoolTable } from '@/components/widgets/spot/SpotPoolTable';
+import { OrderbookDepth } from '@/components/widgets/spot/OrderbookDepth';
+import { OpenOrdersList } from '@/components/widgets/spot/OpenOrdersList';
+import { OrderValidityHint } from '@/components/widgets/spot/OrderValidityHint';
+import { SpotFacts } from '@/components/widgets/spot/SpotFacts';
+import { SwapCard } from '@/components/widgets/spot/SwapCard';
+import { LimitOrderTicket } from '@/components/widgets/spot/LimitOrderTicket';
+import { StakeCard } from '@/components/widgets/spot/StakeCard';
+import { GovernanceCard } from '@/components/widgets/spot/GovernanceCard';
+import { ModifyOrderCard } from '@/components/widgets/spot/ModifyOrderCard';
+import { SettledSweepCard } from '@/components/widgets/spot/SettledSweepCard';
+import { BalanceManagerPanel } from '@/components/widgets/spot/BalanceManagerPanel';
+import type { WriteToolPart } from '@/components/widgets/ReceiptController';
+import type { SpotOpenOrder, SpotOrderbook, SpotPool } from '@/lib/bff/spot-types';
 import { OddsCurveCard } from '@/components/widgets/OddsCurveCard';
 import { SignReceipt, type ReceiptState } from '@/components/widgets/SignReceipt';
 import { MarketHeader } from '@/components/widgets/MarketHeader';
@@ -72,6 +86,29 @@ const receiptBase = {
   suiscanUrl: '#',
   reason: 'The transaction was rejected in your wallet. No funds moved.',
 };
+
+// ── Spot (DeepBook V3) mocks — shapes match the live testnet reads ──
+const mockPools: SpotPool[] = [
+  { poolKey: 'SUI_DBUSDC', base: 'SUI', quote: 'DBUSDC', poolId: '0x1c19362ca52b8ffd7a33cee805a67d40f31e6ba303753fd3a4cfdfacea7163a5' },
+  { poolKey: 'DEEP_SUI', base: 'DEEP', quote: 'SUI', poolId: '0x48c95963e9eac37a316b7ae04a0deb761bcdcc2b67912374d6036e7f0e9bae9f' },
+  { poolKey: 'DEEP_DBUSDC', base: 'DEEP', quote: 'DBUSDC', poolId: '0xe86b991f8632217505fd859445f9803967ac84a9d4a1219065bf191fcb74b622' },
+];
+const mockBook: SpotOrderbook = {
+  poolKey: 'SUI_DBUSDC',
+  bids: [{ price: 0.698, size: 20 }, { price: 0.695, size: 10 }, { price: 0.6, size: 1.8 }],
+  asks: [{ price: 0.706, size: 10 }, { price: 0.709, size: 10 }, { price: 0.71, size: 10 }],
+};
+const mockOrders: SpotOpenOrder[] = [
+  { poolKey: 'SUI_DBUSDC', orderId: '0xorder1aa', isBid: true, price: 0.69, quantity: 100, filledQuantity: 30, status: 'open', expireTs: Date.now() + 36e5 },
+  { poolKey: 'SUI_DBUSDC', orderId: '0xorder2bb', isBid: false, price: 0.72, quantity: 50, filledQuantity: 0, status: 'open', expireTs: Date.now() + 72e5 },
+];
+const noop = () => {};
+const writePart = (tool: string, input: Record<string, unknown>): WriteToolPart => ({
+  type: `tool-${tool}`,
+  input,
+  toolCallId: `devmock${tool.slice(-4)}`,
+});
+const spotWriteProps = { addToolResult: noop, onOutcome: noop, onRetry: noop };
 
 function Cell({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -147,6 +184,33 @@ function WidgetGallery() {
       <Section title="Chat home — category carousel" />
       <div className="h-[440px] w-full max-w-[720px] overflow-hidden rounded-card border border-line bg-canvas">
         <MessageList messages={[]} status="ready" addToolResult={() => {}} onAction={() => {}} />
+      </div>
+
+      <Section title="⭐ Spot (DeepBook V3) — reads" />
+      <div className="flex flex-wrap gap-8">
+        <Cell label="pool table"><SpotPoolTable pools={mockPools} onTrade={noop} /></Cell>
+        <Cell label="orderbook depth"><OrderbookDepth data={mockBook} /></Cell>
+        <Cell label="open orders"><OpenOrdersList orders={mockOrders} /></Cell>
+        <Cell label="validity hint">
+          <div className="flex flex-col gap-2">
+            <OrderValidityHint valid />
+            <OrderValidityHint valid={false} />
+          </div>
+        </Cell>
+        <Cell label="spot facts (pool params)">
+          <SpotFacts name="spot_pool_params" data={{ poolKey: 'SUI_DBUSDC', takerFee: 0.001, makerFee: 0.0005, stakeRequired: 100, tickSize: 0.001, lotSize: 0.1, minSize: 1, whitelisted: true }} />
+        </Cell>
+      </div>
+
+      <Section title="⭐ Spot — generative-input writes (proposed)" />
+      <div className="flex flex-wrap gap-8">
+        <Cell label="swap"><SwapCard part={writePart('spot_swap_base_for_quote', { poolKey: 'SUI_DBUSDC', amount: 10 })} {...spotWriteProps} /></Cell>
+        <Cell label="limit order"><LimitOrderTicket part={writePart('spot_place_limit_order', { poolKey: 'SUI_DBUSDC' })} {...spotWriteProps} /></Cell>
+        <Cell label="modify order"><ModifyOrderCard part={writePart('spot_modify_order', { poolKey: 'SUI_DBUSDC', orderId: '0xorder1aa', currentQuantity: 100, filledQuantity: 30 })} {...spotWriteProps} /></Cell>
+        <Cell label="stake"><StakeCard part={writePart('spot_stake', { poolKey: 'SUI_DBUSDC' })} {...spotWriteProps} /></Cell>
+        <Cell label="governance"><GovernanceCard part={writePart('spot_submit_proposal', { poolKey: 'SUI_DBUSDC' })} {...spotWriteProps} /></Cell>
+        <Cell label="settled sweep"><SettledSweepCard part={writePart('spot_withdraw_settled_amounts', { poolKey: 'SUI_DBUSDC' })} {...spotWriteProps} /></Cell>
+        <Cell label="balance manager"><BalanceManagerPanel onAction={noop} /></Cell>
       </div>
     </main>
   );
