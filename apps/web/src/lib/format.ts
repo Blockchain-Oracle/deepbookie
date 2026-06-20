@@ -21,3 +21,15 @@ export function formatUsd(value: number, decimals = 2): string {
 export function formatPct(p: number, decimals = 1): string {
   return `${(p * 100).toFixed(decimals)}%`;
 }
+
+/** Time-to-expiry as "27m" or "1h 12m" (0 when past). */
+export function formatCountdown(expiryMs: number, nowMs = Date.now()): string {
+  const mins = Math.max(0, Math.round((expiryMs - nowMs) / 60_000));
+  if (mins < 60) return `${mins}m`;
+  return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+}
+
+/** Compact strike label for axes, e.g. $63k. */
+export function formatStrikeShort(usd: number): string {
+  return usd >= 1000 ? `$${(usd / 1000).toFixed(usd % 1000 === 0 ? 0 : 1)}k` : `$${usd.toFixed(0)}`;
+}
