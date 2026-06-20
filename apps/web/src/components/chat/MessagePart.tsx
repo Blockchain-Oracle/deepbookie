@@ -32,6 +32,7 @@ import { ModifyOrderCard } from '@/components/widgets/spot/ModifyOrderCard';
 import { StakeCard } from '@/components/widgets/spot/StakeCard';
 import { GovernanceCard } from '@/components/widgets/spot/GovernanceCard';
 import { SettledSweepCard } from '@/components/widgets/spot/SettledSweepCard';
+import { poolLabel } from '@/lib/format';
 import type { Market, MarketState, Odds, Portfolio, Position, Positions, Quote, RangeQuote, Vault } from '@/lib/bff/types';
 import type { SpotCanPlace, SpotOpenOrder, SpotOrderbook, SpotPool } from '@/lib/bff/spot-types';
 
@@ -243,7 +244,7 @@ export function MessagePart({
     // ── Spot (DeepBook V3) reads ──
     case 'spot_list_pools':
       return ready ? (
-        <SpotPoolTable pools={out as SpotPool[]} onTrade={(pk) => onAction(`I want to swap on the ${pk.replace('_', '/')} pool.`)} />
+        <SpotPoolTable pools={out as SpotPool[]} onTrade={(pk) => onAction(`I want to swap on the ${poolLabel(pk)} pool.`)} />
       ) : (
         skeleton('h-40')
       );
