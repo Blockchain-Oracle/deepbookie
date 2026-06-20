@@ -7,8 +7,20 @@ import { Command } from 'commander';
 function ctxApi() {
   const kp = getOrCreateKeypair();
   const network = (process.env.DEEPBOOKIE_NETWORK as Network | undefined) ?? 'testnet';
-  const ctx = createContext({ network, sender: kp.toSuiAddress(), managerId: process.env.DEEPBOOKIE_MANAGER_ID });
+  const ctx = createContext({
+    network,
+    sender: kp.toSuiAddress(),
+    managerId: process.env.DEEPBOOKIE_MANAGER_ID,
+    balanceManagerId: process.env.DEEPBOOKIE_BALANCE_MANAGER_ID,
+  });
   return { kp, ctx, api: getToolsForAdapter(allTools, ctx) };
+}
+
+type Change = { type: string; objectType?: string; objectId?: string };
+
+/** Pull a newly-created object id (PredictManager / DeepBook BalanceManager) out of tx effects. */
+function createdId(changes: readonly Change[], typeSuffix: string): string | undefined {
+  return changes.find((c) => c.type === 'created' && c.objectType?.includes(typeSuffix))?.objectId;
 }
 
 function out(data: unknown): void {
@@ -68,7 +80,13 @@ program
     } else {
       const tx = await api.build(tool, args);
       const res = await signAndExecute(ctx.client, tx, kp);
-      out({ digest: res.digest, status: res.effects?.status?.status });
+      const result: Record<string, unknown> = { digest: res.digest, status: res.effects?.status?.status };
+      const changes = (res.objectChanges ?? []) as Change[];
+      const managerId = createdId(changes, 'predict_manager::PredictManager');
+      const balanceManagerId = createdId(changes, 'balance_manager::BalanceManager');
+      if (managerId) result.managerId = managerId;
+      if (balanceManagerId) result.balanceManagerId = balanceManagerId;
+      out(result);
     }
   });
 
