@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import reactHooks from 'eslint-plugin-react-hooks';
 
 export default tseslint.config(
   {
@@ -8,6 +9,7 @@ export default tseslint.config(
       '**/.next/**',
       '**/node_modules/**',
       '**/*.config.*',
+      'apps/web/next-env.d.ts',
       'scripts/**', // throwaway/dev scripts (e.g. testnet de-risk)
     ],
   },
@@ -24,6 +26,18 @@ export default tseslint.config(
       // hard per-file cap: 300 (CI fail). Soft target ~200 — flagged in review.
       'max-lines': ['error', { max: 300, skipBlankLines: true, skipComments: true }],
       'max-lines-per-function': ['warn', { max: 80, skipBlankLines: true, skipComments: true }],
+    },
+  },
+  {
+    // web app: React + hooks (the rest of the repo is non-React TS).
+    files: ['apps/web/**/*.{ts,tsx}'],
+    plugins: { 'react-hooks': reactHooks },
+    languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+      // JSX render functions are legitimately long; the 300-line FILE cap still applies.
+      'max-lines-per-function': 'off',
     },
   },
   {

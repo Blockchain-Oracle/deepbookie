@@ -1,0 +1,45 @@
+{
+  "name": "@deepbookie/web",
+  "version": "0.0.1",
+  "description": "DeepBookie web app — generative-UI chat to trade DeepBook Predict, sign in your own wallet.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.85",
+    "@ai-sdk/openai": "^3.0.73",
+    "@ai-sdk/react": "^3.0.210",
+    "@deepbookie/core": "workspace:*",
+    "@deepbookie/predict-client": "workspace:*",
+    "@mysten/dapp-kit-core": "^1.6.1",
+    "@mysten/dapp-kit-react": "^2.1.3",
+    "@mysten/sui": "^2.19.0",
+    "@neondatabase/serverless": "^1.1.0",
+    "@tanstack/react-query": "^5.101.0",
+    "ai": "^6.0.208",
+    "drizzle-orm": "^0.45.2",
+    "next": "^15.3.9",
+    "pino": "^9.5.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.1",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "drizzle-kit": "^0.31.10",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^4.3.1",
+    "typescript": "^5.7.0"
+  }
+}

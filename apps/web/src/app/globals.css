@@ -1,0 +1,53 @@
+@import 'tailwindcss';
+
+/* DeepBookie token layer — editorial financial system. Tailwind v4 reads these as utilities. */
+@theme {
+  --color-ink: #1a1714;
+  --color-paper: #f4f2ec;
+  --color-canvas: #e4e2dc;
+  --color-card: #ffffff;
+  --color-green: #2c5e4a; /* up / live / signed */
+  --color-mint: #7fcaa6;
+  --color-clay: #b0452b; /* down / error */
+  --color-wallet: #4da2ff; /* Sui wallet */
+  --color-line: #e6e1d8;
+  --color-line-strong: #ded9cf;
+  --color-muted: #8a857b;
+  --color-faint: #9c978d;
+  --color-ink-soft: #3c3933;
+  --color-shimmer: #ece8df;
+
+  --font-sans: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --radius-card-in: 8px;
+  --radius-card: 14px;
+  --radius-phone: 42px;
+  --radius-pill: 999px;
+
+  --shadow-raised: 0 18px 40px -22px rgb(26 23 20 / 0.3);
+  --shadow-float: 0 28px 64px -26px rgb(26 23 20 / 0.45);
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* The view pushes in deliberately; nothing snaps. Honor reduced-motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
