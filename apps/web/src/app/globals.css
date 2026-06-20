@@ -82,3 +82,91 @@ body {
 .animate-fade-up {
   animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+/* ── Chat-home launcher: entrance + living-detail motifs (reduced-motion handled globally above) ── */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-rise {
+  animation: rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+.live-dot {
+  animation: live-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse-up {
+  0%,
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 0 rgb(44 94 74 / 0);
+  }
+  45% {
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 4px rgb(44 94 74 / 0.1);
+  }
+}
+.pulse-up {
+  animation: pulse-up 2.6s ease-in-out infinite;
+}
+
+@keyframes spark-dot {
+  0% {
+    offset-distance: 0%;
+  }
+  100% {
+    offset-distance: 100%;
+  }
+}
+.spark-dot {
+  animation: spark-dot 4.5s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scaleX(0.82);
+    opacity: 1;
+  }
+}
+.breathe-a {
+  transform-origin: left center;
+  animation: breathe 3.2s ease-in-out infinite;
+}
+.breathe-b {
+  transform-origin: right center;
+  animation: breathe 3.2s ease-in-out infinite 0.4s;
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+.drift {
+  animation: drift 3s ease-in-out infinite;
+}

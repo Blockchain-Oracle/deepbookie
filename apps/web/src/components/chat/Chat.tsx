@@ -6,6 +6,7 @@ import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } fro
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { Composer } from './Composer';
 import { MessageList } from './MessageList';
+import { FundingBanner } from '@/components/onboarding/FundingBanner';
 import { usePositions } from '@/lib/hooks/usePositions';
 import { useBalanceManager } from '@/lib/hooks/useBalanceManager';
 import type { AddToolResult, SignOutcome } from '@/components/widgets/ReceiptController';
@@ -95,6 +96,9 @@ export function Chat() {
         onAction={(text) => sendMessage({ text })}
         onOutcome={onOutcome}
       />
+      <div className="px-4">
+        <FundingBanner />
+      </div>
       <Composer value={input} onChange={setInput} onSend={onSend} disabled={status !== 'ready'} />
     </div>
   );
