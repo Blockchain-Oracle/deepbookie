@@ -56,8 +56,10 @@ export const STALE = {
   activity: 3_000,
 } as const;
 
-export const INDEXER_TIMEOUT_MS = 8_000;
-export const INDEXER_RETRIES = 2;
+// The markets list (/oracles) is legitimately ~15s/2.2MB, so the timeout must clear it; it's
+// cached server-side after the first hit. Other reads are sub-2s.
+export const INDEXER_TIMEOUT_MS = 22_000;
+export const INDEXER_RETRIES = 1;
 export const VAULT_PERF_MAX_POINTS = 120;
 export const CHAT_PRUNE_MAX_MESSAGES = 40;
 

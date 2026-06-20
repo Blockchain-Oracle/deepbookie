@@ -1,0 +1,58 @@
+'use client';
+
+import { useCallback } from 'react';
+import { useCurrentAccount, useCurrentClient, useDAppKit } from '@mysten/dapp-kit-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { allTools, getToolsForAdapter, type ToolContext } from '@deepbookie/core';
+import { NETWORK } from '@/lib/constants';
+
+/** Map a thrown build/sign error to a user-facing reason (the FAILED receipt shows this). */
+export function reasonFor(e: unknown): string {
+  const m = (e instanceof Error ? e.message : String(e)).toLowerCase();
+  if (m.includes('reject') || m.includes('denied') || m.includes('cancel'))
+    return 'Signature declined in your wallet. No funds moved.';
+  if (m.includes('no dusdc')) return 'No dUSDC in your wallet — fund from the faucet first.';
+  if (m.includes('manager')) return 'Create your account first, then place this bet.';
+  if (m.includes('insufficient') || m.includes('balance')) return 'Not enough balance to cover this bet.';
+  if (m.includes('settled') || m.includes('not active') || m.includes('expired'))
+    return 'This market has settled — it can no longer be traded.';
+  if (m.includes('timeout') || m.includes('indexer')) return 'Couldn’t reach the market right now — try again.';
+  return 'The transaction failed. No funds moved.';
+}
+
+/**
+ * The keyless sign handshake: build the unsigned tx with the SAME core write `build()` (browser
+ * ToolContext wrapping the wallet's client), sign in the wallet, wait for finality, invalidate
+ * caches. Returns the digest; throws on failure (caller renders the FAILED receipt via reasonFor).
+ */
+export function useSubmitTx() {
+  const dappKit = useDAppKit();
+  const client = useCurrentClient();
+  const account = useCurrentAccount();
+  const qc = useQueryClient();
+
+  return useCallback(
+    async (toolName: string, input: Record<string, unknown>, managerId?: string): Promise<string> => {
+      if (!account) throw new Error('wallet not connected');
+      const ctx: ToolContext = { client, network: NETWORK, sender: account.address, managerId };
+      const tx = await getToolsForAdapter(allTools, ctx).build(toolName, input);
+      const res = await dappKit.signAndExecuteTransaction({ transaction: tx });
+      if (res.$kind === 'FailedTransaction') throw new Error('transaction failed on-chain');
+      const digest = res.Transaction.digest;
+      await client.waitForTransaction({ digest });
+
+      // Bust server tags + client caches so balances/positions reflect chain immediately.
+      const tags = ['markets', 'activity', ...(managerId ? [`manager:${managerId}`] : [])];
+      void fetch('/api/revalidate', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ tags }),
+      }).catch(() => {});
+      qc.invalidateQueries({ queryKey: ['balance'] });
+      qc.invalidateQueries({ queryKey: ['positions'] });
+
+      return digest;
+    },
+    [account, client, dappKit, qc],
+  );
+}
