@@ -72,7 +72,7 @@ export default function HistoryPage() {
 
   return (
     <div className="flex h-full min-h-0">
-      <aside className="hidden w-64 shrink-0 overflow-y-auto border-r border-line bg-paper p-3.5 md:block">
+      <aside className="hidden w-64 shrink-0 overflow-y-auto border-r border-line bg-paper p-3.5 lg:block">
         <div className="mb-3 px-1 text-[10px] font-semibold uppercase tracking-[0.13em] text-faint">Sessions</div>
         {chats.isLoading && <Skeleton className="h-16 w-full" />}
         <div className="flex flex-col gap-1">
@@ -92,8 +92,8 @@ export default function HistoryPage() {
         </div>
       </aside>
 
-      {/* Mobile session picker */}
-      <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-line bg-paper p-3 md:hidden">
+      {/* Tablet + mobile session picker */}
+      <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-line bg-paper p-3 lg:hidden">
         {sessions.map((s) => (
           <button
             key={s.id}

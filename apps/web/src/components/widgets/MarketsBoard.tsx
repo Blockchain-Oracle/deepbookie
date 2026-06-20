@@ -48,8 +48,8 @@ export function MarketsBoard({
 
   return (
     <>
-      {/* Desktop table */}
-      <Card className="hidden overflow-hidden p-0 md:block">
+      {/* Desktop table (tablet falls back to cards so dense columns don't cramp) */}
+      <Card className="hidden overflow-hidden p-0 lg:block">
         <div className="flex items-center bg-[#FAF8F3] px-5 py-3">
           <span className={`${TH} flex-[2.4]`}>Market</span>
           <span className={`${TH} flex-1 text-right`}>Spot</span>
@@ -103,8 +103,8 @@ export function MarketsBoard({
         })}
       </Card>
 
-      {/* Mobile cards */}
-      <div className="flex flex-col gap-3 md:hidden">
+      {/* Tablet + mobile cards */}
+      <div className="flex flex-col gap-3 lg:hidden">
         {markets.map((m) => {
           const phase = phaseOf(m, now);
           return (

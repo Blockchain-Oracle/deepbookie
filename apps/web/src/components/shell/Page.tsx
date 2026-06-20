@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 /** Scrolling content surface for a data page — matches the design's 26×30 main padding. */
 export function Page({ children }: { children: ReactNode }) {
   return (
-    <div className="h-full overflow-y-auto px-5 py-6 md:px-8 md:py-7">
+    <div className="h-full overflow-y-auto px-5 py-6 md:px-6 md:py-7 lg:px-8">
       <div className="mx-auto w-full max-w-5xl">{children}</div>
     </div>
   );
