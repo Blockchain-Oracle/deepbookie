@@ -122,6 +122,9 @@ const mintRange = defineWrite({
   surface: 'predict',
   inputSchema: range.extend({ fundUsd: z.number().positive().optional() }),
   build: async (a, ctx) => {
+    if (a.lowerStrikeUsd >= a.higherStrikeUsd) {
+      throw new RangeError('lowerStrikeUsd must be < higherStrikeUsd');
+    }
     const { expiry, snap } = await resolveMarket(a.oracleId);
     const funding = a.fundUsd
       ? { fundCoinId: await firstDusdcCoin(ctx), depositAmount: toDusdc(a.fundUsd) }
@@ -144,6 +147,9 @@ const redeemRange = defineWrite({
   surface: 'predict',
   inputSchema: range,
   build: async (a, ctx) => {
+    if (a.lowerStrikeUsd >= a.higherStrikeUsd) {
+      throw new RangeError('lowerStrikeUsd must be < higherStrikeUsd');
+    }
     const { expiry, snap } = await resolveMarket(a.oracleId);
     return buildRedeemRange({
       managerId: requireManager(ctx, a.managerId),

@@ -17,10 +17,21 @@ const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
  */
 export function getOrCreateKeypair(): Ed25519Keypair {
   const env = process.env.DEEPBOOKIE_PRIVATE_KEY?.trim();
-  if (env) return Ed25519Keypair.fromSecretKey(env);
+  if (env) {
+    try {
+      return Ed25519Keypair.fromSecretKey(env);
+    } catch {
+      throw new Error('DEEPBOOKIE_PRIVATE_KEY is not a valid Sui secret key (expected a suiprivkey… string)');
+    }
+  }
 
   if (existsSync(CONFIG_FILE)) {
-    const cfg = JSON.parse(readFileSync(CONFIG_FILE, 'utf8')) as { secretKey?: string };
+    let cfg: { secretKey?: string };
+    try {
+      cfg = JSON.parse(readFileSync(CONFIG_FILE, 'utf8')) as { secretKey?: string };
+    } catch {
+      throw new Error(`${CONFIG_FILE} is not valid JSON — delete it to regenerate a wallet`);
+    }
     if (!cfg.secretKey) throw new Error(`${CONFIG_FILE} is missing a 'secretKey' field`);
     return Ed25519Keypair.fromSecretKey(cfg.secretKey);
   }

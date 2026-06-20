@@ -52,7 +52,16 @@ program
       process.exitCode = 1;
       return;
     }
-    const args = JSON.parse(json) as Record<string, unknown>;
+    let args: Record<string, unknown>;
+    try {
+      args = JSON.parse(json) as Record<string, unknown>;
+    } catch {
+      process.stderr.write(
+        `invalid JSON for args: ${json}\n  pass a quoted JSON object, e.g. '{"oracleId":"0x.."}'\n`,
+      );
+      process.exitCode = 1;
+      return;
+    }
     const { kp, ctx, api } = ctxApi();
     if (def.kind === 'read') {
       out(await api.read(tool, args));

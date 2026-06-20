@@ -97,17 +97,22 @@ const getQuote = defineRead({
   }),
   read: async (a, ctx) => {
     const { expiry, snap } = await resolveMarket(a.oracleId);
+    const snappedStrike = snap(a.strikeUsd);
     const quantity = toDusdc(a.quantityUsd);
+    if (quantity === 0n) {
+      throw new Error('quantityUsd too small — minimum tradable size is 0.000001 dUSDC');
+    }
     const { mintCost, redeemPayout } = await getTradeAmounts(ctx.client, {
       oracleId: a.oracleId,
       expiry,
-      strike: snap(a.strikeUsd),
+      strike: snappedStrike,
       direction: a.direction,
       quantity,
       sender: ctx.sender ?? ZERO_ADDRESS,
     });
     return {
-      strikeUsd: a.strikeUsd,
+      requestedStrikeUsd: a.strikeUsd,
+      strikeUsd: fromScaled(snappedStrike), // the grid strike actually priced
       quantityUsd: a.quantityUsd,
       mintCostUsd: fromDusdc(mintCost),
       redeemPayoutUsd: fromDusdc(redeemPayout),

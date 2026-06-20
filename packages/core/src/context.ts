@@ -15,6 +15,11 @@ export function createContext(
   opts: { network?: Network; sender?: string; managerId?: string } = {},
 ): ToolContext {
   const network = opts.network ?? 'testnet';
+  // Honesty guard: the Predict indexer + deployment are testnet-only, so a non-testnet context
+  // would read the testnet indexer while pointing the RPC elsewhere (split-brain). Reject it.
+  if (network !== 'testnet') {
+    throw new Error('DeepBook Predict is testnet-only for now — set DEEPBOOKIE_NETWORK=testnet');
+  }
   return {
     client: new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(network), network }),
     network,

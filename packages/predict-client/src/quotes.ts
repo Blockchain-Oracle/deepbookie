@@ -54,7 +54,7 @@ export async function getTradeAmounts(
     transactionBlock: tx,
   });
   const rv = res.results?.[1]?.returnValues;
-  if (!rv || !rv[0] || !rv[1]) {
+  if (!rv || !rv[0]?.[0]?.length || !rv[1]?.[0]?.length) {
     throw new Error(`get_trade_amounts returned no quote (${res.error ?? 'unknown error'})`);
   }
   return { mintCost: decodeU64(rv[0][0]), redeemPayout: decodeU64(rv[1][0]) };

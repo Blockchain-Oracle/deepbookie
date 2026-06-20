@@ -11,7 +11,11 @@ import type {
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${INDEXER_URL}${path}`);
   if (!res.ok) throw new Error(`predict indexer ${path} -> HTTP ${res.status}`);
-  return (await res.json()) as T;
+  const body = (await res.json()) as T;
+  if (body === null || body === undefined) {
+    throw new Error(`predict indexer ${path} -> empty/invalid response`);
+  }
+  return body;
 }
 
 export function getOracles(): Promise<OracleRow[]> {
