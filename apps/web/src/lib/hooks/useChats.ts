@@ -3,7 +3,9 @@ import { useCurrentAccount } from '@mysten/dapp-kit';
 import { POLL } from '@/lib/constants';
 import { apiGet } from './client';
 import type { ChatSummary } from '@/lib/db/chats';
-import type { ChatRow } from '@/lib/db/schema';
+import type { ChatRow, TxOutcomeRow } from '@/lib/db/schema';
+
+export type ChatSession = ChatRow & { outcomes: TxOutcomeRow[] };
 
 /** The connected wallet's saved sessions (History list). */
 export function useChats() {
@@ -22,6 +24,6 @@ export function useChatSession(id?: string) {
   return useQuery({
     queryKey: ['chat', id, owner],
     enabled: !!owner && !!id,
-    queryFn: () => apiGet<ChatRow>(`/api/chats/${id}?wallet=${owner}`),
+    queryFn: () => apiGet<ChatSession>(`/api/chats/${id}?wallet=${owner}`),
   });
 }

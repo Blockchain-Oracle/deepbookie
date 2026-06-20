@@ -7,6 +7,12 @@ import { SuiJsonRpcClient } from '@mysten/sui/jsonRpc';
 import { allTools, getToolsForAdapter, type ToolContext } from '@deepbookie/core';
 import { NETWORK } from '@/lib/constants';
 
+/** A wallet decline (user rejected the popup) — a cancellation, not a failure. */
+export function isUserRejection(e: unknown): boolean {
+  const m = (e instanceof Error ? e.message : String(e)).toLowerCase();
+  return m.includes('reject') || m.includes('denied') || m.includes('cancel');
+}
+
 /** Map a thrown build/sign error to a user-facing reason (the FAILED receipt shows this). */
 export function reasonFor(e: unknown): string {
   const m = (e instanceof Error ? e.message : String(e)).toLowerCase();

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getChat } from '@/lib/db/chats';
+import { getChat, listOutcomes } from '@/lib/db/chats';
 import { logger } from '@/lib/logger.server';
 
 export const runtime = 'nodejs';
@@ -13,7 +13,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   try {
     const chat = await getChat(id, wallet);
     if (!chat) return NextResponse.json({ error: 'not found' }, { status: 404 });
-    return NextResponse.json(chat);
+    const outcomes = await listOutcomes(id, wallet);
+    return NextResponse.json({ ...chat, outcomes });
   } catch (err) {
     logger.error({ err: err instanceof Error ? err.message : String(err), id }, 'GET /api/chats/[id]');
     return NextResponse.json({ error: 'unavailable' }, { status: 502 });

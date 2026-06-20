@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from 'ai';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { Composer } from './Composer';
 import { MessageList } from './MessageList';
 import { usePositions } from '@/lib/hooks/usePositions';
-import type { AddToolResult } from '@/components/widgets/ReceiptController';
+import type { AddToolResult, SignOutcome } from '@/components/widgets/ReceiptController';
 
 export function Chat() {
   const account = useCurrentAccount();
@@ -55,6 +55,33 @@ export function Chat() {
     setInput('');
   };
 
+  // Record the sign outcome the instant it happens — independent of the stream resume, so a signed
+  // trade is never lost (the plan's belt-and-suspenders save-on-sign). Keyed by toolCallId.
+  const onOutcome = useCallback(
+    (o: SignOutcome) => {
+      const wallet = account?.address;
+      if (!wallet) return;
+      const body = JSON.stringify({ ...o, walletAddress: wallet });
+      // Bounded retry — a signed trade's ledger row must survive a transient blip, not be lost.
+      void (async () => {
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          try {
+            const res = await fetch(`/api/chats/${chatId}/outcome`, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body,
+            });
+            if (res.ok) return;
+          } catch {
+            /* network blip — retry */
+          }
+          await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+        }
+      })();
+    },
+    [account?.address, chatId],
+  );
+
   return (
     <div className="flex h-full flex-col">
       <MessageList
@@ -62,6 +89,7 @@ export function Chat() {
         status={status}
         addToolResult={addToolResult as unknown as AddToolResult}
         onAction={(text) => sendMessage({ text })}
+        onOutcome={onOutcome}
       />
       <Composer value={input} onChange={setInput} onSend={onSend} disabled={status !== 'ready'} />
     </div>

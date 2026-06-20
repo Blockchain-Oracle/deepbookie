@@ -13,7 +13,12 @@ import { VaultCard } from '@/components/widgets/VaultCard';
 import { PortfolioRollup } from '@/components/widgets/PortfolioRollup';
 import { PositionCard } from '@/components/widgets/PositionCard';
 import { ActivityTape } from '@/components/widgets/ActivityTape';
-import { ReceiptController, type AddToolResult, type WriteToolPart } from '@/components/widgets/ReceiptController';
+import {
+  ReceiptController,
+  type AddToolResult,
+  type OnSignOutcome,
+  type WriteToolPart,
+} from '@/components/widgets/ReceiptController';
 import type { Market, MarketState, Odds, Portfolio, Position, Positions, Quote, RangeQuote, Vault } from '@/lib/bff/types';
 
 type Part = UIMessage['parts'][number];
@@ -51,11 +56,13 @@ export function MessagePart({
   part,
   addToolResult,
   onAction,
+  onOutcome,
 }: {
   role: string;
   part: Part;
   addToolResult: AddToolResult;
   onAction: (text: string) => void;
+  onOutcome?: OnSignOutcome;
 }) {
   if (part.type === 'text') {
     if (role === 'user') {
@@ -82,6 +89,7 @@ export function MessagePart({
         part={tp as WriteToolPart}
         addToolResult={addToolResult}
         onRetry={() => onAction('Let’s try that again.')}
+        onOutcome={onOutcome}
       />
     );
   }

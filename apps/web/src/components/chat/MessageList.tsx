@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import type { UIMessage } from 'ai';
 import { BrandMark } from '@/components/ui/BrandMark';
 import { MessagePart } from './MessagePart';
-import type { AddToolResult } from '@/components/widgets/ReceiptController';
+import type { AddToolResult, OnSignOutcome } from '@/components/widgets/ReceiptController';
 
 // Category carousel for the chat home screen — each card sends its starter prompt on click.
 const CATEGORIES = [
@@ -56,11 +56,13 @@ export function MessageList({
   status,
   addToolResult,
   onAction,
+  onOutcome,
 }: {
   messages: UIMessage[];
   status: string;
   addToolResult: AddToolResult;
   onAction: (text: string) => void;
+  onOutcome?: OnSignOutcome;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -80,6 +82,7 @@ export function MessageList({
                 part={part}
                 addToolResult={addToolResult}
                 onAction={onAction}
+                onOutcome={onOutcome}
               />
             ))}
           </div>

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { SignReceipt, type ReceiptLine, type ReceiptState } from './SignReceipt';
-import { useSubmitTx, reasonFor } from '@/lib/hooks/useSubmitTx';
+import { useSubmitTx, reasonFor, isUserRejection } from '@/lib/hooks/useSubmitTx';
 import { useQuote } from '@/lib/hooks/useQuote';
 import { usePositions } from '@/lib/hooks/usePositions';
 import { SUISCAN_TX } from '@/lib/constants';
@@ -26,6 +26,15 @@ export type AddToolResult = (
     | { tool: string; toolCallId: string; state: 'output-error'; errorText: string },
 ) => void;
 
+/** Reported the instant a write resolves — persisted independently of the transcript (the ledger). */
+export interface SignOutcome {
+  toolCallId: string;
+  toolName: string;
+  status: 'signed' | 'cancelled' | 'failed';
+  digest?: string;
+}
+export type OnSignOutcome = (o: SignOutcome) => void;
+
 const num = (v: unknown) => (typeof v === 'number' ? v : 0);
 const str = (v: unknown) => (typeof v === 'string' ? v : '');
 const docNumberFor = (id: string) => `DB·${id.slice(0, 4).toUpperCase()}·${id.slice(-4)}`;
@@ -34,10 +43,12 @@ export function ReceiptController({
   part,
   addToolResult,
   onRetry,
+  onOutcome,
 }: {
   part: WriteToolPart;
   addToolResult: AddToolResult;
   onRetry: () => void;
+  onOutcome?: OnSignOutcome;
 }) {
   const submit = useSubmitTx();
   const account = useCurrentAccount();
@@ -79,14 +90,23 @@ export function ReceiptController({
     try {
       const digest = await submit(toolName, input, positionsQ.data?.managerId ?? undefined);
       addToolResult({ tool: toolName, toolCallId: part.toolCallId, output: { digest } });
+      onOutcome?.({ toolCallId: part.toolCallId, toolName, status: 'signed', digest });
     } catch (e) {
-      addToolResult({ tool: toolName, toolCallId: part.toolCallId, state: 'output-error', errorText: reasonFor(e) });
+      // A wallet decline is a cancellation, not a failure — render the void receipt + log it as cancelled.
+      if (isUserRejection(e)) {
+        addToolResult({ tool: toolName, toolCallId: part.toolCallId, output: { status: 'cancelled' } });
+        onOutcome?.({ toolCallId: part.toolCallId, toolName, status: 'cancelled' });
+      } else {
+        addToolResult({ tool: toolName, toolCallId: part.toolCallId, state: 'output-error', errorText: reasonFor(e) });
+        onOutcome?.({ toolCallId: part.toolCallId, toolName, status: 'failed' });
+      }
       setLocal('idle'); // allow retry after a failure
     }
   };
 
   const onCancel = () => {
     addToolResult({ tool: toolName, toolCallId: part.toolCallId, output: { status: 'cancelled' } });
+    onOutcome?.({ toolCallId: part.toolCallId, toolName, status: 'cancelled' });
   };
 
   const common = {
