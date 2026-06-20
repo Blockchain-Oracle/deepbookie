@@ -105,6 +105,20 @@ const account = defineRead({
   read: async (a, ctx) => {
     requireBalanceManager(ctx);
     const db = spotClient(ctx);
+    // A freshly-created manager has no account record in a pool until it first trades there — the
+    // SDK's account() devInspect aborts and crashes parsing an empty result. Gate on accountExists
+    // and return an empty (but valid) account so the read never throws for a new manager.
+    const exists = await db.accountExists(a.poolKey, SPOT_MANAGER_KEY).catch(() => false);
+    if (!exists) {
+      return {
+        poolKey: a.poolKey,
+        openOrderIds: [],
+        locked: { base: 0, quote: 0, deep: 0 },
+        stake: { active: 0, inactive: 0 },
+        volume: { taker: 0, maker: 0 },
+        rebates: { base: 0, quote: 0, deep: 0 },
+      };
+    }
     const [acct, locked] = await Promise.all([
       db.account(a.poolKey, SPOT_MANAGER_KEY),
       db.lockedBalance(a.poolKey, SPOT_MANAGER_KEY),

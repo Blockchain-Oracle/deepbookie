@@ -38,15 +38,22 @@ const BM_SCOPED = new Set([
 export async function POST(req: Request) {
   let tool: string | undefined;
   try {
-    const body = (await req.json()) as { tool?: string; args?: Record<string, unknown>; owner?: string };
+    const body = (await req.json()) as {
+      tool?: string;
+      args?: Record<string, unknown>;
+      owner?: string;
+      balanceManagerId?: string;
+    };
     tool = body.tool;
     if (!tool || !ALLOWED.has(tool)) {
       return NextResponse.json({ error: 'unknown spot read' }, { status: 400 });
     }
     let balanceManagerId: string | null = null;
     if (BM_SCOPED.has(tool)) {
-      if (!body.owner) return NextResponse.json({ error: 'no wallet' }, { status: 400 });
-      balanceManagerId = await resolveBalanceManagerByOwner(body.owner).catch(() => null);
+      // Prefer the client-provided id (captured at creation, localStorage-backed) — the on-chain
+      // resolver can't find shared BalanceManagers. Fall back to it only if the client didn't send one.
+      balanceManagerId =
+        body.balanceManagerId ?? (body.owner ? await resolveBalanceManagerByOwner(body.owner).catch(() => null) : null);
       if (!balanceManagerId) return NextResponse.json({ error: 'no balance manager' }, { status: 409 });
     }
     const ctx = createContext({

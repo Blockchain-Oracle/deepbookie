@@ -6,6 +6,7 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { SuiJsonRpcClient } from '@mysten/sui/jsonRpc';
 import { allTools, getToolsForAdapter, type ToolContext } from '@deepbookie/core';
 import { NETWORK } from '@/lib/constants';
+import { setStoredBalanceManager } from '@/lib/spot/bmStore';
 
 /** A wallet decline (user rejected the popup) — a cancellation, not a failure. */
 export function isUserRejection(e: unknown): boolean {
@@ -86,7 +87,12 @@ export function useSubmitTx() {
           const created = (tb.objectChanges as ObjChange[] | undefined)?.find(
             (c) => c.type === 'created' && c.objectType?.includes('balance_manager::BalanceManager'),
           );
-          if (created?.objectId) qc.setQueryData(['balanceManager', owner], { balanceManagerId: created.objectId });
+          if (created?.objectId) {
+            // Persist (localStorage) + prime the cache — the on-chain resolver can't find shared BMs,
+            // so this captured id is the authoritative source for every later spot action + reload.
+            setStoredBalanceManager(owner, created.objectId);
+            qc.setQueryData(['balanceManager', owner], { balanceManagerId: created.objectId });
+          }
         } catch {
           /* fall back to the resolver refetch below */
         }
