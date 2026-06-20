@@ -325,6 +325,22 @@ One token layer → Tailwind theme **and** dapp-kit CSS vars.
   it as a unit; no message-level queries needed). Indexed on `wallet_address`.
 - **Endpoints:** `GET /api/chats?wallet=` (list/sessions), `GET /api/chats/{id}` (restore),
   persistence on `onFinish` in `/api/chat`. `validateUIMessages` on restore.
+
+**What History *is* — chat sessions, NOT a trade ledger (two different things, two places):**
+- **History tab = your conversations with the agent** (one row = one session). Because you trade by
+  signing a receipt *inside* a chat, your trades naturally appear within these transcripts as the
+  signed receipts (digest + Suiscan). This is the "my chat with AI" surface.
+- **The standalone "all my trades / PnL" ledger is the Positions tab**, read **on-chain** (the
+  manager's minted/redeemed via the indexer, §8) — that is the canonical trade record, not the DB.
+- **No separate `trades` table.** The stored `UIMessage[]` already embeds each trade's *sign-time*
+  facts (digest, oracle, strike, direction, quantity, cost, max payout) inside the receipt
+  tool-result. Trades live on-chain; only the conversation lives in Postgres.
+- **Immutable transcript + live outcome overlay.** A trade signed at 3:18 may settle at 3:30 —
+  *after* the chat is saved — so the outcome (settled price, won/lost, redeemed, payout) is unknown
+  at save time. On restore we **overlay the live on-chain outcome** (looked up by digest/oracle at
+  view time), so History renders "Settled · UP won · +100" without ever persisting a stale outcome.
+  The transcript is frozen; the outcome is always re-derived from chain. (Optional later: cache a
+  *terminal* outcome once fully settled+redeemed to skip re-fetching.)
 - **Funds stay on-chain** — only transcripts live in the DB ("not in our database" holds for money).
 
 ---
