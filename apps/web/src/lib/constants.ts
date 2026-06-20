@@ -23,6 +23,7 @@ export const MANAGER_TYPE = `${PREDICT_PACKAGE}::predict_manager::PredictManager
 
 export const SUISCAN_TX = (digest: string) => `https://suiscan.xyz/testnet/tx/${digest}`;
 export const SUISCAN_OBJECT = (id: string) => `https://suiscan.xyz/testnet/object/${id}`;
+export const SUISCAN_ACCOUNT = (addr: string) => `https://suiscan.xyz/testnet/account/${addr}`;
 
 /** Operator tally form — fallback path to request testnet dUSDC (hackathon-gated). */
 export const TALLY_FAUCET_URL = 'https://tally.so/r/Xx102L';

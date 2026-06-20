@@ -3,6 +3,7 @@
 import type { UIMessage } from 'ai';
 import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Markdown } from '@/components/chat/Markdown';
 import { OddsCurveCard } from '@/components/widgets/OddsCurveCard';
 import { MarketHeader } from '@/components/widgets/MarketHeader';
 import { MarketTable } from '@/components/widgets/MarketTable';
@@ -59,12 +60,16 @@ export function MessagePart({
   if (part.type === 'text') {
     if (role === 'user') {
       return (
-        <div className="ml-auto w-fit max-w-[82%] rounded-[16px_16px_5px_16px] bg-ink px-4 py-2.5 text-sm leading-snug text-paper">
+        <div className="ml-auto w-fit max-w-[82%] whitespace-pre-wrap rounded-[16px_16px_5px_16px] bg-ink px-4 py-2.5 text-sm leading-snug text-paper [overflow-wrap:anywhere]">
           {part.text}
         </div>
       );
     }
-    return <div className="max-w-[92%] text-sm leading-relaxed text-ink-soft">{part.text}</div>;
+    return (
+      <div className="max-w-[92%]">
+        <Markdown>{part.text}</Markdown>
+      </div>
+    );
   }
 
   if (!part.type.startsWith('tool-')) return null;
