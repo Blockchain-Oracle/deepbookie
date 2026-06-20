@@ -42,9 +42,36 @@ export default function PositionsPage() {
         <div className="flex flex-col gap-5">
           {data.portfolio && <PortfolioRollup portfolio={data.portfolio} />}
           <PositionsTable positions={data.positions?.minted ?? []} managerId={data.managerId} />
+          <LifecycleNote />
         </div>
       )}
     </Page>
+  );
+}
+
+/** How a Predict bet behaves end-to-end — so "ongoing", "sell now", and "collect" are never a mystery. */
+function LifecycleNote() {
+  const steps = [
+    { k: 'Bet', d: 'You mint an UP/DOWN position — you sign it; dUSDC leaves your wallet.' },
+    { k: 'Ongoing', d: 'Its value moves with the live odds until the deadline.' },
+    { k: 'Settles', d: 'At expiry the oracle stamps the price — the outcome locks automatically.' },
+    { k: 'Collect', d: 'Redeem a settled win for its payout (a lost bet is worth 0).' },
+  ];
+  return (
+    <Card className="p-4">
+      <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-faint">How a bet works</div>
+      <div className="flex flex-col gap-2">
+        {steps.map((s) => (
+          <div key={s.k} className="flex gap-3 text-[13px] leading-snug">
+            <span className="w-16 shrink-0 font-semibold text-ink">{s.k}</span>
+            <span className="text-muted">{s.d}</span>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 border-t border-line pt-3 text-[12.5px] leading-snug text-muted">
+        No “cancel” — Predict is a vault, not an order book. But you’re never trapped: <span className="font-semibold text-ink">Sell now</span> closes an open bet early at its live value.
+      </p>
+    </Card>
   );
 }
 

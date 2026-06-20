@@ -4,8 +4,23 @@ import { useTxAction } from '@/lib/hooks/useTxAction';
 import { SUISCAN_TX } from '@/lib/constants';
 import type { Position } from '@/lib/bff/types';
 
-/** Settle one binary position into the manager balance — the keyless sign flow as a single row action. */
-export function RedeemButton({ position, managerId }: { position: Position; managerId: string }) {
+/**
+ * The keyless redeem action as a single row button. `redeem` serves BOTH lifecycle exits:
+ *  - open bet  → "Sell now" (close early at live value)
+ *  - settled   → "Collect"  (claim the settled win; a lost bet redeems to 0)
+ * The label is set by the caller from the position's phase.
+ */
+export function RedeemButton({
+  position,
+  managerId,
+  label = 'Collect',
+  tone = 'green',
+}: {
+  position: Position;
+  managerId: string;
+  label?: string;
+  tone?: 'green' | 'ink';
+}) {
   const { status, digest, reason, run } = useTxAction();
 
   if (status === 'done' && digest) {
@@ -16,7 +31,7 @@ export function RedeemButton({ position, managerId }: { position: Position; mana
         rel="noreferrer"
         className="font-mono text-[11px] font-semibold text-green underline decoration-green/40 underline-offset-2"
       >
-        Redeemed ↗
+        Done ↗
       </a>
     );
   }
@@ -35,14 +50,15 @@ export function RedeemButton({ position, managerId }: { position: Position; mana
   }
 
   const signing = status === 'signing';
+  const base = tone === 'ink' ? 'bg-ink text-paper' : 'bg-green text-white';
   return (
     <button
       type="button"
       disabled={signing}
       onClick={() => void run('redeem', toArgs(position), { managerId })}
-      className="rounded-[7px] bg-green px-3.5 py-1.5 text-[12px] font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+      className={`rounded-[7px] px-3.5 py-1.5 text-[12px] font-semibold transition hover:opacity-90 disabled:opacity-60 ${base}`}
     >
-      {signing ? 'Signing…' : 'Redeem →'}
+      {signing ? 'Signing…' : `${label} →`}
     </button>
   );
 }

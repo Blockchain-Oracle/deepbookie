@@ -40,7 +40,7 @@ function PositionList({ positions }: { positions: Positions }) {
   return (
     <div className="flex flex-col gap-2">
       {positions.minted.map((p, i) => (
-        <PositionCard key={`m${i}`} position={p} />
+        <PositionCard key={`m${i}`} position={p} managerId={positions.managerId} />
       ))}
       {positions.redeemed.map((p, i) => (
         <PositionCard key={`r${i}`} position={p} settled />
