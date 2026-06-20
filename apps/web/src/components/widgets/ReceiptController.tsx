@@ -6,6 +6,7 @@ import { SignReceipt, type ReceiptLine, type ReceiptState } from './SignReceipt'
 import { useSubmitTx, reasonFor, isUserRejection } from '@/lib/hooks/useSubmitTx';
 import { useQuote } from '@/lib/hooks/useQuote';
 import { usePositions } from '@/lib/hooks/usePositions';
+import { useBalanceManager } from '@/lib/hooks/useBalanceManager';
 import { SUISCAN_TX } from '@/lib/constants';
 import { formatUsd, shortenDigest } from '@/lib/format';
 import type { Direction } from '@/lib/bff/types';
@@ -53,12 +54,14 @@ export function ReceiptController({
   const submit = useSubmitTx();
   const account = useCurrentAccount();
   const positionsQ = usePositions(account?.address);
+  const bm = useBalanceManager(account?.address);
   const [local, setLocal] = useState<'idle' | 'signing' | 'dismissed'>('idle');
 
   const toolName = part.type.slice('tool-'.length);
   const input = part.input ?? {};
   const isBet = toolName === 'mint' || toolName === 'redeem';
-  const needsManager = toolName !== 'create_manager';
+  const isSpot = toolName.startsWith('spot_');
+  const needsManager = toolName !== 'create_manager' && !isSpot;
   const direction = (str(input.direction) || 'UP') as Direction;
 
   const quote = useQuote(
@@ -88,7 +91,10 @@ export function ReceiptController({
     if (local === 'signing') return; // re-entry / double-submit guard
     setLocal('signing');
     try {
-      const digest = await submit(toolName, input, { managerId: positionsQ.data?.managerId ?? undefined });
+      const digest = await submit(toolName, input, {
+        managerId: positionsQ.data?.managerId ?? undefined,
+        balanceManagerId: bm.data?.balanceManagerId ?? undefined,
+      });
       addToolResult({ tool: toolName, toolCallId: part.toolCallId, output: { digest } });
       onOutcome?.({ toolCallId: part.toolCallId, toolName, status: 'signed', digest });
     } catch (e) {
@@ -151,6 +157,31 @@ export function ReceiptController({
     redeem_range: {
       title: `Settle $${formatUsd(num(input.lowerStrikeUsd), 0)}–$${formatUsd(num(input.higherStrikeUsd), 0)}`,
       lines: [{ label: 'Quantity', value: `${formatUsd(num(input.quantityUsd))} contracts`, strong: true }],
+    },
+    // Spot (DeepBook V3) zero/fixed-input writes — the editable spot writes route to their own cards.
+    spot_create_balance_manager: {
+      title: 'Open your DeepBook account',
+      lines: [{ label: 'Account', value: 'New BalanceManager' }],
+    },
+    spot_deposit: {
+      title: `Deposit ${formatUsd(num(input.amount))} ${str(input.coinKey)}`,
+      lines: [{ label: 'Coin', value: str(input.coinKey) }, { label: 'Amount', value: `${formatUsd(num(input.amount))} ${str(input.coinKey)}`, strong: true }],
+    },
+    spot_withdraw: {
+      title: `Withdraw ${input.amount === undefined ? 'all' : formatUsd(num(input.amount))} ${str(input.coinKey)}`,
+      lines: [{ label: 'Coin', value: str(input.coinKey) }, { label: 'Amount', value: input.amount === undefined ? 'All available' : `${formatUsd(num(input.amount))} ${str(input.coinKey)}`, strong: true }],
+    },
+    spot_place_market_order: {
+      title: `${input.isBid ? 'Buy' : 'Sell'} ${formatUsd(num(input.quantity))} (market)`,
+      lines: [{ label: 'Pool', value: str(input.poolKey) }, { label: 'Quantity', value: formatUsd(num(input.quantity)), strong: true }],
+    },
+    spot_cancel_order: {
+      title: 'Cancel order',
+      lines: [{ label: 'Pool', value: str(input.poolKey) }, { label: 'Order', value: shortenDigest(str(input.orderId)) }],
+    },
+    spot_cancel_all_orders: {
+      title: 'Cancel all orders',
+      lines: [{ label: 'Pool', value: str(input.poolKey) }],
     },
   };
   const action = actions[toolName] ?? { title: toolName, lines: [] };

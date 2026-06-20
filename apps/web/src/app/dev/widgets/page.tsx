@@ -1,5 +1,6 @@
 'use client';
 
+import { Providers } from '@/components/providers/Providers';
 import { OddsCurveCard } from '@/components/widgets/OddsCurveCard';
 import { SignReceipt, type ReceiptState } from '@/components/widgets/SignReceipt';
 import { MarketHeader } from '@/components/widgets/MarketHeader';
@@ -84,7 +85,17 @@ function Section({ title }: { title: string }) {
   return <h2 className="mb-4 mt-12 font-mono text-xs uppercase tracking-[0.1em] text-faint">{title}</h2>;
 }
 
-export default function WidgetGallery() {
+export default function WidgetGalleryPage() {
+  // Wrap in the app providers (ssr:false) — some widgets (PositionCard) now read on-chain via wallet
+  // hooks, so they need the SuiClient/Wallet context; this also keeps the page out of static prerender.
+  return (
+    <Providers>
+      <WidgetGallery />
+    </Providers>
+  );
+}
+
+function WidgetGallery() {
   const receiptStates: ReceiptState[] = ['loading', 'proposed', 'signing', 'signed', 'failed', 'cancelled'];
   return (
     <main className="min-h-screen bg-canvas px-12 py-14 font-sans text-ink">

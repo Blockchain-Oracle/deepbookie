@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import type { UIMessage } from 'ai';
 import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -19,10 +20,57 @@ import {
   type OnSignOutcome,
   type WriteToolPart,
 } from '@/components/widgets/ReceiptController';
+import { SpotPoolTable } from '@/components/widgets/spot/SpotPoolTable';
+import { OrderbookDepth } from '@/components/widgets/spot/OrderbookDepth';
+import { OpenOrdersList } from '@/components/widgets/spot/OpenOrdersList';
+import { BalanceManagerPanel } from '@/components/widgets/spot/BalanceManagerPanel';
+import { OrderValidityHint } from '@/components/widgets/spot/OrderValidityHint';
+import { SpotFacts } from '@/components/widgets/spot/SpotFacts';
+import { SwapCard } from '@/components/widgets/spot/SwapCard';
+import { LimitOrderTicket } from '@/components/widgets/spot/LimitOrderTicket';
+import { ModifyOrderCard } from '@/components/widgets/spot/ModifyOrderCard';
+import { StakeCard } from '@/components/widgets/spot/StakeCard';
+import { GovernanceCard } from '@/components/widgets/spot/GovernanceCard';
+import { SettledSweepCard } from '@/components/widgets/spot/SettledSweepCard';
 import type { Market, MarketState, Odds, Portfolio, Position, Positions, Quote, RangeQuote, Vault } from '@/lib/bff/types';
+import type { SpotCanPlace, SpotOpenOrder, SpotOrderbook, SpotPool } from '@/lib/bff/spot-types';
 
 type Part = UIMessage['parts'][number];
-const WRITE = new Set(['create_manager', 'mint', 'redeem', 'mint_range', 'redeem_range', 'supply', 'withdraw']);
+
+/** Predict writes + spot zero/fixed-input writes → the fixed ReceiptController (sign as proposed). */
+const WRITE = new Set([
+  'create_manager',
+  'mint',
+  'redeem',
+  'mint_range',
+  'redeem_range',
+  'supply',
+  'withdraw',
+  'spot_create_balance_manager',
+  'spot_deposit',
+  'spot_withdraw',
+  'spot_place_market_order',
+  'spot_cancel_order',
+  'spot_cancel_all_orders',
+]);
+
+/** Spot generative-input writes → bespoke cards (user edits the values, then signs). All share the
+ *  same write-part props ({ part, addToolResult, onOutcome, onRetry }). */
+const SPOT_INPUT: Record<
+  string,
+  (p: { part: WriteToolPart; addToolResult: AddToolResult; onOutcome?: OnSignOutcome; onRetry: () => void }) => ReactNode
+> = {
+  spot_swap_base_for_quote: SwapCard,
+  spot_swap_quote_for_base: SwapCard,
+  spot_place_limit_order: LimitOrderTicket,
+  spot_modify_order: ModifyOrderCard,
+  spot_stake: StakeCard,
+  spot_unstake: StakeCard,
+  spot_submit_proposal: GovernanceCard,
+  spot_vote: GovernanceCard,
+  spot_claim_rebates: GovernanceCard,
+  spot_withdraw_settled_amounts: SettledSweepCard,
+};
 
 interface ToolView {
   type: string;
@@ -83,6 +131,19 @@ export function MessagePart({
   const tp = part as ToolView;
   const name = tp.type.slice('tool-'.length);
 
+  // Spot generative-input writes → their bespoke card (handles its own states + sign).
+  const SpotInputCard = SPOT_INPUT[name];
+  if (SpotInputCard) {
+    return (
+      <SpotInputCard
+        part={tp as WriteToolPart}
+        addToolResult={addToolResult}
+        onOutcome={onOutcome}
+        onRetry={() => onAction('Let’s try that again.')}
+      />
+    );
+  }
+
   if (WRITE.has(name)) {
     return (
       <ReceiptController
@@ -99,6 +160,26 @@ export function MessagePart({
     const noManager =
       (name === 'get_portfolio' || name === 'get_positions') &&
       (tp.errorText ?? '').toLowerCase().includes('manager');
+    // No DeepBook BalanceManager yet → offer to open the spot account.
+    const noSpotAccount = name.startsWith('spot_') && (tp.errorText ?? '').toLowerCase().includes('balance manager');
+    if (noSpotAccount) {
+      return (
+        <Card className="p-4">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.13em] text-faint">DeepBook spot</div>
+          <div className="mt-1 text-[15px] font-semibold">No spot account yet</div>
+          <p className="mt-1 text-[13px] leading-snug text-muted">
+            Open a DeepBook BalanceManager — you sign it in your wallet — to deposit, swap, and trade.
+          </p>
+          <button
+            type="button"
+            onClick={() => onAction('Open my DeepBook spot account.')}
+            className="mt-3 inline-flex rounded-card-in bg-ink px-4 py-2 text-[13px] font-semibold text-paper transition hover:opacity-90"
+          >
+            Open spot account →
+          </button>
+        </Card>
+      );
+    }
     if (noManager) {
       return (
         <Card className="p-4">
@@ -151,6 +232,27 @@ export function MessagePart({
       ) : (
         skeleton('h-24')
       );
+    // ── Spot (DeepBook V3) reads ──
+    case 'spot_list_pools':
+      return ready ? (
+        <SpotPoolTable pools={out as SpotPool[]} onTrade={(pk) => onAction(`I want to swap on the ${pk.replace('_', '/')} pool.`)} />
+      ) : (
+        skeleton('h-40')
+      );
+    case 'spot_orderbook':
+      return ready ? <OrderbookDepth data={out as SpotOrderbook} /> : skeleton('h-40');
+    case 'spot_open_orders':
+      return ready ? <OpenOrdersList orders={out as SpotOpenOrder[]} /> : skeleton('h-24');
+    case 'spot_account':
+      return <BalanceManagerPanel onAction={onAction} />;
+    case 'spot_can_place_limit_order':
+    case 'spot_can_place_market_order':
+      return ready ? <OrderValidityHint valid={(out as SpotCanPlace).canPlace} /> : skeleton('h-10');
+    case 'spot_mid_price':
+    case 'spot_pool_params':
+    case 'spot_swap_quote':
+    case 'spot_balance':
+      return ready ? <SpotFacts name={name} data={out} /> : skeleton('h-16');
     default:
       return ready ? null : skeleton('h-12');
   }
