@@ -20,7 +20,7 @@
     "@deepbookie/predict-client": "workspace:*",
     "@mysten/sui": "^2.19.0",
     "commander": "^14.0.0",
-    "pino": "^9.5.0"
+    "@deepbookie/node": "workspace:*"
   },
   "author": "blockchainoracle <blockchainoracle.dev@gmail.com>",
   "repository": {
