@@ -39,7 +39,7 @@ export function Chat() {
     [account?.address, managerId, balanceManagerId, balanceManagerUnknown, chatId],
   );
 
-  const { messages, sendMessage, status, addToolResult } = useChat({
+  const { messages, sendMessage, status, addToolResult, error, regenerate } = useChat({
     transport,
     // Resume the stream once the user has signed (or declined) every proposed write.
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
@@ -101,6 +101,22 @@ export function Chat() {
         onAction={(text) => sendMessage({ text })}
         onOutcome={onOutcome}
       />
+      {status === 'error' && (
+        // A stream failure (network/provider/rate-limit) otherwise shows nothing and leaves the
+        // composer disabled — surface it with a Retry that re-runs the last turn (regenerate).
+        <div className="mx-4 mb-2 flex items-center justify-between gap-3 rounded-card-in border border-[#E6C9BE] bg-[#FBF1EC] px-3.5 py-2.5">
+          <span className="text-[12.5px] font-medium text-clay">
+            {error?.message ? 'The assistant hit an error — try again.' : 'Something went wrong — try again.'}
+          </span>
+          <button
+            type="button"
+            onClick={() => void regenerate()}
+            className="flex-none rounded-card-in bg-ink px-3 py-1.5 text-[12px] font-semibold text-paper transition hover:opacity-90"
+          >
+            Retry
+          </button>
+        </div>
+      )}
       <div className="px-4">
         <FundingBanner />
       </div>

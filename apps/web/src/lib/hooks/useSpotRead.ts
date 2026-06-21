@@ -10,8 +10,6 @@ import type {
   SpotCoinBalance,
   SpotMid,
   SpotOpenOrder,
-  SpotOrderbook,
-  SpotPool,
   SpotPoolParams,
   SpotSwapQuote,
 } from '@/lib/bff/spot-types';
@@ -40,18 +38,10 @@ export function useSpotRead<T>(tool: string, args: Record<string, unknown> | und
 }
 
 // ── Typed convenience wrappers ───────────────────────────────────────────────
-export const useSpotPools = (opts?: SpotReadOpts) =>
-  useSpotRead<SpotPool[]>('spot_list_pools', {}, { staleTime: 60_000, ...opts });
-
+// NOTE: spot_list_pools / spot_orderbook have NO hook wrappers — that data flows from the agent's
+// streamed tool output (MessagePart → SpotPoolTable / OrderbookDepth), not a client-initiated read.
 export const useSpotMid = (poolKey?: string, opts?: SpotReadOpts) =>
   useSpotRead<SpotMid>('spot_mid_price', poolKey ? { poolKey } : undefined, opts);
-
-export const useSpotOrderbook = (poolKey?: string, ticks?: number, opts?: SpotReadOpts) =>
-  useSpotRead<SpotOrderbook>(
-    'spot_orderbook',
-    poolKey ? { poolKey, ...(ticks ? { ticks } : {}) } : undefined,
-    { refetchInterval: 4_000, ...opts },
-  );
 
 export const useSpotPoolParams = (poolKey?: string, opts?: SpotReadOpts) =>
   useSpotRead<SpotPoolParams>('spot_pool_params', poolKey ? { poolKey } : undefined, {

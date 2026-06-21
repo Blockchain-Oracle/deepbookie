@@ -254,7 +254,7 @@ export function MessagePart({
     case 'spot_open_orders':
       return ready ? <OpenOrdersList orders={out as SpotOpenOrder[]} /> : skeleton('h-24');
     case 'spot_account':
-      return <BalanceManagerPanel onAction={onAction} />;
+      return ready ? <BalanceManagerPanel onAction={onAction} /> : skeleton('h-40');
     case 'spot_can_place_limit_order':
       return ready ? <OrderValidityHint valid={(out as SpotCanPlace).canPlace} /> : skeleton('h-10');
     case 'spot_mid_price':

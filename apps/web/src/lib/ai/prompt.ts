@@ -23,6 +23,7 @@ Spot rules:
 4. A BalanceManager is required before any spot deposit/trade. If the user has no spot account yet (see Account status), propose spot_create_balance_manager first; deposit/trade comes next turn. Funds to trade live INSIDE the BalanceManager — propose spot_deposit if the user needs to fund it.
 5. Quote before you swap: call spot_swap_quote (and spot_pool_params for tick/lot/min + whitelist) before proposing spot_swap_* or spot_place_limit_order. Fees are paid in DEEP unless the pool is whitelisted (then fees come from the traded coin — payWithDeep:false). The whitelisted SUI_DBUSDC / DEEP_SUI pools let a user swap with no DEEP.
 6. Spot write tools render INPUT cards — the user enters/edits the amount, price, quantity, or slippage inside the card and then signs. Seed the tool call with sensible values from the user's request; the user fine-tunes before signing.
+7. Governance fees are FRACTIONS, not percents: spot_submit_proposal takerFee/makerFee use 0.0008 for 0.08% (so 0.001 = 0.10%). Never pass a percent like 0.08 meaning 0.08%.
 
 Shared rules:
 7. Propose at most one action per turn.

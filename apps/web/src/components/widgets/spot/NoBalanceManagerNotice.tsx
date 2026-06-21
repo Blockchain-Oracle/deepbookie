@@ -1,5 +1,7 @@
 'use client';
 
+import { CardNotice } from '@/components/widgets/spot/CardNotice';
+
 /**
  * The single source of truth for the "no BalanceManager" gate every generative-input spot write card
  * renders when `!w.hasBalanceManager && !w.bmLoading`. Previously each of the five cards re-implemented
@@ -68,28 +70,5 @@ export function NoBalanceManagerNotice({
     );
   }
 
-  return (
-    <div className="flex min-h-[120px] w-full flex-col justify-center gap-3 rounded-card border border-line bg-card p-5">
-      {title && <div className="text-[9.5px] font-semibold uppercase tracking-[0.13em] text-faint">{title}</div>}
-      <div className="text-[13px] leading-[1.45] text-muted">{copy}</div>
-      <div className="flex gap-2.5">
-        {showRetry && (
-          <button
-            type="button"
-            onClick={onRetry}
-            className="rounded-[9px] border border-line-strong px-4 py-2 text-[12.5px] font-semibold text-ink transition hover:bg-paper"
-          >
-            Retry
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="rounded-[9px] border border-line-strong px-4 py-2 text-[12.5px] font-semibold text-[#7d7870] transition hover:bg-paper"
-        >
-          Dismiss
-        </button>
-      </div>
-    </div>
-  );
+  return <CardNotice title={title} text={copy} onRetry={showRetry ? onRetry : undefined} onDismiss={onDismiss} />;
 }

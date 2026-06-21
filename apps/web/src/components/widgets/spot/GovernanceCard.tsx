@@ -157,7 +157,9 @@ export function GovernanceCard({
           </button>
           <div className="mt-[10px] text-[10.5px] leading-[1.4] text-faint">
             {noStake
-              ? 'You have no active stake — stake DEEP in this pool first to gain voting power.'
+              ? (account.data?.stake.inactive ?? 0) > 0
+                ? 'Your stake is pending — it becomes voting power next epoch.'
+                : 'You have no active stake — stake DEEP in this pool first to gain voting power.'
               : "Your active stake is your voting power. Votes apply to the next epoch's fees."}
           </div>
         </>

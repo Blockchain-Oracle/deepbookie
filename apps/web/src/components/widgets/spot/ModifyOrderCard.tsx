@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSpotWriteCard } from '@/components/widgets/spot/useSpotWriteCard';
 import { NoBalanceManagerNotice } from '@/components/widgets/spot/NoBalanceManagerNotice';
+import { CardNotice } from '@/components/widgets/spot/CardNotice';
 import { useSpotOpenOrders, useSpotPoolParams } from '@/lib/hooks/useSpotRead';
 import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/widgets/ReceiptController';
 import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt';
@@ -126,16 +127,16 @@ export function ModifyOrderCard({
 
   // A transient read failure must NOT masquerade as "order gone" (the user could re-place a duplicate).
   if (orders.isError) {
-    return <Notice title={TITLE} text="Couldn’t load this order right now — try again in a moment." onCancel={w.cancel} onRetry={() => void orders.refetch()} />;
+    return <CardNotice title={TITLE} text="Couldn’t load this order right now — try again in a moment." onDismiss={w.cancel} onRetry={() => void orders.refetch()} />;
   }
 
   // The order isn't in the book anymore (filled, cancelled, or expired) — nothing valid to sign.
   if (!order) {
     return (
-      <Notice
+      <CardNotice
         title={TITLE}
         text={`That order is no longer open on ${pair} — it may have filled or been cancelled.`}
-        onCancel={w.cancel}
+        onDismiss={w.cancel}
       />
     );
   }
@@ -277,45 +278,6 @@ export function ModifyOrderCard({
           className="rounded-[9px] border border-line-strong px-5 py-3 text-sm font-semibold text-[#7d7870] transition hover:bg-paper"
         >
           Cancel
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/** A quiet full-card notice (no BalanceManager / order gone / read failed). Always resolves the tool
- *  call via Dismiss (w.cancel) so the assistant turn never wedges; optional Retry for transient cases. */
-function Notice({
-  title,
-  text,
-  onCancel,
-  onRetry,
-}: {
-  title: string;
-  text: string;
-  onCancel: () => void;
-  onRetry?: () => void;
-}) {
-  return (
-    <div className="flex min-h-[120px] w-full flex-col justify-center gap-3 rounded-card border border-line bg-card p-5">
-      <div className="text-[9.5px] font-semibold uppercase tracking-[0.13em] text-faint">{title}</div>
-      <div className="text-[13px] leading-[1.45] text-muted">{text}</div>
-      <div className="flex gap-2.5">
-        {onRetry && (
-          <button
-            type="button"
-            onClick={onRetry}
-            className="rounded-[9px] border border-line-strong px-4 py-2 text-[12.5px] font-semibold text-ink transition hover:bg-paper"
-          >
-            Retry
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-[9px] border border-line-strong px-4 py-2 text-[12.5px] font-semibold text-[#7d7870] transition hover:bg-paper"
-        >
-          Dismiss
         </button>
       </div>
     </div>

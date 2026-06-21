@@ -81,10 +81,11 @@ export function StakeCard({
   }
 
   const amt = Number(amount);
-  // While the DEEP balance is loading or errored, don't cap (avoid a false "too much"); once the
-  // balance is known, enforce amt <= accountDeep so the user can't stake more than the BM holds.
-  const deepKnown = !deepBal.isLoading && !deepBal.isError;
-  const stakeValid = amt > 0 && (!deepKnown || amt <= accountDeep) && w.hasBalanceManager;
+  // Block the stake when the DEEP balance read FAILED (signing would just MoveAbort with no client
+  // explanation — show a Retry instead). While it's still LOADING, keep the cap fail-open (on-chain is
+  // authoritative); once known, enforce amt <= accountDeep so the user can't stake more than the BM holds.
+  const stakeValid =
+    amt > 0 && !deepBal.isError && (deepBal.isLoading || amt <= accountDeep) && w.hasBalanceManager;
   // On-chain `unstake` withdraws ALL stake (active + inactive) — fresh same-epoch stake sits in
   // `inactive` until the next epoch, so gating on `active` alone would block a legitimate unstake.
   const totalStake = active + inactive;
@@ -149,12 +150,22 @@ export function StakeCard({
           <div className="mb-[13px] rounded-[9px] border border-line bg-[#FBFAF7] px-[13px] py-[11px]">
             <div className="mb-1.5 flex justify-between">
               <span className="text-[9.5px] font-semibold uppercase tracking-[0.13em] text-faint">Amount to stake</span>
-              <span className="font-mono text-[10.5px] text-muted">
-in account {deep(accountDeep)} ·{' '}
-                <button type="button" onClick={() => setAmount(String(accountDeep))} className="font-bold text-green">
-                  Max
+              {deepBal.isError ? (
+                <button
+                  type="button"
+                  onClick={() => void deepBal.refetch()}
+                  className="font-mono text-[10.5px] font-semibold text-clay underline underline-offset-2"
+                >
+                  Couldn’t read DEEP — retry
                 </button>
-              </span>
+              ) : (
+                <span className="font-mono text-[10.5px] text-muted">
+                  in account {deep(accountDeep)} ·{' '}
+                  <button type="button" onClick={() => setAmount(String(accountDeep))} className="font-bold text-green">
+                    Max
+                  </button>
+                </span>
+              )}
             </div>
             <div className="flex items-center justify-between">
               <input
