@@ -20,7 +20,7 @@ import type { PositionEntry } from '@deepbookie/predict-client';
 import { z } from 'zod';
 import { defineRead } from '../tool.js';
 import { resolveMarket } from './helpers.js';
-import { ZERO_ADDRESS } from '../spot/constants.js';
+import { ZERO_ADDRESS } from '../context.js';
 
 function mapPosition(p: PositionEntry) {
   return {

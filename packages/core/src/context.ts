@@ -1,6 +1,10 @@
 import type { Network } from '@deepbookie/predict-client';
 import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
 
+/** The 0x0…0 sender used as the devInspect fallback when no wallet is connected (reads only; never a
+ *  real signer). Neutral home here since both Predict reads and the spot client use it. */
+export const ZERO_ADDRESS = `0x${'0'.repeat(64)}`;
+
 /** Everything a tool needs that isn't a per-call argument. Supplied by each surface (MCP/CLI/web). */
 export interface ToolContext {
   client: SuiJsonRpcClient;

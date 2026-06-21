@@ -6,7 +6,7 @@ import { useSpotWriteCard } from '@/components/widgets/spot/useSpotWriteCard';
 import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/widgets/ReceiptController';
 import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt';
 import { SUISCAN_TX } from '@/lib/constants';
-import { docNumberFor, formatUsd } from '@/lib/format';
+import { docNumberFor, formatUsd, splitPool } from '@/lib/format';
 
 const SLIPPAGES = [0.5, 1] as const;
 // DEEP fee headroom on non-whitelisted pools: the quoted deepRequired is computed against the book at
@@ -51,7 +51,7 @@ export function SwapCard({
 
   const poolKey = String((w.proposed as { poolKey?: unknown }).poolKey ?? '');
   const [from, to] = useMemo(() => {
-    const [base = 'BASE', quote = 'QUOTE'] = poolKey.split('_');
+    const { base, quote } = splitPool(poolKey);
     return isSellBase ? [base, quote] : [quote, base];
   }, [poolKey, isSellBase]);
 
@@ -127,8 +127,11 @@ export function SwapCard({
     );
   }
 
-  const cta = emptyBook ? 'No liquidity' : quoting ? 'Fetching quote…' : 'Swap';
-  const canSwap = amt > 0 && out > 0 && !quoting && !emptyBook;
+  const cta = emptyBook ? 'No liquidity' : quote.isError && amt > 0 ? 'Re-quote needed' : quoting ? 'Fetching quote…' : 'Swap';
+  // Block signing off a STALE quote: TanStack v5 retains the last good `quote.data` when a background
+  // refetch (e.g. window-focus during an indexer cold-start) errors. Without !quote.isError the button
+  // would stay enabled and sign a minOut/deepAmount derived from the out-of-date snapshot.
+  const canSwap = amt > 0 && out > 0 && !quoting && !emptyBook && !quote.isError;
   const fieldFrom = 'rounded-card-in border border-line bg-paper px-[13px] py-[11px]';
 
   return (

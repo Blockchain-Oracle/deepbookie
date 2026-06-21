@@ -7,8 +7,8 @@ import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt'
 import { useSpotAccount, useSpotBalance } from '@/lib/hooks/useSpotRead';
 import { SUISCAN_TX } from '@/lib/constants';
 import { docNumberFor, formatUsd, num, poolLabel } from '@/lib/format';
+import { DEFAULT_SPOT_POOL } from '@/lib/spot/constants';
 
-const DEFAULT_POOL = 'SUI_DBUSDC';
 const deep = (n: number) => formatUsd(n, 0);
 
 /** Stake / unstake DEEP for fee discounts + governance weight. Requires a BalanceManager. */
@@ -25,7 +25,7 @@ export function StakeCard({
 }) {
   const w = useSpotWriteCard(part, addToolResult, onOutcome);
   const isUnstake = w.toolName === 'spot_unstake';
-  const poolKey = (typeof w.proposed.poolKey === 'string' && w.proposed.poolKey) || DEFAULT_POOL;
+  const poolKey = (typeof w.proposed.poolKey === 'string' && w.proposed.poolKey) || DEFAULT_SPOT_POOL;
 
   const account = useSpotAccount(w.state === 'proposed' ? poolKey : undefined);
   const deepBal = useSpotBalance(w.state === 'proposed' && !isUnstake ? 'DEEP' : undefined);
@@ -85,6 +85,13 @@ export function StakeCard({
                 : 'A network hiccup checking your balance manager — retry in a moment; don’t create a new one.'}
             </div>
           </>
+        ) : !w.connected ? (
+          <>
+            <div className="text-[16px] font-bold leading-[1.3] tracking-[-0.02em] text-ink">Connect your wallet to stake</div>
+            <div className="text-[12px] leading-[1.45] text-muted">
+              Staking lives in your spot account — connect your wallet first, then stake DEEP from it.
+            </div>
+          </>
         ) : (
           <>
             <div className="text-[16px] font-bold leading-[1.3] tracking-[-0.02em] text-ink">
@@ -127,7 +134,10 @@ export function StakeCard({
   // On-chain `unstake` withdraws ALL stake (active + inactive) — fresh same-epoch stake sits in
   // `inactive` until the next epoch, so gating on `active` alone would block a legitimate unstake.
   const totalStake = active + inactive;
-  const canUnstake = totalStake > 0 && w.hasBalanceManager;
+  // Require a SUCCESSFUL account read before unstaking — so the receipt's "Amount returned" is the real
+  // total, never a 0/partial snapshot from a still-loading or errored read (the on-chain effect is
+  // withdraw-all regardless, so this is receipt accuracy, not fund safety).
+  const canUnstake = account.isSuccess && totalStake > 0 && w.hasBalanceManager;
 
   const onSubmit = () => {
     if (isUnstake) {

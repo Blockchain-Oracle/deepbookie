@@ -49,10 +49,12 @@ export function ModifyOrderCard({
   // lot; round the product back to clean decimals to avoid float dust (2.2000000000000002).
   const snap = (v: number) => (lotSize > 0 ? Math.round(Math.floor(v / lotSize + 1e-9) * lotSize * 1e9) / 1e9 : v);
 
-  // The user drags the lot-aligned slider down to reduce; seed at the agent's in-range proposal, else
-  // the current size (a no-op until dragged down). `override` tracks an edit.
+  // The user drags the lot-aligned slider down to reduce. Seed at the agent's proposal whenever it's a
+  // genuine reduce (0 < seeded < current) — EVEN if below the filled floor or min size — so the specific
+  // reason banner (below filled / below min) explains why it's rejected, instead of falling back to
+  // `current` and showing a generic "No change to apply". A non-reduce proposal → current (no-op).
   const seeded = num(p.newQuantity);
-  const defaultQty = seeded > filled && seeded < current ? seeded : current;
+  const defaultQty = seeded > 0 && seeded < current ? seeded : current;
   const [override, setOverride] = useState<number | null>(null);
   const newQty = override ?? defaultQty;
   const signQty = snap(newQty); // the lot-aligned value we validate AND sign
@@ -107,10 +109,13 @@ export function ModifyOrderCard({
     if (w.storageBlocked) {
       return <Notice title={TITLE} text="Your browser is blocking storage — we can’t detect your account; don’t create a second one." onCancel={w.cancel} />;
     }
-    return w.bmError ? (
-      <Notice title={TITLE} text="Couldn’t reach your account — retry, don’t create a new one." onCancel={w.cancel} onRetry={w.bmRefetch} />
-    ) : (
+    if (w.bmError) {
+      return <Notice title={TITLE} text="Couldn’t reach your account — retry, don’t create a new one." onCancel={w.cancel} onRetry={w.bmRefetch} />;
+    }
+    return w.connected ? (
       <Notice title={TITLE} text="A balance manager is required to modify orders." onCancel={w.cancel} />
+    ) : (
+      <Notice title={TITLE} text="Connect your wallet first to modify orders." onCancel={w.cancel} />
     );
   }
 

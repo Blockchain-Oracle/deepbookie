@@ -1,6 +1,6 @@
 import { DeepBookClient } from '@mysten/deepbook-v3';
-import type { ToolContext } from '../context.js';
-import { SPOT_COINS, SPOT_MANAGER_KEY, SPOT_NETWORK, SPOT_POOLS, ZERO_ADDRESS } from './constants.js';
+import { ZERO_ADDRESS, type ToolContext } from '../context.js';
+import { SPOT_COINS, SPOT_MANAGER_KEY, SPOT_NETWORK, SPOT_POOLS } from './constants.js';
 
 type SdkClient = ConstructorParameters<typeof DeepBookClient>[0]['client'];
 

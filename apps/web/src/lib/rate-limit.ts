@@ -45,15 +45,21 @@ export function allowFaucet(ip: string): boolean {
 // (unauthenticated by design; the durable fix is SIWS session auth). Keyed e.g. `chat:<ip>`.
 const genBuckets = new Map<string, Bucket>();
 // Global backstop: because the per-IP key derives from the client-controlled X-Forwarded-For, an
-// attacker can rotate it to dodge the per-IP cap — this process-wide ceiling bounds total abuse
-// regardless of key-spoofing. Set far above any legitimate single-instance load.
+// attacker can rotate it to dodge the per-IP cap — this ceiling bounds total abuse regardless of
+// key-spoofing. Scoped PER ROUTE (the key prefix before ':'), so flooding one route can't trip the
+// backstop for every other route's legitimate users (a global self-DoS). Set far above real load.
 const GEN_GLOBAL_MAX = 5000;
-let genGlobal: Bucket = { count: 0, resetAt: 0 };
+const genGlobalByRoute = new Map<string, Bucket>();
 
 export function allowRequest(key: string, max: number, windowMs: number): boolean {
   const now = Date.now();
-  if (now > genGlobal.resetAt) genGlobal = { count: 0, resetAt: now + windowMs };
-  if (genGlobal.count >= GEN_GLOBAL_MAX) return false;
+  const route = key.split(':')[0] || 'default';
+  let global = genGlobalByRoute.get(route);
+  if (!global || now > global.resetAt) {
+    global = { count: 0, resetAt: now + windowMs };
+    genGlobalByRoute.set(route, global);
+  }
+  if (global.count >= GEN_GLOBAL_MAX) return false;
   let bucket = genBuckets.get(key);
   if (!bucket || now > bucket.resetAt) {
     bucket = { count: 0, resetAt: now + windowMs };
@@ -61,7 +67,7 @@ export function allowRequest(key: string, max: number, windowMs: number): boolea
   }
   if (bucket.count >= max) return false;
   bucket.count += 1;
-  genGlobal.count += 1;
+  global.count += 1;
   return true;
 }
 

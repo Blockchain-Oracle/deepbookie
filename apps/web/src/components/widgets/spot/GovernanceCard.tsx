@@ -6,15 +6,13 @@ import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/w
 import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt';
 import { useSpotAccount, useSpotPoolParams } from '@/lib/hooks/useSpotRead';
 import { SUISCAN_TX } from '@/lib/constants';
-import { docNumberFor, formatAddress, formatUsd, num, poolLabel, str } from '@/lib/format';
+import { docNumberFor, formatAddress, formatPct, formatUsd, num, poolLabel, str } from '@/lib/format';
+import { DEFAULT_SPOT_POOL } from '@/lib/spot/constants';
 
-const DEFAULT_POOL = 'SUI_DBUSDC';
 const seed = (v: unknown) => (num(v) > 0 ? String(num(v)) : '');
 /** Fee fields edit PERCENT; the agent proposes a FRACTION (0.0008 = 0.08%) — seed as percent so an
  *  un-edited proposal signs the agent's intended fee, not 1/100 of it (toFrac divides by 100 again). */
 const seedPct = (v: unknown) => (num(v) > 0 ? String(num(v) * 100) : '');
-/** Pool fees are stored as fractions (0.001 = 0.10%); the form edits PERCENT and signs the fraction. */
-const pct = (frac: number) => `${(frac * 100).toFixed(2)}%`;
 /** Percent input → on-chain fraction (0.08% → 0.0008). The proposal tool wants the fraction. */
 const toFrac = (percentStr: string) => Number(percentStr) / 100;
 
@@ -35,7 +33,7 @@ export function GovernanceCard({
 }) {
   const w = useSpotWriteCard(part, addToolResult, onOutcome);
   const mode: Mode = w.toolName === 'spot_submit_proposal' ? 'propose' : w.toolName === 'spot_vote' ? 'vote' : 'claim';
-  const poolKey = str(w.proposed.poolKey) || DEFAULT_POOL;
+  const poolKey = str(w.proposed.poolKey) || DEFAULT_SPOT_POOL;
   const active = w.state === 'proposed';
 
   const params = useSpotPoolParams(active && mode === 'propose' ? poolKey : undefined);
@@ -75,6 +73,11 @@ export function GovernanceCard({
   // Gate the retry affordance to a real transient (a no-BM user's 409 is handled by the no-BM note,
   // not an endless "couldn't reach your account" retry).
   const accountErr = mode !== 'propose' && account.isError && w.hasBalanceManager;
+  // Voting power IS the active stake. Gate the vote on a confirmed >0 weight: DeepBook aborts a vote
+  // with zero stake, and while the account is still loading the weight reads 0 — so this also blocks
+  // a premature click. `noStake` (loaded + genuinely zero) drives the explanatory hint.
+  const voteWeight = account.data?.stake.active ?? 0;
+  const noStake = mode === 'vote' && account.isSuccess && voteWeight <= 0;
 
   return (
     <div className="w-full rounded-card border border-line bg-card p-4">
@@ -92,8 +95,8 @@ export function GovernanceCard({
       {mode === 'propose' && (
         <>
           <div className="mb-[14px] flex gap-[7px]">
-            <RefStat label="Cur. taker" value={cur ? pct(cur.takerFee) : '—'} loading={params.isLoading} />
-            <RefStat label="Cur. maker" value={cur ? pct(cur.makerFee) : '—'} loading={params.isLoading} />
+            <RefStat label="Cur. taker" value={cur ? formatPct(cur.takerFee, 2) : '—'} loading={params.isLoading} />
+            <RefStat label="Cur. maker" value={cur ? formatPct(cur.makerFee, 2) : '—'} loading={params.isLoading} />
             <RefStat label="Stake req" value={cur ? formatUsd(cur.stakeRequired, 0) : '—'} loading={params.isLoading} />
           </div>
           <div className="mb-2 flex gap-[9px]">
@@ -105,8 +108,12 @@ export function GovernanceCard({
           </div>
           <button
             type="button"
-            // Require both fees AND a stake — a blank field would otherwise sign a real on-chain 0.
-            disabled={!w.hasBalanceManager || !(Number(taker) > 0 && Number(maker) >= 0 && Number(stake) > 0)}
+            // Taker + stake must be > 0; maker may be an explicit 0 (a fee-free maker proposal is valid)
+            // but a BLANK maker field is rejected so we never sign an unintended 0 from an empty input.
+            disabled={
+              !w.hasBalanceManager ||
+              !(Number(taker) > 0 && maker.trim() !== '' && Number(maker) >= 0 && Number(stake) > 0)
+            }
             onClick={() =>
               void w.sign(
                 { poolKey, takerFee: toFrac(taker), makerFee: toFrac(maker), stakeRequired: Number(stake) },
@@ -134,14 +141,16 @@ export function GovernanceCard({
           </div>
           <button
             type="button"
-            disabled={!w.hasBalanceManager || accountErr || proposalId.trim().length < 3}
+            disabled={!w.hasBalanceManager || accountErr || voteWeight <= 0 || proposalId.trim().length < 3}
             onClick={() => void w.sign({ poolKey, proposalId: proposalId.trim() }, { proposalId: proposalId.trim() })}
             className={DARK_BTN}
           >
             Cast vote
           </button>
           <div className="mt-[10px] text-[10.5px] leading-[1.4] text-faint">
-            Your active stake is your voting power. Votes apply to the next epoch&apos;s fees.
+            {noStake
+              ? 'You have no active stake — stake DEEP in this pool first to gain voting power.'
+              : "Your active stake is your voting power. Votes apply to the next epoch's fees."}
           </div>
         </>
       )}
@@ -180,7 +189,9 @@ export function GovernanceCard({
             ? 'Couldn’t reach your account.'
             : w.storageBlocked
               ? 'Storage is blocked — we can’t detect your account; don’t create a second one.'
-              : 'Create a DeepBook account first to use governance.'}
+              : !w.connected
+                ? 'Connect your wallet first to use governance.'
+                : 'Create a DeepBook account first to use governance.'}
           {w.bmError && (
             <button type="button" onClick={w.bmRefetch} className="ml-1 font-semibold text-ink underline underline-offset-2">
               Retry
@@ -279,7 +290,7 @@ function RebateRow({
 
 function terminalTitle(mode: Mode, part: WriteToolPart): string {
   const i = { ...(part.input ?? {}), ...(part.output ?? {}) }; // output (edited, signed) wins over input (proposal)
-  if (mode === 'propose') return `Propose fees ${(num(i.takerFee) * 100).toFixed(2)}% / ${(num(i.makerFee) * 100).toFixed(2)}%`;
+  if (mode === 'propose') return `Propose fees ${formatPct(num(i.takerFee), 2)} / ${formatPct(num(i.makerFee), 2)}`;
   if (mode === 'vote') return 'Vote on proposal';
   return 'Claim rebates';
 }

@@ -58,7 +58,9 @@ export function ChatHome({ onAction }: { onAction: (text: string) => void }) {
         </div>
       </div>
 
-      <ConnectModal trigger={<span aria-hidden className="hidden" />} open={connectOpen} onOpenChange={setConnectOpen} />
+      {/* Controlled modal; the trigger is a focusable-but-visually-hidden sentinel (sr-only, not
+          display:none) so the modal can return focus to it on close instead of dropping focus to body. */}
+      <ConnectModal trigger={<span tabIndex={-1} aria-hidden className="sr-only" />} open={connectOpen} onOpenChange={setConnectOpen} />
     </div>
   );
 }

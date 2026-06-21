@@ -3,7 +3,7 @@
 import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { CoinLogo } from '@/components/widgets/CoinLogo';
-import { formatUsd } from '@/lib/format';
+import { formatPct, formatUsd } from '@/lib/format';
 import { useSpotMid, useSpotPoolParams } from '@/lib/hooks/useSpotRead';
 import type { SpotPool } from '@/lib/bff/spot-types';
 
@@ -18,8 +18,15 @@ function fmtMid(mid: number): string {
   if (mid >= 1) return mid.toFixed(4);
   return mid.toPrecision(4);
 }
-function fmtPct(fee: number): string {
-  return Number.isFinite(fee) ? `${(fee * 100).toFixed(2)}%` : '—';
+const fmtPct = (fee: number): string => (Number.isFinite(fee) ? formatPct(fee, 2) : '—');
+
+/** A subtle read-error marker — distinguishes a failed mid/params read from a genuine empty/zero value. */
+function ErrMark() {
+  return (
+    <span className="font-mono text-[11px] text-clay" title="Couldn’t load — refreshing">
+      ⚠
+    </span>
+  );
 }
 
 function PairMark({ base, quote }: { base: string; quote: string }) {
@@ -55,7 +62,6 @@ function PoolRow({
 }) {
   const mid = useSpotMid(pool.poolKey);
   const params = useSpotPoolParams(pool.poolKey);
-  const loading = mid.isLoading || params.isLoading;
   const whitelisted = !!params.data?.whitelisted;
   const midTxt = mid.data ? fmtMid(mid.data.midPrice) : '—';
   const takerTxt = params.data ? fmtPct(params.data.takerFee) : '—';
@@ -70,19 +76,25 @@ function PoolRow({
             {pool.base}/{pool.quote}
           </span>
         </div>
-        {loading ? (
+        {mid.isLoading ? (
           <span className="flex-[1.4] text-right">
             <Skeleton className="ml-auto h-3 w-14 rounded-card-in" />
           </span>
         ) : (
-          <span className="flex-[1.4] text-right font-mono text-[13px] tabular-nums">{midTxt}</span>
+          <span className="flex-[1.4] text-right font-mono text-[13px] tabular-nums">
+            {mid.isError ? <ErrMark /> : midTxt}
+          </span>
         )}
-        <span className="flex-1 text-right font-mono text-[12px] tabular-nums text-muted">{takerTxt}</span>
+        <span className="flex-1 text-right font-mono text-[12px] tabular-nums text-muted">
+          {params.isError ? <ErrMark /> : takerTxt}
+        </span>
         <span className="flex-[1.5] text-center">
           {params.isLoading ? (
             <Skeleton className="mx-auto h-4 w-16 rounded-pill" />
-          ) : params.data ? (
+          ) : params.isSuccess ? (
             <FeeChip whitelisted={whitelisted} />
+          ) : params.isError ? (
+            <ErrMark />
           ) : (
             <span className="font-mono text-[10px] text-faint">—</span>
           )}
@@ -107,8 +119,10 @@ function PoolRow({
           </div>
           {params.isLoading ? (
             <Skeleton className="h-4 w-16 rounded-pill" />
-          ) : params.data ? (
+          ) : params.isSuccess ? (
             <FeeChip whitelisted={whitelisted} />
+          ) : params.isError ? (
+            <ErrMark />
           ) : (
             <span className="font-mono text-[10px] text-faint">—</span>
           )}
@@ -116,10 +130,12 @@ function PoolRow({
         <div className="flex items-end justify-between">
           <div>
             <div className={TH}>Mid</div>
-            {loading ? (
+            {mid.isLoading ? (
               <Skeleton className="mt-1 h-4 w-16 rounded-card-in" />
             ) : (
-              <div className="mt-0.5 font-mono text-[15px] font-bold tabular-nums">{midTxt}</div>
+              <div className="mt-0.5 font-mono text-[15px] font-bold tabular-nums">
+                {mid.isError ? <ErrMark /> : midTxt}
+              </div>
             )}
           </div>
           <button type="button" onClick={() => onTrade(pool.poolKey)} className={`${CTA} px-4 py-[7px]`}>

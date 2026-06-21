@@ -8,6 +8,7 @@ import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/w
 import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt';
 import { SUISCAN_TX } from '@/lib/constants';
 import { docNumberFor, formatUsd, poolLabel, splitPool, str } from '@/lib/format';
+import { DEFAULT_SPOT_POOL } from '@/lib/spot/constants';
 
 const fmt = (n: number, dp: number) => n.toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
 const dpOf = (step: number) => (step > 0 && step < 1 ? Math.min(8, Math.round(-Math.log10(step))) : step >= 1 ? 1 : 4);
@@ -65,7 +66,7 @@ export function LimitOrderTicket({
   const w = useSpotWriteCard(part, addToolResult, onOutcome);
   const proposed = w.proposed;
 
-  const poolKey = str(proposed.poolKey) || 'SUI_DBUSDC';
+  const poolKey = str(proposed.poolKey) || DEFAULT_SPOT_POOL;
   const params = useSpotPoolParams(poolKey);
   const p = params.data;
 
@@ -129,7 +130,9 @@ export function LimitOrderTicket({
     );
   }
 
-  const blocked = !inputsClean || !canPlace || validating || !w.hasBalanceManager;
+  // `can.isError` too: TanStack retains the last good pre-flight (possibly canPlace:true) on a
+  // background-refetch error, so without this a stale "valid" could re-enable the CTA. Mirrors SwapCard.
+  const blocked = !inputsClean || !canPlace || validating || !w.hasBalanceManager || can.isError;
   const ctaLabel = !w.hasBalanceManager
     ? 'Open a BalanceManager first'
     : !inputsClean || !canPlace
@@ -209,7 +212,9 @@ export function LimitOrderTicket({
             ? 'Couldn’t reach your account — don’t create a new one.'
             : w.storageBlocked
               ? 'Your browser is blocking storage — we can’t detect your account; don’t create a second one.'
-              : 'You need a BalanceManager before placing maker orders.'}
+              : !w.connected
+                ? 'Connect your wallet first to place maker orders.'
+                : 'You need a BalanceManager before placing maker orders.'}
           {w.bmError && (
             <button type="button" onClick={w.bmRefetch} className="ml-1.5 font-semibold underline underline-offset-2">
               Retry

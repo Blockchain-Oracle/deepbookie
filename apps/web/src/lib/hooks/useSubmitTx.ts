@@ -7,6 +7,7 @@ import { SuiJsonRpcClient } from '@mysten/sui/jsonRpc';
 import { allTools, getToolsForAdapter, type ToolContext } from '@deepbookie/core';
 import { NETWORK } from '@/lib/constants';
 import { setStoredBalanceManager } from '@/lib/spot/bmStore';
+import { clientLogger } from '@/lib/logger.client';
 
 /** A wallet decline (user rejected the popup) — a cancellation, not a failure. */
 export function isUserRejection(e: unknown): boolean {
@@ -101,8 +102,15 @@ export function useSubmitTx() {
         }
         // Capture failed on every attempt → the shared BM id is unknown AND the on-chain resolver can't
         // recover it, so do NOT let the UI fall through to "no account → Create" (which would mint a
-        // duplicate + orphan funds). Seed an error so the panel shows Retry, not Create.
-        if (!captured) qc.setQueryData(['balanceManager', owner], { balanceManagerId: null, error: true });
+        // duplicate + orphan funds). Seed an error so the panel shows Retry, not Create — and leave a
+        // structured breadcrumb so this isn't a silent failure (the BM exists on-chain at `digest`).
+        if (!captured) {
+          clientLogger.warn('BalanceManager id capture failed after retries — id unrecoverable this session', {
+            digest,
+            owner,
+          });
+          qc.setQueryData(['balanceManager', owner], { balanceManagerId: null, error: true });
+        }
       }
 
       // Refresh now (responsive), then again after finality lands (fresh chain state). Both non-blocking.

@@ -61,6 +61,9 @@ export function useSpotWriteCard(part: WriteToolPart, addToolResult: AddToolResu
     /** The wallet's resolved BalanceManager id (null if none yet). Swaps don't need it; orders do. */
     balanceManagerId,
     hasBalanceManager: !!balanceManagerId,
+    /** Wallet connected? When false the BM query is disabled (so bmLoading is false too) — cards should
+     *  prompt "connect", NOT "create an account" (which would be misleading for a disconnected user). */
+    connected: !!account,
     bmLoading: bm.isLoading,
     /** Resolver-error flag — true when the BM lookup FAILED (vs genuinely none). Cards show retry,
      *  not "create one", so a transient failure can't lead to a duplicate shared BalanceManager. */

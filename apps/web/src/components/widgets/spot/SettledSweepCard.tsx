@@ -7,8 +7,8 @@ import { useSpotAccount } from '@/lib/hooks/useSpotRead';
 import type { SpotBalances } from '@/lib/bff/spot-types';
 import { SUISCAN_TX } from '@/lib/constants';
 import { docNumberFor, formatUsd, poolLabel, splitPool } from '@/lib/format';
+import { DEFAULT_SPOT_POOL } from '@/lib/spot/constants';
 
-const DEFAULT_POOL = 'SUI_DBUSDC';
 const ZERO: SpotBalances = { base: 0, quote: 0, deep: 0 };
 
 /** A coin amount worth showing — drops dust below half a display unit. */
@@ -44,7 +44,7 @@ export function SettledSweepCard({
   onRetry: () => void;
 }) {
   const w = useSpotWriteCard(part, addToolResult, onOutcome);
-  const poolKey = (typeof w.proposed.poolKey === 'string' && w.proposed.poolKey) || DEFAULT_POOL;
+  const poolKey = (typeof w.proposed.poolKey === 'string' && w.proposed.poolKey) || DEFAULT_SPOT_POOL;
   const { base, quote } = splitPool(poolKey);
   const poolName = poolLabel(poolKey);
 
@@ -90,7 +90,9 @@ export function SettledSweepCard({
             ? 'Couldn’t reach your account — retry in a moment.'
             : w.storageBlocked
               ? 'Your browser is blocking storage — we can’t detect your account; don’t create a second one.'
-              : `Open a DeepBook account first to sweep ${poolName} proceeds.`}
+              : !w.connected
+                ? `Connect your wallet first to sweep ${poolName} proceeds.`
+                : `Open a DeepBook account first to sweep ${poolName} proceeds.`}
         </span>
         <div className="flex gap-2.5">
           {w.bmError && (

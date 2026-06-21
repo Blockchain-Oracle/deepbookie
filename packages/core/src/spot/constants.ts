@@ -6,8 +6,6 @@ export const SPOT_MANAGER_KEY = 'MAIN';
 /** DeepBook V3 spot is testnet-only here (matches the Predict deployment). */
 export const SPOT_NETWORK = 'testnet' as const;
 
-export const ZERO_ADDRESS = `0x${'0'.repeat(64)}`;
-
 /** Suffix of the created BalanceManager object type — parses a new id out of tx effects (MCP/CLI). */
 export const BALANCE_MANAGER_TYPE = 'balance_manager::BalanceManager';
 

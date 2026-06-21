@@ -1,10 +1,8 @@
 'use client';
 
 import { Card } from '@/components/ui/Card';
-import { formatUsd, num, poolLabel } from '@/lib/format';
+import { formatPct, formatUsd, num, poolLabel } from '@/lib/format';
 import type { SpotCoinBalance, SpotMid, SpotPoolParams, SpotSwapQuote } from '@/lib/bff/spot-types';
-
-const pct = (v: number) => `${(v * 100).toFixed(3)}%`;
 
 /** A compact key/value card for the informational spot reads that don't warrant a bespoke widget
  *  (mid price, pool params, a swap quote preview, a coin balance). The rich flows live in SwapCard /
@@ -40,8 +38,8 @@ function factsFor(name: string, data: unknown): { label: string; rows: { label: 
       return {
         label: `${pool} · pool params`,
         rows: [
-          { label: 'Taker fee', value: pct(num(p.takerFee)) },
-          { label: 'Maker fee', value: pct(num(p.makerFee)) },
+          { label: 'Taker fee', value: formatPct(num(p.takerFee), 3) },
+          { label: 'Maker fee', value: formatPct(num(p.makerFee), 3) },
           { label: 'Tick / lot / min', value: `${formatUsd(num(p.tickSize), 4)} / ${num(p.lotSize)} / ${num(p.minSize)}` },
           { label: 'Fees', value: p.whitelisted ? 'DEEP-free (whitelisted)' : 'paid in DEEP' },
         ],

@@ -24,9 +24,10 @@ export function Chat() {
   // re-resolving per request). Auth still never trusts it — spot writes are signed in the wallet.
   const bmData = useBalanceManager(account?.address).data;
   const balanceManagerId = bmData?.balanceManagerId ?? null;
-  // Storage blocked → we genuinely can't tell if a shared BM exists; tell the route NOT to proactively
-  // propose creating one (which would mint a duplicate + orphan funds for a returning user).
-  const balanceManagerUnknown = bmData?.storageBlocked ?? false;
+  // BM existence is UNKNOWN when storage is blocked OR the resolver itself failed (a transient
+  // 429/500/timeout — distinct from a genuine "no account" null). In both cases tell the route NOT to
+  // proactively propose creating one: minting a duplicate shared BM orphans a returning user's funds.
+  const balanceManagerUnknown = (bmData?.storageBlocked ?? false) || (bmData?.error ?? false);
 
   // Recreated when the address or resolved managers change; carries all to the route.
   const transport = useMemo(
