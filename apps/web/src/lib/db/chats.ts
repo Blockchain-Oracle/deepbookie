@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { getDb } from './client';
 import { chats, txOutcomes, type ChatRow, type TxOutcomeRow } from './schema';
 
@@ -15,7 +15,9 @@ export async function listChats(wallet: string): Promise<ChatSummary[]> {
   const rows = await db
     .select({ id: chats.id, title: chats.title, updatedAt: chats.updatedAt })
     .from(chats)
-    .where(eq(chats.walletAddress, wallet))
+    // Only sessions with an actual transcript — never list the empty "New chat" stubs that
+    // `ensureChat` creates when a sign outcome is recorded before the transcript save lands.
+    .where(and(eq(chats.walletAddress, wallet), sql`jsonb_array_length(${chats.messages}) > 0`))
     .orderBy(desc(chats.updatedAt))
     .limit(60);
   return rows.map((r) => ({ id: r.id, title: r.title, updatedAt: r.updatedAt.toISOString() }));
