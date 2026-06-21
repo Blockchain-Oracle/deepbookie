@@ -24,14 +24,14 @@ export function OpenProtocol() {
           {/* Copy column */}
           <div className="min-w-0 flex-[1_1_380px] max-w-[520px]">
             <div className="font-mono mb-[22px] text-[11px] uppercase tracking-[0.12em] text-muted">
-              Built to outlast the app
+              One agent, anywhere you trade
             </div>
             <h2 className="m-0 mb-5 text-[32px] font-bold leading-[1.04] tracking-[-0.035em] sm:text-[40px]">
-              DeepBookie is one interface. The market is open.
+              Same chat. Web, terminal, or your AI client.
             </h2>
             <p className="m-0 text-[16px] leading-[1.55] text-[#615c53] sm:text-[17px]">
-              It runs on DeepBook Predict, an open prediction market on Sui. The same agent — and the
-              same sign-it-yourself receipts — work from your terminal, any AI client, or right here.
+              DeepBookie runs on DeepBook — both Predict (BTC prediction markets) and Spot (the
+              order book). The same chat works from your terminal, any AI client, or right here.
               Your positions live on-chain, not in our database.
             </p>
           </div>

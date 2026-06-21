@@ -16,12 +16,12 @@ export function CtaFooter() {
       <div className="mx-auto max-w-[1180px] px-6 pb-10 pt-20 sm:px-10 sm:pt-24">
         <div className="mx-auto mb-16 max-w-[680px] text-center sm:mb-20">
           <h2 className="m-0 text-[40px] font-extrabold leading-[1.0] tracking-[-0.04em] sm:text-[54px]">
-            The agent proposes.
+            Trade DeepBook
             <br />
-            You sign.
+            just by chatting.
           </h2>
           <p className="m-0 mx-auto mt-[22px] max-w-[560px] text-[17px] leading-[1.5] text-[#cfc9bd] sm:text-[18px]">
-            Connect a Sui wallet, grab some test dUSDC, and place your first bet in under a minute.
+            Connect a Sui wallet, grab some test dUSDC, and place your first trade in under a minute.
           </p>
           <div className="mt-[34px] flex flex-wrap items-center justify-center gap-4">
             <Link
@@ -60,7 +60,7 @@ export function CtaFooter() {
             ))}
           </nav>
 
-          <div className="font-mono text-[11px] text-[#6b675e]">non-custodial · open protocol</div>
+          <div className="font-mono text-[11px] text-[#6b675e]">you sign every trade</div>
         </footer>
       </div>
     </section>

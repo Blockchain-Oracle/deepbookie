@@ -1,18 +1,18 @@
 const STEPS = [
   {
     n: '01',
-    title: 'Ask in plain language',
-    body: '“Will BTC be above $63k in the next half hour?” The agent reads the live market and reasons about the right bet.',
+    title: 'You ask',
+    body: '“Bet $20 on BTC closing above $110k Friday.” Or “Swap 1 SUI for dUSDC.” Plain English — no forms, no order tickets.',
   },
   {
     n: '02',
-    title: 'See the real odds',
-    body: 'A live probability curve — P(price ≥ strike) across every strike, priced off an on-chain volatility model. Tap a strike.',
+    title: 'DeepBookie builds it',
+    body: 'It pulls the live market, shows you the cost, the payout, and the receipt. Nothing has happened yet — this part is free.',
   },
   {
     n: '03',
-    title: 'Sign it yourself',
-    body: 'The agent proposes an itemized receipt. You authorize it in your own wallet, get an on-chain digest, and keep custody throughout.',
+    title: 'You sign',
+    body: 'Your wallet pops up. You approve. The trade lands on-chain with a digest you can check on Suiscan.',
   },
 ] as const;
 
@@ -34,7 +34,7 @@ export function HowItWorks() {
             id="how-heading"
             className="m-0 max-w-[620px] text-3xl font-bold leading-[1.02] tracking-[-0.035em] sm:text-[40px]"
           >
-            Ask a question. Read the odds. Sign it yourself.
+            You ask. DeepBookie builds it. You sign.
           </h2>
           <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
             3 steps · one signature

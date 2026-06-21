@@ -27,7 +27,7 @@ export function Composer({
               onSend();
             }
           }}
-          placeholder="Ask about a market, or place a bet…"
+          placeholder="Ask about a market, place a bet, or swap…"
           className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-faint"
         />
         <button

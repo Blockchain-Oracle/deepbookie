@@ -5,9 +5,9 @@ import '@mysten/dapp-kit/dist/index.css';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'DeepBookie — the agent proposes, you sign',
+  title: 'DeepBookie — trade DeepBook by chatting',
   description:
-    'Talk to an AI that prices DeepBook Predict bets off a live volatility model. It proposes; you sign every trade in your own wallet. It holds no key.',
+    'A chat app for trading DeepBook on Sui. Describe a trade in plain English — bet on BTC, swap tokens, manage your positions — and DeepBookie builds it. You sign every trade in your own wallet.',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
