@@ -23,9 +23,13 @@ export const MANAGER_TYPE = `${PREDICT_PACKAGE}::predict_manager::PredictManager
 
 export const SUISCAN_TX = (digest: string) => `https://suiscan.xyz/testnet/tx/${digest}`;
 export const SUISCAN_OBJECT = (id: string) => `https://suiscan.xyz/testnet/object/${id}`;
+export const SUISCAN_ACCOUNT = (addr: string) => `https://suiscan.xyz/testnet/account/${addr}`;
 
 /** Operator tally form — fallback path to request testnet dUSDC (hackathon-gated). */
 export const TALLY_FAUCET_URL = 'https://tally.so/r/Xx102L';
+
+/** External documentation site (separate app, deployed at this domain). */
+export const DOCS_URL = 'https://docs.deepbookie.xyz';
 
 /** Server cache lifetimes (seconds) for the BFF route handlers — see spec §3. */
 export const REVALIDATE = {
@@ -35,6 +39,9 @@ export const REVALIDATE = {
   vaultPerf: 30,
   manager: 5,
   activity: 4,
+  // Spot (DeepBook V3): pool/param catalogs are near-static; the order book moves fast.
+  spotPools: 60,
+  spotBook: 3,
 } as const;
 
 /** Client poll cadences (ms) for TanStack Query refetchInterval. */
@@ -61,7 +68,14 @@ export const STALE = {
 export const INDEXER_TIMEOUT_MS = 22_000;
 export const INDEXER_RETRIES = 1;
 export const VAULT_PERF_MAX_POINTS = 120;
-export const CHAT_PRUNE_MAX_MESSAGES = 40;
+// Hard cap on inbound chat transcript length — bounds LLM token cost + jsonb storage growth per
+// request (the per-IP rate limit caps request count, not body size). A normal session is well under it.
+export const CHAT_MAX_MESSAGES = 500;
+
+/** Markets board enrichment: bound per-market odds fan-out; scan the activity feed for volume/trades. */
+export const MARKETS_ENRICH_CONCURRENCY = 6;
+export const ACTIVITY_SCAN_LIMIT = 100; // /positions/minted returns up to 100 recent events
+export const MARKET_TRADES_LIMIT = 12; // recent trades shown on a market detail page
 
 /** App-run faucet: a small dUSDC grant from the operator wallet to remove demo friction. */
 export const FAUCET_AMOUNT_USD = 10;
@@ -73,3 +87,10 @@ export const SUI_DECIMALS = 9;
 export const FAUCET_RATE_PER_IP = 5;
 export const FAUCET_RATE_GLOBAL = 40;
 export const FAUCET_RATE_WINDOW_MS = 60 * 60 * 1000;
+
+// Chat + history-write abuse guard (in-memory; per-process). NOT an authorization boundary — history
+// is keyed by a secret random chatId; signed-message (SIWS) session auth is the documented fast-follow.
+export const CHAT_RATE_PER_IP = 60;
+export const CHAT_RATE_WINDOW_MS = 60 * 1000;
+// Spot reads poll (orderbook/account/balance), so the per-IP cap is higher than chat's.
+export const SPOT_READ_RATE_PER_IP = 300;

@@ -1,0 +1,5 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "pnpm --filter @deepbookie/predict-client --filter @deepbookie/core run build && next build",
+  "framework": "nextjs"
+}

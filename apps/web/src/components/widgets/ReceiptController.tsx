@@ -1,20 +1,33 @@
 'use client';
 
-import { useState } from 'react';
-import { useCurrentAccount } from '@mysten/dapp-kit-react';
-import { SignReceipt, type ReceiptLine, type ReceiptState } from './SignReceipt';
-import { useSubmitTx, reasonFor } from '@/lib/hooks/useSubmitTx';
+import { useRef, useState } from 'react';
+import { useCurrentAccount } from '@mysten/dapp-kit';
+import { SignReceipt, type ReceiptLine } from './SignReceipt';
+import { deriveReceiptState } from './receiptState';
+import { useSubmitTx, reasonFor, isUserRejection } from '@/lib/hooks/useSubmitTx';
 import { useQuote } from '@/lib/hooks/useQuote';
 import { usePositions } from '@/lib/hooks/usePositions';
+import { useBalanceManager } from '@/lib/hooks/useBalanceManager';
 import { SUISCAN_TX } from '@/lib/constants';
-import { formatUsd, shortenDigest } from '@/lib/format';
+import { docNumberFor, formatUsd, num, poolLabel, shortenDigest, str } from '@/lib/format';
 import type { Direction } from '@/lib/bff/types';
 
 export interface WriteToolPart {
   type: string;
   state?: string;
   input?: Record<string, unknown>;
-  output?: { digest?: string; status?: string };
+  output?: {
+    digest?: string;
+    status?: string;
+    amount?: number;
+    takerFee?: number;
+    makerFee?: number;
+    stakeRequired?: number;
+    proposalId?: string;
+    newQuantity?: number;
+    reducingBy?: number;
+    base?: string;
+  };
   toolCallId: string;
   errorText?: string;
 }
@@ -26,28 +39,40 @@ export type AddToolResult = (
     | { tool: string; toolCallId: string; state: 'output-error'; errorText: string },
 ) => void;
 
-const num = (v: unknown) => (typeof v === 'number' ? v : 0);
-const str = (v: unknown) => (typeof v === 'string' ? v : '');
-const docNumberFor = (id: string) => `DB·${id.slice(0, 4).toUpperCase()}·${id.slice(-4)}`;
+/** Reported the instant a write resolves — persisted independently of the transcript (the ledger). */
+export interface SignOutcome {
+  toolCallId: string;
+  toolName: string;
+  status: 'signed' | 'cancelled' | 'failed';
+  digest?: string;
+}
+export type OnSignOutcome = (o: SignOutcome) => void;
 
 export function ReceiptController({
   part,
   addToolResult,
   onRetry,
+  onOutcome,
 }: {
   part: WriteToolPart;
   addToolResult: AddToolResult;
   onRetry: () => void;
+  onOutcome?: OnSignOutcome;
 }) {
   const submit = useSubmitTx();
   const account = useCurrentAccount();
   const positionsQ = usePositions(account?.address);
+  const bm = useBalanceManager(account?.address);
   const [local, setLocal] = useState<'idle' | 'signing' | 'dismissed'>('idle');
+  // Synchronous re-entry guard — `local` state only flips next render, so a fast double-click could
+  // pass a state-only check twice and queue two wallet prompts. A ref flips in the same tick.
+  const inFlight = useRef(false);
 
   const toolName = part.type.slice('tool-'.length);
   const input = part.input ?? {};
   const isBet = toolName === 'mint' || toolName === 'redeem';
-  const needsManager = toolName !== 'create_manager';
+  const isSpot = toolName.startsWith('spot_');
+  const needsManager = toolName !== 'create_manager' && !isSpot;
   const direction = (str(input.direction) || 'UP') as Direction;
 
   const quote = useQuote(
@@ -58,35 +83,40 @@ export function ReceiptController({
 
   if (local === 'dismissed') return null;
 
-  // Terminal part states (signed / cancelled / failed) win over transient local state, so a
-  // reload/remount renders the right thing — cancellation is encoded in part.output, not local.
-  const cancelled = part.state === 'output-available' && part.output?.status === 'cancelled';
-  const state: ReceiptState = cancelled
-    ? 'cancelled'
-    : part.state === 'output-available'
-      ? 'signed'
-      : part.state === 'output-error'
-        ? 'failed'
-        : local === 'signing'
-          ? 'signing'
-          : part.state === 'input-streaming'
-            ? 'loading'
-            : 'proposed';
+  // Terminal part states win over the transient local 'signing' flag (shared with the spot cards).
+  const state = deriveReceiptState(part, local === 'signing');
 
   const onAuthorize = async () => {
-    if (local === 'signing') return; // re-entry / double-submit guard
+    if (inFlight.current) return; // synchronous re-entry / double-submit guard
+    inFlight.current = true;
     setLocal('signing');
     try {
-      const digest = await submit(toolName, input, positionsQ.data?.managerId ?? undefined);
+      const digest = await submit(toolName, input, {
+        managerId: positionsQ.data?.managerId ?? undefined,
+        balanceManagerId: bm.data?.balanceManagerId ?? undefined,
+      });
       addToolResult({ tool: toolName, toolCallId: part.toolCallId, output: { digest } });
+      onOutcome?.({ toolCallId: part.toolCallId, toolName, status: 'signed', digest });
     } catch (e) {
-      addToolResult({ tool: toolName, toolCallId: part.toolCallId, state: 'output-error', errorText: reasonFor(e) });
+      // A wallet decline is a cancellation, not a failure — render the void receipt + log it as cancelled.
+      if (isUserRejection(e)) {
+        addToolResult({ tool: toolName, toolCallId: part.toolCallId, output: { status: 'cancelled' } });
+        onOutcome?.({ toolCallId: part.toolCallId, toolName, status: 'cancelled' });
+      } else {
+        addToolResult({ tool: toolName, toolCallId: part.toolCallId, state: 'output-error', errorText: reasonFor(e) });
+        onOutcome?.({ toolCallId: part.toolCallId, toolName, status: 'failed' });
+      }
       setLocal('idle'); // allow retry after a failure
+    } finally {
+      inFlight.current = false; // clears on every terminal path so a legit retry isn't blocked
     }
   };
 
   const onCancel = () => {
+    if (inFlight.current) return; // drop a double-tap (or a cancel mid-sign) — one terminal resolution only
+    inFlight.current = true;
     addToolResult({ tool: toolName, toolCallId: part.toolCallId, output: { status: 'cancelled' } });
+    onOutcome?.({ toolCallId: part.toolCallId, toolName, status: 'cancelled' });
   };
 
   const common = {
@@ -131,6 +161,27 @@ export function ReceiptController({
     redeem_range: {
       title: `Settle $${formatUsd(num(input.lowerStrikeUsd), 0)}–$${formatUsd(num(input.higherStrikeUsd), 0)}`,
       lines: [{ label: 'Quantity', value: `${formatUsd(num(input.quantityUsd))} contracts`, strong: true }],
+    },
+    // Spot (DeepBook V3) zero/fixed-input writes — the editable spot writes route to their own cards.
+    spot_create_balance_manager: {
+      title: 'Open your DeepBook account',
+      lines: [{ label: 'Account', value: 'New BalanceManager' }],
+    },
+    spot_deposit: {
+      title: `Deposit ${formatUsd(num(input.amount))} ${str(input.coinKey)}`,
+      lines: [{ label: 'Coin', value: str(input.coinKey) }, { label: 'Amount', value: `${formatUsd(num(input.amount))} ${str(input.coinKey)}`, strong: true }],
+    },
+    spot_withdraw: {
+      title: `Withdraw ${input.amount === undefined ? 'all' : formatUsd(num(input.amount))} ${str(input.coinKey)}`,
+      lines: [{ label: 'Coin', value: str(input.coinKey) }, { label: 'Amount', value: input.amount === undefined ? 'All available' : `${formatUsd(num(input.amount))} ${str(input.coinKey)}`, strong: true }],
+    },
+    spot_cancel_order: {
+      title: 'Cancel order',
+      lines: [{ label: 'Pool', value: poolLabel(str(input.poolKey)) }, { label: 'Order', value: shortenDigest(str(input.orderId)) }],
+    },
+    spot_cancel_all_orders: {
+      title: 'Cancel all orders',
+      lines: [{ label: 'Pool', value: poolLabel(str(input.poolKey)) }],
     },
   };
   const action = actions[toolName] ?? { title: toolName, lines: [] };

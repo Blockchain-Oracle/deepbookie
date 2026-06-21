@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { schibsted, plexMono } from '@/components/foundation/fonts';
+import '@mysten/dapp-kit/dist/index.css';
 import './globals.css';
 
 export const metadata: Metadata = {

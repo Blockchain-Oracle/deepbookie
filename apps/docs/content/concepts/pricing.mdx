@@ -1,0 +1,40 @@
+---
+title: Pricing — SVI → N(d2)
+description: How DeepBookie turns a live volatility curve into the odds of a bet.
+---
+
+# Pricing: SVI → N(d₂)
+
+When you ask *"what are the odds BTC is above $70k on Friday?"*, DeepBookie reads
+the live market and answers with a real probability.
+
+<OddsCurve />
+
+## In plain terms
+
+1. The market has a **volatility curve** — how much traders expect the price to
+   move. DeepBookie fits it with a model called **SVI** (Stochastic Volatility
+   Inspired).
+2. It converts that into a probability with **N(d₂)** — a standard Black-Scholes
+   formula that turns volatility into a 0–100% chance.
+3. Do that for every strike and you get the odds curve above.
+
+That probability *is* the fair price of your bet. Higher odds cost more to buy;
+longer-shot odds pay more if they hit.
+
+<Callout type="tip">
+  This is the same model behind the odds-curve widget in chat. Ask "what are the
+  odds BTC closes above $70k?" to see it live.
+</Callout>
+
+## For the curious — the math
+
+In `@deepbookie/predict-client`'s `math.ts`:
+
+- `upProbability(svi, forward, strike)` computes a normalized distance `d₂` and
+  runs it through `normalCdf()` → a number from `0` to `1`.
+- `downProbability = 1 − upProbability`.
+- `buildCurve()` samples ~25 strikes around the forward price to draw the smile.
+
+All inputs are scaled ×1e9 (see [Scaling & units](/concepts/scaling)); the
+probabilities come back as `0`–`1`.

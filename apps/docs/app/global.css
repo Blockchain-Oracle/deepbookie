@@ -1,0 +1,335 @@
+@import 'tailwindcss';
+
+/* ── DeepBookie brand tokens (verbatim from apps/web) ── */
+@theme {
+  --color-ink: #1a1714;
+  --color-paper: #f4f2ec;
+  --color-canvas: #e4e2dc;
+  --color-card: #ffffff;
+  --color-green: #2c5e4a;
+  --color-mint: #7fcaa6;
+  --color-clay: #b0452b;
+  --color-wallet: #4da2ff;
+  --color-line: #e6e1d8;
+  --color-line-strong: #ded9cf;
+  --color-muted: #8a857b;
+  --color-faint: #9c978d;
+  --color-ink-soft: #3c3933;
+  --color-shimmer: #ece8df;
+
+  --font-sans: var(--font-schibsted), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --radius-card-in: 8px;
+  --radius-card: 14px;
+  --radius-pill: 999px;
+
+  --shadow-raised: 0 18px 40px -22px rgb(26 23 20 / 0.3);
+  --shadow-float: 0 28px 64px -26px rgb(26 23 20 / 0.45);
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+body {
+  background: #e4e2dc;
+  color: #1a1714;
+  font-family: 'Schibsted Grotesk', var(--font-schibsted), sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+::selection {
+  background: #c7dbcf;
+}
+
+/* ── design utility classes ── */
+.mono {
+  font-family: 'IBM Plex Mono', var(--font-plex-mono), monospace;
+  font-variant-numeric: tabular-nums;
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+.lbl {
+  font-size: 10px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* ── responsive layout reflow (matches the design exactly) ── */
+.dbk-navlinks {
+  display: flex;
+}
+.dbk-hamb {
+  display: none;
+}
+.dbk-searchpill {
+  display: flex;
+}
+.dbk-searchicon {
+  display: none;
+}
+.dbk-sidebar {
+  display: block;
+}
+.dbk-toc {
+  display: block;
+}
+.dbk-openapp {
+  display: inline-flex;
+}
+.intent-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.trade-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.demo-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+.twocol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+@media (max-width: 1199px) {
+  .dbk-toc {
+    display: none;
+  }
+}
+@media (max-width: 1023px) {
+  .dbk-sidebar {
+    display: none;
+  }
+  .dbk-navlinks {
+    display: none;
+  }
+  .dbk-hamb {
+    display: inline-flex;
+  }
+  .intent-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .trade-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+  .demo-split {
+    grid-template-columns: 1fr;
+  }
+  .twocol {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 639px) {
+  .dbk-searchpill {
+    display: none;
+  }
+  .dbk-searchicon {
+    display: inline-flex;
+  }
+  .dbk-openapp {
+    display: none;
+  }
+  .intent-grid {
+    grid-template-columns: 1fr;
+  }
+  .trade-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── MDX prose (matches the design content page) ── */
+.dbk-prose {
+  font-size: 16px;
+  line-height: 1.7;
+  color: #3c3933;
+}
+.dbk-prose h1 {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: #1a1714;
+  margin: 0 0 10px;
+}
+.dbk-prose h2 {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #1a1714;
+  margin: 34px 0 8px;
+  scroll-margin-top: 76px;
+}
+.dbk-prose h3 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #1a1714;
+  margin: 26px 0 7px;
+  scroll-margin-top: 76px;
+}
+.dbk-prose h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1714;
+  margin: 20px 0 6px;
+}
+.dbk-prose p {
+  margin: 0 0 18px;
+}
+.dbk-prose a {
+  color: #2c5e4a;
+  text-decoration: none;
+  border-bottom: 1px solid #bcd6ca;
+}
+.dbk-prose ul,
+.dbk-prose ol {
+  margin: 0 0 16px;
+  padding-left: 22px;
+}
+.dbk-prose li {
+  margin-bottom: 6px;
+}
+.dbk-prose strong,
+.dbk-prose b {
+  font-weight: 700;
+}
+.dbk-prose blockquote {
+  margin: 0 0 22px;
+  padding: 4px 0 4px 18px;
+  border-left: 3px solid #2c5e4a;
+  color: #4a5a52;
+  font-size: 16.5px;
+  line-height: 1.6;
+  font-style: italic;
+}
+.dbk-prose hr {
+  border: none;
+  border-top: 1px solid #ded9cf;
+  margin: 28px 0;
+}
+.dbk-prose :not(pre) > code {
+  font-family: 'IBM Plex Mono', var(--font-plex-mono), monospace;
+  font-size: 0.88em;
+  background: #f4f2ec;
+  border: 1px solid #e6e1d8;
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+.dbk-prose pre {
+  background: #1a1714;
+  border: 1px solid #2c2823;
+  border-radius: 12px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 16px 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.dbk-prose pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #cfc9bd;
+  font-family: 'IBM Plex Mono', var(--font-plex-mono), monospace;
+}
+.dbk-prose table {
+  width: 100%;
+  border: 1px solid #e6e1d8;
+  border-radius: 12px;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  font-size: 13.5px;
+  margin: 16px 0;
+}
+.dbk-prose th {
+  background: #faf8f3;
+  text-align: left;
+  padding: 11px 15px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #928d83;
+  font-weight: 600;
+  border-bottom: 1px solid #ede9e0;
+}
+.dbk-prose td {
+  padding: 11px 15px;
+  border-bottom: 1px solid #f2eee6;
+}
+.dbk-prose tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── motion ── */
+@keyframes dbkUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes dbkPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes dbkSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes dbkStamp {
+  0% {
+    opacity: 0;
+    transform: scale(1.7) rotate(-20deg);
+  }
+  100% {
+    opacity: 0.92;
+    transform: scale(1) rotate(-9deg);
+  }
+}
+.rise {
+  animation: dbkUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.intent-card {
+  transition:
+    box-shadow 0.2s,
+    transform 0.2s,
+    border-color 0.2s;
+}
+.intent-card:hover {
+  box-shadow: 0 18px 40px -22px rgb(26 23 20 / 0.3);
+  transform: translateY(-2px);
+  border-color: #dceae2;
+}
+.livedot {
+  animation: dbkPulse 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+  }
+}

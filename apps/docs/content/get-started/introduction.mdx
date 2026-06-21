@@ -1,0 +1,48 @@
+---
+title: Introduction
+description: DeepBookie is a chat app for trading on Sui. You describe a trade in plain English, the AI builds it, and you sign it in your own wallet.
+---
+
+# What is DeepBookie?
+
+DeepBookie is a chat app for trading on Sui. You type what you want in plain
+English — *"Bet $50 that Bitcoin is above $70,000 on Friday"* — and an AI prices
+it, shows you the cost and the payout, and builds the transaction. You sign it in
+your own wallet.
+
+**The AI proposes. You sign. It never holds your keys or touches your money.**
+
+## Two markets, one chat
+
+DeepBookie trades two DeepBook markets on Sui testnet:
+
+- **Predict** — yes/no bets on a price. *"Will BTC be above $70k on Friday?"* If
+  you're right, you win a fixed payout.
+- **Spot** — ordinary trading on an order book. Swap one coin for another, or
+  place a limit order.
+
+You don't pick a market. You just say what you want, and the AI uses the right
+tools.
+
+## Four ways to use it
+
+The same tools work everywhere:
+
+- **Web app** — the chat in your browser; sign with your wallet.
+- **MCP server** — run the tools inside Claude Desktop, Cursor, or Claude Code.
+- **CLI** — trade from your terminal.
+- **Claude skill** — a playbook that teaches any Claude agent how to trade here.
+
+## Try it in two minutes
+
+<Steps
+  items={[
+    { title: 'Open the web app', body: 'Connect a Sui wallet set to testnet.' },
+    { title: 'Get test dUSDC', body: 'Tap “Get dUSDC” in the app. It’s test money — no real value.' },
+    { title: 'Ask for a trade', body: '“Bet $50 that BTC is above $70k Friday.” Check the receipt, then sign.' },
+  ]}
+/>
+
+<Callout type="note">
+  Everything runs on Sui **testnet**. Balances are test dUSDC — not worth real money.
+</Callout>

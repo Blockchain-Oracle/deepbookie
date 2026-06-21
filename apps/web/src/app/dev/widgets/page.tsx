@@ -1,5 +1,6 @@
 'use client';
 
+import { Providers } from '@/components/providers/Providers';
 import { OddsCurveCard } from '@/components/widgets/OddsCurveCard';
 import { SignReceipt, type ReceiptState } from '@/components/widgets/SignReceipt';
 import { MarketHeader } from '@/components/widgets/MarketHeader';
@@ -10,7 +11,25 @@ import { VaultCard } from '@/components/widgets/VaultCard';
 import { PortfolioRollup } from '@/components/widgets/PortfolioRollup';
 import { PositionCard } from '@/components/widgets/PositionCard';
 import { ActivityTape } from '@/components/widgets/ActivityTape';
+import { Markdown } from '@/components/chat/Markdown';
+import { MessageList } from '@/components/chat/MessageList';
 import type { Market, MarketState, Odds, Portfolio, Position, Quote, RangeQuote, Vault } from '@/lib/bff/types';
+
+const MOCK_MD = `Here's the **BTC binary** settling at 2:30 PM.
+
+- Spot: \`$63,422.99\`
+- Model P(up) at $63k: **53.8%**
+- Breakeven: ~$63,180
+
+| Side | Cost / 100 | Max payout |
+| --- | --- | --- |
+| UP | 53.80 | 100.00 |
+| DOWN | 46.20 | 100.00 |
+
+I'd lean **UP** here — want me to price a bet? See [Suiscan](https://suiscan.xyz/testnet).`;
+
+const LONG_USER_MSG =
+  'Quote a UP bet on the BTC market settling Jun 20, 2:30 PM at strike $63000. (oracleId: 0x828b28349daf715f8dd43fc9d946ce721a4be6b2e8ac8b1c562b855625fefb5c)';
 
 // Dev-only gallery for visual QA of every widget against the design (no wallet needed).
 const SPOT = 63422.99;
@@ -66,7 +85,17 @@ function Section({ title }: { title: string }) {
   return <h2 className="mb-4 mt-12 font-mono text-xs uppercase tracking-[0.1em] text-faint">{title}</h2>;
 }
 
-export default function WidgetGallery() {
+export default function WidgetGalleryPage() {
+  // Wrap in the app providers (ssr:false) — some widgets (PositionCard) now read on-chain via wallet
+  // hooks, so they need the SuiClient/Wallet context; this also keeps the page out of static prerender.
+  return (
+    <Providers>
+      <WidgetGallery />
+    </Providers>
+  );
+}
+
+function WidgetGallery() {
   const receiptStates: ReceiptState[] = ['loading', 'proposed', 'signing', 'signed', 'failed', 'cancelled'];
   return (
     <main className="min-h-screen bg-canvas px-12 py-14 font-sans text-ink">
@@ -101,6 +130,23 @@ export default function WidgetGallery() {
         <Cell label="position"><PositionCard position={mockPosition} /></Cell>
         <Cell label="activity tape"><ActivityTape bets={mockBets} /></Cell>
         <Cell label="markets table"><MarketTable markets={mockMarkets} onPick={() => {}} /></Cell>
+      </div>
+
+      <Section title="Chat formatting" />
+      <div className="flex flex-wrap gap-8">
+        <Cell label="assistant markdown">
+          <Markdown>{MOCK_MD}</Markdown>
+        </Cell>
+        <Cell label="user bubble (long + oracleId)">
+          <div className="ml-auto w-fit max-w-[82%] whitespace-pre-wrap rounded-[16px_16px_5px_16px] bg-ink px-4 py-2.5 text-sm leading-snug text-paper [overflow-wrap:anywhere]">
+            {LONG_USER_MSG}
+          </div>
+        </Cell>
+      </div>
+
+      <Section title="Chat home — category carousel" />
+      <div className="h-[440px] w-full max-w-[720px] overflow-hidden rounded-card border border-line bg-canvas">
+        <MessageList messages={[]} status="ready" addToolResult={() => {}} onAction={() => {}} />
       </div>
     </main>
   );

@@ -1,0 +1,76 @@
+---
+title: Error codes
+description: The errors DeepBookie raises, what causes each one, and how to clear it.
+---
+
+# Error codes
+
+DeepBookie fails loudly and in plain English. Most errors are guardrails. They catch a missing account or a wrong network *before* a transaction is built, so you never sign something broken.
+
+The messages below come straight from the tool registry (`@deepbookie/core`) and the CLI (`@deepbookie/cli`). You see the same strings on the web app, the MCP server, and the terminal.
+
+## Quick reference
+
+| Error | Cause | Fix |
+| --- | --- | --- |
+| `this needs a PredictManager — run create_manager first` | No PredictManager resolved. Most writes (`mint`, `redeem`, `mint_range`, `redeem_range`) and position reads (`get_portfolio`, `get_positions`) need one. | Run `create_manager` once. The web app does this on your first trade. On CLI/MCP, set `DEEPBOOKIE_MANAGER_ID` after creating it. |
+| `no dUSDC in wallet — acquire test dUSDC from the faucet first` | Funding a bet or LP deposit splits a real dUSDC coin, and your wallet holds none. | Get test dUSDC (see below). The word "faucet" here means the in-app mint, not a public tap. |
+| `funding requires a connected wallet (ctx.sender)` | A funded write (`mint`/`mint_range` with `fundUsd`, or `supply`) ran with no signer address. | Connect a wallet (web) or provision a local key (CLI/MCP). |
+| `this needs a connected wallet (ctx.sender)` | A write that needs a sender (`supply`, `withdraw`) ran without one. | Same as above. |
+| `invalid JSON for args: …` | The `deepbookie call` CLI could not parse the JSON args string. | Pass a single quoted JSON object, e.g. `'{"oracleId":"0x.."}'`. |
+| `unknown tool '<name>' (try: deepbookie tools)` | Called a tool name that is not in the registry. | Run `deepbookie tools` to list all 44 valid names. |
+| `DeepBook Predict is testnet-only for now — set DEEPBOOKIE_NETWORK=testnet` | The context was built for a non-testnet network. | Unset `DEEPBOOKIE_NETWORK` (it defaults to `testnet`) or set it to `testnet`. |
+| `market has no live price/SVI yet` | `get_odds` ran on a market with no published price yet. | Pick an active market, or retry once the indexer has fresh state (see lag below). |
+| `quantityUsd too small — minimum tradable size is 0.000001 dUSDC` | The size rounded to zero at 6-decimal dUSDC precision. | Use a `quantityUsd` of at least `0.000001`. |
+| `lowerStrikeUsd must be < higherStrikeUsd` | A range bet (`mint_range`/`redeem_range`) had a lower strike at or above the higher. | Order the band so `lowerStrikeUsd < higherStrikeUsd`. |
+
+## Missing PredictManager
+
+A PredictManager is your account inside Predict. It holds your balance and positions. Creating one is a one-time signed transaction.
+
+<Steps items={[
+  { title: 'Create the manager', body: 'Call create_manager. It returns an unsigned tx. Sign it in your wallet (web) or with your local key (CLI/MCP).' },
+  { title: 'Capture the id', body: 'The CLI prints managerId from the tx effects. Save it.' },
+  { title: 'Reuse it', body: 'On CLI/MCP, set DEEPBOOKIE_MANAGER_ID to that id so every later read and write picks it up.' }
+]} />
+
+<Callout type="note">On the web app this is automatic. The first trade flow creates and remembers your manager. The error only shows up on CLI/MCP, where no manager id was supplied.</Callout>
+
+## No dUSDC
+
+dUSDC is the settlement asset. It is **operator-gated**: the treasury cap is held privately, so there is no public faucet to find. DeepBookie funds a bet by *splitting a real dUSDC coin you already hold* — never by minting one itself.
+
+You get test dUSDC two ways:
+
+- **In the web app** — tap **Get dUSDC**. This calls the operator mint and sends test coins to your wallet.
+- **Via the tally form** — request dUSDC for your address when you are off the web app.
+
+<Callout type="warning">The legacy error string says "faucet," but DeepBookie has no public faucet. It means the in-app **Get dUSDC** mint or the tally form. Once a coin lands in your wallet, `mint` with `fundUsd` (or `supply`) can split it. The mint takes a moment to confirm — balance and portfolio reads fail until it does.</Callout>
+
+## Invalid JSON args (CLI)
+
+`deepbookie call <tool> '<json>'` parses the second argument as a JSON object. A shell that strips quotes — or a trailing comma — trips it:
+
+```bash
+# wrong: the shell eats the braces, args become unparseable
+deepbookie call get_odds {oracleId:0x..}
+
+# right: single-quote the whole object
+deepbookie call get_odds '{"oracleId":"0x.."}'
+```
+
+## Testnet-only enforcement
+
+Predict's contracts and indexer live only on Sui testnet. Pointing the RPC at another network while still reading the testnet indexer would be split-brain, so `createContext` rejects any non-testnet network. `DEEPBOOKIE_NETWORK` defaults to `testnet` — leave it unset unless you have a reason to set it.
+
+## Indexer lag (~7s)
+
+Reads come from the Predict indexer, which trails the chain by about **7 seconds**. A position or price you just changed may not show up right away.
+
+<Callout type="tip">This is not an error — it is freshness. If a fresh trade or settlement is not reflected yet, wait a few seconds and read again. Quotes and odds catch up.</Callout>
+
+## Strike not on the grid (auto-snapped)
+
+You pass strikes in plain dollars. On-chain, strikes sit on a fixed grid. DeepBookie's `resolveMarket` helper snaps your dollar strike to the nearest valid grid strike automatically. There is no error to fix.
+
+<Callout type="note">An off-grid strike like `64321.50` is rounded to the nearest tick before the tx is built. The quote and position you get back reflect the snapped strike, so always read the returned value rather than your exact input.</Callout>

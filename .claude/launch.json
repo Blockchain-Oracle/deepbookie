@@ -6,6 +6,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@deepbookie/web", "dev"],
       "port": 3000
+    },
+    {
+      "name": "docs",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@deepbookie/docs", "exec", "next", "dev", "--webpack", "-p", "3011"],
+      "port": 3011
     }
   ]
 }

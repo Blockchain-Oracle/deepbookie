@@ -11,6 +11,13 @@ export interface Market {
   status: string;
 }
 
+/** A market row enriched for the Markets board: live spot, at-the-money P(up), recent trade count. */
+export interface MarketEnriched extends Market {
+  spot: number | null; // null when live price/SVI is briefly unavailable
+  pUp: number | null; // at-the-money probability the price ends UP
+  volume: number; // recent trades on this market (from the activity feed)
+}
+
 export interface MarketState {
   oracleId: string;
   asset: string;
@@ -82,6 +89,8 @@ export interface Position {
   probabilityAtTrade: number;
   digest: string;
   at: number;
+  trader?: string | null; // present on the global activity feed
+  managerId?: string | null;
 }
 
 export interface Positions {

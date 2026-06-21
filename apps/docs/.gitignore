@@ -1,0 +1,13 @@
+# next
+/.next/
+/out/
+
+# fumadocs-mdx generated source
+/.source/
+
+# misc
+next-env.d.ts
+*.tsbuildinfo
+
+# pagefind search index (generated)
+/public/_pagefind/

@@ -1,0 +1,59 @@
+---
+title: Sign at the edge
+description: Every write tool returns an unsigned Sui transaction. You sign it in your wallet or on your machine — never in the cloud. The agent never holds your key.
+---
+
+# Sign at the edge
+
+DeepBookie's tools come in two kinds.
+
+- A **read** runs on the server and returns JSON. No wallet, no signing.
+- A **write** builds an **unsigned** Sui transaction and hands it back. It stops there. Nothing is signed. Nothing is sent.
+
+The agent proposes the transaction. You sign it. The agent never holds your key.
+
+## The core never holds a key
+
+`@deepbookie/core` has no key and no way to sign. A write tool is typed as a `build()` that returns an unsigned `Transaction` — there is no `execute()`:
+
+```ts
+/** A write tool builds an unsigned Sui transaction. You sign it at the edge. */
+export interface WriteTool {
+  kind: 'write';
+  build: (args, ctx) => Promise<Transaction>;
+}
+```
+
+The adapter exposes `read()` and `build()` — and nothing else. No code in core touches a private key, signs bytes, or submits a transaction. The same registry powers the web app, MCP, CLI, and the Claude skill. So this holds true everywhere.
+
+<Callout type="note">
+The transaction the agent builds is the exact transaction you sign. There is no second, hidden step in between.
+</Callout>
+
+## Where signing happens
+
+The unsigned transaction travels to the **edge** — the device in front of you — and that is the only place a signature gets added.
+
+<Steps items={[
+  { title: 'Web — your browser wallet', body: 'The unsigned transaction goes to your connected Sui wallet. You review it and approve it in the wallet popup. Your key never leaves the wallet.' },
+  { title: 'CLI / MCP — a local key', body: 'A key on your machine signs and submits the transaction (loaded from DEEPBOOKIE_PRIVATE_KEY or ~/.deepbookie/config.json). The key stays on your machine, never in the agent.' }
+]} />
+
+```ts
+// @deepbookie/node — the edge for CLI and MCP
+const tx = await api.build(tool.name, args);          // unsigned, from core
+const res = await signAndExecute(ctx.client, tx, kp); // signed locally, then submitted
+```
+
+<Callout type="warning">
+The agent can build any trade. It can never commit one. If there is no edge — no wallet connected, no local key — the transaction just never gets signed.
+</Callout>
+
+## What the receipt shows
+
+Every write shows up as a receipt with two states:
+
+- **Ink** — the proposed, unsigned transaction the agent built.
+- **Green** — the signed transaction, confirmed on-chain by its digest.
+
+Ink means proposed. Green means done. You move from one to the other when you sign at the edge.

@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 // Allowlist so a hostile caller can't flush arbitrary tags (cache-stampede DoS).
-const ALLOWED = /^(markets|activity|vault|market:0x[0-9a-fA-F]{1,66}|manager:0x[0-9a-fA-F]{1,66})$/;
+const ALLOWED = /^(markets|activity|spot|vault|market:0x[0-9a-fA-F]{1,66}|manager:0x[0-9a-fA-F]{1,66})$/;
 const MAX_TAGS = 10;
 
 /** Bust server-cache tags after a signed write so the next read reflects chain. */

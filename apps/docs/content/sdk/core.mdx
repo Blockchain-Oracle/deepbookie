@@ -1,0 +1,112 @@
+---
+title: "@deepbookie/core"
+description: The shared tool registry. Author a tool once, use it from any surface. Reads return JSON; writes return an unsigned transaction you sign yourself.
+---
+
+# @deepbookie/core
+
+`@deepbookie/core` is the registry every surface shares. It holds the canonical list of DeepBookie tools — each one written exactly once — and knows nothing about MCP, the CLI, or the web app. It is an internal package, but it is built to be portable: anyone can import the same registry, run reads, and build the same unsigned transactions DeepBookie builds, then sign them with their own key.
+
+The contract is simple. **Reads run on the server and return JSON. Writes return an unsigned Sui `Transaction`.** Core never holds a key and never signs.
+
+## ToolDef — read or write
+
+Every tool is a `ToolDef`, split on `kind`:
+
+```ts
+export type ToolDef = ReadTool | WriteTool;
+
+export interface ReadTool<S> extends Base<S> {
+  kind: 'read';
+  read: (args: z.infer<S>, ctx: ToolContext) => Promise<unknown>;
+}
+
+export interface WriteTool<S> extends Base<S> {
+  kind: 'write';
+  build: (args: z.infer<S>, ctx: ToolContext) => Promise<Transaction>;
+}
+```
+
+A `ReadTool` exposes `read(args, ctx)`. It hits the indexer or `devInspect` and returns plain JSON. No wallet, no signing. A `WriteTool` exposes `build(args, ctx)`. It returns an **unsigned `@mysten/sui` `Transaction`**. You sign it yourself.
+
+Each tool also carries a `name`, a `description`, a `surface`, and an `inputSchema` (a Zod object, so adapters can read `.shape`). Tools are written with the `defineRead` / `defineWrite` helpers, which set `kind` for you.
+
+## allTools — every tool in one array
+
+`allTools` is the single source of truth: all 44 tools, in one array.
+
+```ts
+import { allTools } from '@deepbookie/core';
+```
+
+Two tags let any consumer filter without parsing names:
+
+- **`surface`** — `'predict' | 'spot' | 'margin'`. Which DeepBook market a tool belongs to. A Predict-only demo, for example, keeps `surface === 'predict'`.
+- **`kind`** — `'read' | 'write'`. Whether the tool returns JSON or an unsigned transaction.
+
+<Callout type="note">
+`surface` lists `'margin'` in the type, but the shipped registry covers only the two live markets — Predict (binary options) and Spot (order book). There are no margin tools today.
+</Callout>
+
+## getToolsForAdapter — the consumer view
+
+This is the seam you build against. Pass the registry and a `ToolContext`, get back a small transport-free facade:
+
+```ts
+import { allTools, getToolsForAdapter, createContext } from '@deepbookie/core';
+
+const ctx = createContext({ network: 'testnet', sender: myAddress, managerId });
+const tools = getToolsForAdapter(allTools, ctx);
+
+tools.list();                          // ToolInfo[] — name, description, surface, kind
+tools.schema('predict_get_portfolio'); // the Zod inputSchema for that tool
+
+// Reads return JSON:
+const portfolio = await tools.read('predict_get_portfolio', { /* args */ });
+
+// Writes return an UNSIGNED transaction — you sign it:
+const tx = await tools.build('predict_mint', { /* args */ });
+```
+
+`read` and `build` both validate args against the tool's `inputSchema` before running, and throw if you call the wrong verb for a tool's `kind` (e.g. `build` on a read). What you do with the returned `Transaction` is up to you: sign with a local keypair, a browser wallet, or anything that speaks `@mysten/sui`.
+
+<Steps items={[
+  { title: 'Build the context', body: 'createContext({ network: "testnet", sender, managerId }) gives you the SuiJsonRpcClient and identity.' },
+  { title: 'Get the adapter view', body: 'getToolsForAdapter(allTools, ctx) returns list / schema / read / build.' },
+  { title: 'Read or build', body: 'read(name, args) returns JSON. build(name, args) returns an unsigned Transaction.' },
+  { title: 'Sign it yourself', body: 'Sign the unsigned Transaction with your own key. Core never touches it.' }
+]} />
+
+## ToolContext — everything that isn't a per-call argument
+
+Each surface supplies a `ToolContext`. It is the only stateful thing a tool gets besides its args:
+
+| Field | Type | Purpose |
+| --- | --- | --- |
+| `client` | `SuiJsonRpcClient` | The RPC client for reads and coin selection. |
+| `network` | `Network` | `'testnet'` only. |
+| `sender` | `string?` | The signer's address. Needed to build writes (picking a funding coin, setting the LP recipient). |
+| `managerId` | `string?` | The user's `PredictManager` object id. Optional for catalog reads; required for position reads and all writes. |
+| `balanceManagerId` | `string?` | The user's DeepBook V3 `BalanceManager` id. Needed for Spot account reads and writes. |
+
+### When `managerId` is required
+
+A `PredictManager` is the on-chain account that holds your bets and dUSDC balance. You create it once with `create_manager`.
+
+- **Catalog reads don't need it.** Tools like `list_markets`, `get_market`, `get_odds`, and `get_quote` describe the markets, not your account. Leave `managerId` undefined and they still work.
+- **Position reads need it.** `get_portfolio` and `get_positions` read one manager's state. They take an optional `managerId` argument that falls back to `ctx.managerId`; if both are undefined they throw `get_portfolio requires a managerId` / `get_positions requires a managerId`.
+- **All writes need it.** `mint`, `redeem`, `mint_range`, and `redeem_range` resolve it through `requireManager(ctx, args.managerId)` (`tools/writes.ts`). With no override and no `ctx.managerId`, it throws:
+
+```
+this needs a PredictManager — run create_manager first
+```
+
+<Callout type="warning">
+Each surface fills `managerId` for you. The web app resolves it from your connected wallet; the CLI and MCP read `DEEPBOOKIE_MANAGER_ID` (or you pass `managerId` per call). If you build your own context, set it before calling a position read or a write.
+</Callout>
+
+`createContext` builds the context for you and defaults `network` to `'testnet'`. It is a guard, not just a default: any non-testnet network throws, because the Predict indexer and deployment are testnet-only and a mismatched RPC would read testnet while pointing somewhere else.
+
+<Callout type="warning">
+The agent never holds a key. `build` hands you an unsigned transaction; signing happens at the edge — a browser wallet on the web, a local keypair for MCP and CLI. Never in the cloud.
+</Callout>

@@ -1,21 +1,9 @@
-import { createDAppKit } from '@mysten/dapp-kit-core';
-import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
-import { NETWORK } from './constants';
+import { createNetworkConfig } from '@mysten/dapp-kit';
 
-/**
- * The single dApp-kit instance (nanostores-based). Plain module — NO 'use client' — so it can be
- * imported anywhere; the React providers that consume it are the client boundary (loaded ssr:false).
- * We use SuiJsonRpcClient (the @mysten/sui 2.x JSON-RPC client) as the network client.
- */
-export const dAppKit = createDAppKit({
-  networks: [NETWORK],
-  defaultNetwork: NETWORK,
-  createClient: (network) => new SuiJsonRpcClient({ network, url: getJsonRpcFullnodeUrl(network) }),
+// Testnet-only (matches the rest of the app). Hardcoded URL — @mysten/sui 2.x dropped getFullnodeUrl.
+const TESTNET_FULLNODE = 'https://fullnode.testnet.sui.io:443';
+
+/** Legacy dApp-kit network config consumed by SuiClientProvider. */
+export const { networkConfig } = createNetworkConfig({
+  testnet: { url: TESTNET_FULLNODE, network: 'testnet' },
 });
-
-// Register the instance type so the hooks infer our network + client without per-call generics.
-declare module '@mysten/dapp-kit-core' {
-  interface Register {
-    dAppKit: typeof dAppKit;
-  }
-}

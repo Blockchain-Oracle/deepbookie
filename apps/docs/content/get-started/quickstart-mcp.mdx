@@ -1,0 +1,106 @@
+---
+title: "Quickstart: MCP"
+description: Run DeepBookie's tools inside Claude Desktop, Cursor, or Claude Code — trade Predict and Spot in chat. Reads run free; writes build an unsigned transaction your local key signs on your machine.
+---
+
+# Quickstart: MCP
+
+DeepBookie ships as an MCP server. Any MCP client — Claude Desktop, Cursor, Claude Code — can read markets and trade both DeepBook markets (Predict and Spot) in plain language.
+
+Reads run free. Writes build an unsigned Sui transaction, which a key on **your machine** signs. The key never reaches the model and never leaves your computer.
+
+## Install
+
+Run it on demand, no install:
+
+```bash
+npx -y @deepbookie/mcp
+```
+
+Or install it once, globally — this gives you the `deepbookie-mcp` command:
+
+```bash
+npm install -g @deepbookie/mcp
+```
+
+## Configure your client
+
+Add a `deepbookie` entry to your client's MCP config. The file path depends on your client.
+
+**Claude Desktop** — macOS: `~/Library/Application Support/Claude/claude_desktop_config.json` · Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "deepbookie": {
+      "command": "npx",
+      "args": ["-y", "@deepbookie/mcp"],
+      "env": {
+        "DEEPBOOKIE_NETWORK": "testnet"
+      }
+    }
+  }
+}
+```
+
+If you installed globally, drop `args` and call the binary directly:
+
+```json
+{
+  "mcpServers": {
+    "deepbookie": {
+      "command": "deepbookie-mcp",
+      "env": {
+        "DEEPBOOKIE_NETWORK": "testnet"
+      }
+    }
+  }
+}
+```
+
+<Steps items={[
+  { title: 'Save the config', body: 'Put the block above into your client config file.' },
+  { title: 'Restart your client', body: 'The DeepBookie tools appear under the deepbookie server.' },
+  { title: 'Try it', body: 'Ask: "show me the BTC market".' }
+]} />
+
+<Callout type="note">
+Per-client config for Cursor and Claude Code, plus the full env table, lives at [/surfaces/mcp](/surfaces/mcp).
+</Callout>
+
+## The local key
+
+The server signs on your machine with a local Ed25519 key. The model never sees it. On first run the server loads a key in this order:
+
+1. `DEEPBOOKIE_PRIVATE_KEY` — a `suiprivkey…` secret from the environment.
+2. The keystore file — a saved key, written with `0600` permissions (owner-only).
+3. Otherwise it **auto-generates** one, saves it to the keystore, and logs the new address so you can fund it.
+
+The keystore path depends on your OS:
+
+- **macOS / Linux:** `~/.deepbookie/config.json`
+- **Windows:** under `%APPDATA%` (`%APPDATA%\.deepbookie\config.json`)
+
+Fund that address with testnet SUI (for gas) and dUSDC before placing a bet. dUSDC is operator-gated — there is no public faucet. Tap **Get dUSDC** in the web app, or request it via the tally form.
+
+## Environment variables
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `DEEPBOOKIE_NETWORK` | Sui network to target | `testnet` |
+| `DEEPBOOKIE_PRIVATE_KEY` | Local signing key (`suiprivkey…`) | auto-generated |
+| `DEEPBOOKIE_MANAGER_ID` | Pre-set Predict manager object | resolved at runtime |
+| `DEEPBOOKIE_BALANCE_MANAGER_ID` | Pre-set Spot balance manager object | resolved at runtime |
+| `DEEPBOOKIE_LOG_LEVEL` | Log verbosity; set `debug` to troubleshoot | `info` |
+
+## Troubleshooting
+
+**Server doesn't appear in your client.** Check the config path is right for your OS, the JSON is valid, and you fully restarted the client. Set `DEEPBOOKIE_LOG_LEVEL` to `debug` for more detail.
+
+**Reading logs (Claude Desktop).** The server logs to stderr; your client captures it. On macOS, tail `~/Library/Logs/Claude/mcp*.log`.
+
+**Writes fail with "no dUSDC in wallet".** Your auto-generated wallet has no funds yet. Copy the address the server logged on first run, then fund it with testnet SUI for gas and grab dUSDC via **Get dUSDC** in the web app or the tally form.
+
+<Callout type="warning">
+Testnet only. The key sits in plaintext on disk, so fund the address sparingly and never reuse it for mainnet.
+</Callout>

@@ -16,3 +16,8 @@ coverage/
 .deepbookie/
 .secrets/
 *.keystore
+.vercel
+.env*
+
+# npm auth (token — never commit)
+.npmrc

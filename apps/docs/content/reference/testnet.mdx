@@ -1,0 +1,46 @@
+---
+title: Testnet facts & addresses
+description: The pinned Sui testnet IDs, the dUSDC type, the indexer URL, and the scaling rules DeepBookie uses.
+---
+
+# Testnet facts & addresses
+
+Everything DeepBookie touches on-chain runs on **Sui testnet**. The package IDs, object IDs, the dUSDC type, the indexer URL, and the scaling rules all live in one file: `packages/predict-client/src/constants.ts`. Change them in one place, and every surface follows.
+
+The values below are copied from that file.
+
+<Callout type="warning">Testnet only. These IDs and endpoints **will change at mainnet**. Treat every address here as provisional.</Callout>
+
+## Constants
+
+| Constant | Value |
+| --- | --- |
+| `NETWORK` | `testnet` |
+| `PREDICT_PACKAGE` | `0xf5ea2b3749c65d6e56507cc35388719aadb28f9cab873696a2f8687f5c785138` |
+| `PREDICT_OBJECT` | `0xc8736204d12f0a7277c86388a68bf8a194b0a14c5538ad13f22cbd8e2a38028a` |
+| `PREDICT_REGISTRY` | `0x43af14fed5480c20ff77e2263d5f794c35b9fab7e2212903127062f4fe2a6e64` |
+| `DUSDC_TYPE` — the dUSDC coin (6 decimals) | `0xe95040085976bfd54a1a07225cd46c8a2b4e8e2b6732f140a0fc49850ba73e1a::dusdc::DUSDC` |
+| `PLP_TYPE` — the vault share coin | `0xf5ea2b3749c65d6e56507cc35388719aadb28f9cab873696a2f8687f5c785138::plp::PLP` |
+| `CLOCK_OBJECT` | `0x6` |
+| `INDEXER_URL` | `https://predict-server.testnet.mystenlabs.com` |
+| `FLOAT_SCALING` | `1000000000` (1e9) |
+| `DUSDC_DECIMALS` | `6` |
+
+## Scaling rules
+
+On-chain, prices, strikes, and probabilities are stored as whole numbers scaled by `FLOAT_SCALING` (1e9). To read a human value, divide by 1e9. For example, a $65,000 strike is stored as `65000000000000`.
+
+dUSDC is a separate token with **6 decimals**. So $5 of dUSDC is stored as `5000000`. That scaling is independent of `FLOAT_SCALING`.
+
+## Getting dUSDC
+
+dUSDC is test money — it has no real value. It is **operator-gated**: there is no public faucet. You get it through the **"Get dUSDC"** button in the web app, or by requesting it on the tally form. To fund a bet, DeepBookie splits a real dUSDC coin you already hold — it never mints one.
+
+```ts
+import {
+  PREDICT_PACKAGE,
+  DUSDC_TYPE,
+  FLOAT_SCALING,
+  INDEXER_URL,
+} from '@deepbookie/predict-client';
+```

@@ -7,9 +7,12 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/.next/**',
+      '**/.source/**', // fumadocs-mdx generated source (apps/docs)
+      '**/_pagefind/**', // pagefind generated search index (apps/docs)
       '**/node_modules/**',
       '**/*.config.*',
       'apps/web/next-env.d.ts',
+      'apps/docs/next-env.d.ts',
       'scripts/**', // throwaway/dev scripts (e.g. testnet de-risk)
     ],
   },
@@ -29,8 +32,8 @@ export default tseslint.config(
     },
   },
   {
-    // web app: React + hooks (the rest of the repo is non-React TS).
-    files: ['apps/web/**/*.{ts,tsx}'],
+    // React apps (web + docs): React + hooks (the rest of the repo is non-React TS).
+    files: ['apps/web/**/*.{ts,tsx}', 'apps/docs/**/*.{ts,tsx}'],
     plugins: { 'react-hooks': reactHooks },
     languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
     rules: {

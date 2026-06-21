@@ -1,0 +1,96 @@
+---
+title: "@deepbookie/predict-client"
+description: The first DeepBook Predict TypeScript client — unsigned transaction builders, indexer readers, devInspect quotes, and the pricing math. One dependency, runs in Node or the browser.
+---
+
+# @deepbookie/predict-client
+
+This is the library that does the on-chain work behind every DeepBookie bet on the **Predict** market. It builds unsigned Sui transactions, reads the live indexer, and prices the odds — and it never touches a key.
+
+Its only dependency is `@mysten/sui`, so the same code runs in Node or the browser.
+
+```bash
+npm install @deepbookie/predict-client
+```
+
+<Callout type="note">
+Every builder returns an unsigned `Transaction`. You sign it at the edge — a browser wallet on the web, a local key for MCP and CLI. The client builds; it never signs.
+</Callout>
+
+## Modules
+
+| Module | Exports | What it does |
+| --- | --- | --- |
+| **ptb** | `buildMint`, `buildRedeem`, `buildMintRange`, `buildRedeemRange`, `buildCreateManager`, `buildSupply`, `buildWithdraw`, `buildRedeemPermissionless` | Unsigned transaction builders for every Predict write. `buildMint` / `buildMintRange` take an optional `funding` to split and deposit dUSDC in the same transaction. |
+| **indexer** | `getOracles`, `getActiveOracles`, `getOracleState`, `getLatestSvi`, `getVaultSummary`, `getManagerSummary`, `getManagerPnl`, `getManagerPositions`, `getVaultPerformance`, `getRecentMints` | REST readers over the Predict indexer. No wallet, no gas — just JSON. |
+| **quotes** | `getTradeAmounts`, `getRangeTradeAmounts` | Exact on-chain quotes via `devInspect` (no signing, no gas). Returns `{ mintCost, redeemPayout }` in **dUSDC base units (6dp)** — divide by 1,000,000 for dollars, or use `fromDusdc`. |
+| **math** | `normalCdf`, `upProbability`, `downProbability`, `buildCurve` | The pricing functions. Turn the indexer's volatility numbers into a 0–1 probability and sample the odds curve. |
+| **units** | `fromScaled`, `toScaled`, `fromDusdc`, `toDusdc` | Convert between human numbers and on-chain numbers — ×1e9 for prices and probabilities, 6dp for dUSDC. |
+| **constants** | `PREDICT_PACKAGE`, `PREDICT_OBJECT`, `DUSDC_TYPE`, `INDEXER_URL`, `FLOAT_SCALING`, `NETWORK`, `TARGET`, … | Every ID, scaling factor, and Move-call target in one place. |
+| **types** | `OracleRow`, `OracleState`, `SviParams`, `CurvePoint`, `VaultSummary`, `ManagerSummary`, `PositionEntry`, `Direction`, … | Shapes for everything the indexer returns and the builders accept. |
+
+## The pricing math
+
+`upProbability(svi, forward, strike)` returns the chance the price ends **above** the strike at expiry, as a number from 0 to 1. It mirrors the on-chain logic exactly.
+
+All three inputs are **×1e9 scaled integers** — the raw form the indexer already returns. (See [Scaling](/concepts/scaling) for what ×1e9 means, and [Pricing](/concepts/pricing) for the math.)
+
+```ts
+import { getLatestSvi, getOracleState, upProbability, buildCurve } from '@deepbookie/predict-client';
+
+const { latest_price } = await getOracleState(oracleId);
+const svi = await getLatestSvi(oracleId);
+const p = upProbability(svi!, latest_price!.forward, strikeScaled); // 0..1
+const curve = buildCurve(svi!, latest_price!.forward, { steps: 25, rangePct: 0.05 });
+```
+
+## Quickstart
+
+Read the live odds, build an unsigned mint transaction, then sign it at the edge.
+
+```ts
+import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
+import {
+  getActiveOracles, getLatestSvi, getOracleState,
+  upProbability, buildMint, toDusdc, NETWORK,
+} from '@deepbookie/predict-client';
+
+const [market] = await getActiveOracles();                 // BTC market on testnet
+const { latest_price } = await getOracleState(market.oracle_id);
+const svi = await getLatestSvi(market.oracle_id);
+
+// market.min_strike is already ×1e9 from the indexer — pass it directly, no scaling.
+const odds = upProbability(svi!, latest_price!.forward, market.min_strike); // 0..1
+
+const tx = buildMint({                                     // unsigned Transaction
+  managerId, oracleId: market.oracle_id, expiry: market.expiry,
+  strike: market.min_strike, direction: 'UP', quantity: 1_000_000,
+  funding: { fundCoinId, depositAmount: toDusdc(5) },      // split + deposit 5 dUSDC
+});
+
+const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(NETWORK) });
+const { digest } = await client.signAndExecuteTransaction({ signer: keypair, transaction: tx });
+```
+
+<Callout type="tip">
+On the web, hand the same `tx` to `useSignAndExecuteTransaction()` from dapp-kit instead. The builder output is identical — the client never signs.
+</Callout>
+
+## Quoting a bet before you build it
+
+Want the exact cost without building a full mint? Call `getTradeAmounts`. It runs a `devInspect` — a read-only simulation, no gas, no signing — and returns the numbers in **dUSDC base units (6dp)**.
+
+```ts
+import { getTradeAmounts, fromDusdc } from '@deepbookie/predict-client';
+
+const { mintCost, redeemPayout } = await getTradeAmounts(client, {
+  oracleId: market.oracle_id, expiry: market.expiry,
+  strike: market.min_strike, direction: 'UP',
+  quantity: 1_000_000, sender: myAddress,
+});
+
+console.log(`Cost: $${fromDusdc(mintCost)}`); // mintCost is base units — fromDusdc gives dollars
+```
+
+`getRangeTradeAmounts` does the same for a price-band (range) bet — pass `lower` and `higher` instead of one `strike`.

@@ -7,3 +7,4 @@ export * from './tool.js';
 export * from './context.js';
 export * from './registry.js';
 export * from './adapter.js';
+export { resolveBalanceManagerIds } from './spot/resolve.js';

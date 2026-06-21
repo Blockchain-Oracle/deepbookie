@@ -1,0 +1,142 @@
+---
+title: CLI
+description: Trade DeepBook from your terminal. A tool builds the transaction; a local key on your machine signs it.
+---
+
+# CLI
+
+`@deepbookie/cli` runs the DeepBookie tools from your shell. Reads print JSON. Writes build an unsigned transaction, sign it with a **local key on your machine**, and submit it. The agent never holds your key — it only loads the keypair to sign at the edge.
+
+There are only **3 commands**: `wallet`, `tools`, and `call`. `call <tool>` is the universal entry point — it runs any of the 44 tools by name. There are no per-tool subcommands.
+
+## Install
+
+```bash
+npm install -g @deepbookie/cli
+```
+
+This installs one binary: `deepbookie`. It defaults to Sui **testnet**.
+
+<Callout type="warning">
+DeepBookie runs on Sui **testnet**. The signing key lives in plaintext at `~/.deepbookie/config.json` (mode `0600`). Treat it as a hot, disposable wallet — fund it only with testnet SUI and dUSDC, and never set `DEEPBOOKIE_PRIVATE_KEY` to a mainnet key.
+</Callout>
+
+## First-time setup
+
+Run `deepbookie wallet`. If no key exists, the CLI generates a fresh one, saves it to `~/.deepbookie/config.json` (mode `0600`), and prints a warning. Then fund the printed address with testnet SUI (for gas) and dUSDC (to trade). dUSDC is operator-gated — request it via the [tally form](https://predict-server.testnet.mystenlabs.com) or the web app's "Get dUSDC" button. There is no public faucet.
+
+```text
+WARN: generated a new DeepBookie wallet — fund it with testnet SUI (gas) + dUSDC to trade
+```
+
+The CLI looks for a key in three places, in order: the `DEEPBOOKIE_PRIVATE_KEY` env var (a `suiprivkey…` string), then the config file, then auto-generate.
+
+## Environment variables
+
+| Variable | Purpose |
+| --- | --- |
+| `DEEPBOOKIE_PRIVATE_KEY` | `suiprivkey…` secret key; takes priority over the config file. |
+| `DEEPBOOKIE_NETWORK` | Sui network; defaults to `testnet`. |
+| `DEEPBOOKIE_MANAGER_ID` | Default Predict `managerId`, so you don't pass it on every call. |
+| `DEEPBOOKIE_BALANCE_MANAGER_ID` | Default Spot `balanceManagerId`, so you don't pass it on every call. |
+
+## `deepbookie wallet`
+
+Prints your local address and its balances. Balances are raw integer strings.
+
+<Callout type="note">
+**MIST** is the base unit of SUI: 1 SUI = 1,000,000,000 MIST. dUSDC has 6 decimal places: 1 dUSDC = 1,000,000.
+</Callout>
+
+```bash
+deepbookie wallet
+```
+
+```json
+{
+  "address": "0x9a1b…c7",
+  "sui": "1980000000",
+  "dusdc": "5000000"
+}
+```
+
+So this wallet holds **1.98 SUI** (`1980000000` MIST ÷ 1e9) and **5 dUSDC** (`5000000` ÷ 1e6).
+
+## `deepbookie tools`
+
+Lists every tool in the registry — name, description, and kind (`read` or `write`). No wallet or network call. Run this to discover all 44 tools.
+
+```bash
+deepbookie tools
+```
+
+```json
+[
+  { "name": "list_markets", "description": "all active BTC markets with expiries + strike ranges", "kind": "read" },
+  { "name": "get_market", "description": "one market's live state: spot, forward, expiry, strikes", "kind": "read" },
+  { "name": "get_odds", "description": "probability across strikes (the odds curve)", "kind": "read" },
+  { "name": "get_quote", "description": "exact cost to mint or payout to redeem a binary", "kind": "read" },
+  { "name": "get_portfolio", "description": "a PredictManager's balances, exposure, and PnL", "kind": "read" },
+  { "name": "create_manager", "description": "create your PredictManager (one-time)", "kind": "write" },
+  { "name": "mint", "description": "buy a binary UP/DOWN at a dollar strike", "kind": "write" },
+  { "name": "redeem", "description": "sell or settle a binary", "kind": "write" }
+  // …36 more — 18 Predict + 26 Spot
+]
+```
+
+## `deepbookie call <tool> [json]`
+
+Runs any tool by name. The second argument is a quoted JSON object of the tool's inputs (defaults to `{}`).
+
+- **Reads** print the tool's JSON result.
+- **Writes** build the unsigned transaction, sign it with your local key, submit it, and print `{ digest, status }`. If the transaction creates a manager, the new id is echoed as `managerId` or `balanceManagerId`.
+
+### Errors
+
+A bad tool name:
+
+```text
+unknown tool 'foo' (try: deepbookie tools)
+```
+
+Malformed JSON args (note the unquoted key — JSON needs `"oracleId"`):
+
+```text
+invalid JSON for args: {oracleId:0x..}
+  pass a quoted JSON object, e.g. '{"oracleId":"0x.."}'
+```
+
+## A worked session
+
+Place a bet end to end: read the odds, create a manager, mint, check your portfolio, redeem.
+
+```bash
+# 1. Who am I, and what do I hold?
+deepbookie call list_markets '{}'
+# → [{ "oracleId": "0xc873…", "expiry": 1750464000000, "strikes": [...] }]
+
+# 2. Read the odds — free, no signing
+deepbookie call get_odds '{"oracleId":"0xc873…"}'
+# → { "strikes": [...], "probabilities": [...] }
+
+# 3. Create a PredictManager (one-time; required before betting)
+deepbookie call create_manager '{}'
+# → { "digest": "APMjNXwN…z2hF", "status": "success", "managerId": "0x4f2a…" }
+
+# Save it so you don't pass it every time:
+export DEEPBOOKIE_MANAGER_ID=0x4f2a…
+
+# 4. Mint an UP bet: $50 that BTC is above $70,000
+deepbookie call mint '{"oracleId":"0xc873…","strikeUsd":70000,"direction":"up","quantityUsd":50}'
+# → { "digest": "7bQ2…kP9", "status": "success" }
+
+# 5. Check your position
+deepbookie call get_portfolio '{}'
+# → { "balance": "...", "exposure": "...", "redeemable": "..." }
+
+# 6. Redeem after settlement
+deepbookie call redeem '{"oracleId":"0xc873…","strikeUsd":70000,"direction":"up","quantityUsd":50}'
+# → { "digest": "9cT4…mR1", "status": "success" }
+```
+
+Dollar amounts go in as plain dollars (`strikeUsd`, `quantityUsd`) — DeepBookie scales them for the chain and snaps the strike to the nearest valid grid value. With `DEEPBOOKIE_MANAGER_ID` set, you can drop `managerId` from every call; Spot tools work the same way with `DEEPBOOKIE_BALANCE_MANAGER_ID`.

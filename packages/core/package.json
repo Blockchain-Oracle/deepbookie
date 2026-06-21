@@ -1,9 +1,8 @@
 {
   "name": "@deepbookie/core",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Neutral, transport-free tool registry for DeepBookie — reads execute, writes return unsigned Sui transactions.",
   "license": "MIT",
-  "private": true,
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -21,7 +20,37 @@
   },
   "dependencies": {
     "@deepbookie/predict-client": "workspace:*",
+    "@mysten/deepbook-v3": "^1.5.1",
     "@mysten/sui": "^2.19.0",
     "zod": "^4.0.0"
-  }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "author": "blockchainoracle <blockchainoracle.dev@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Blockchain-Oracle/deepbookie.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://deepbookie.vercel.app",
+  "bugs": {
+    "url": "https://github.com/Blockchain-Oracle/deepbookie/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "sui",
+    "deepbook",
+    "predict",
+    "tools",
+    "agent",
+    "registry",
+    "unsigned-transaction"
+  ]
 }

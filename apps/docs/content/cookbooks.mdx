@@ -1,0 +1,121 @@
+---
+title: Cookbooks
+description: Outcome-named recipes that chain DeepBookie tools end to end — from a single bet to a keeper bot.
+---
+
+# Cookbooks
+
+Recipes that chain the tools end to end. Each one starts with a goal in plain words and ends with a signed transaction (or a clean read). Reads are free. Writes return an **unsigned** Sui transaction — you sign it at the edge: a browser wallet on web, a local key on MCP/CLI. The agent never holds your key.
+
+<Callout type="note">
+These recipes use the **CLI** (`bash`) because it's the shortest way to show a tool call. Building your own app? Use the **Node SDK** (`@deepbookie/core`) instead — same tool names, called from TypeScript. The last two recipes show that path. Every tool also works on the [MCP server](/surfaces/mcp) and in the web app.
+</Callout>
+
+Tool calls take a JSON object. Strikes are plain dollars (`70000`), sizes are plain dollars (`quantityUsd: 5`), and direction is `"UP"` or `"DOWN"`. You pass an `oracleId`; DeepBookie looks up that market's expiry and snaps your strike to the nearest valid grid price for you.
+
+## Will BTC be above $X soon?
+
+The headline bet: a binary UP position on a short-expiry BTC market. Read the odds, quote the exact cost, then mint.
+
+<Steps items={[
+  { title: 'Open an account', body: 'create_manager once — opens your PredictManager. Reuse it after.' },
+  { title: 'Find the market', body: 'list_markets → pick an active BTC expiry and a strike near $X.' },
+  { title: 'Read the odds', body: 'get_odds for the probability curve; get_quote for exact cost and payout.' },
+  { title: 'Place the bet', body: 'mint with direction "UP". Sign in your wallet (web) or on your machine (CLI/MCP).' },
+]} />
+
+```bash
+deepbookie call create_manager '{}'
+deepbookie call get_quote '{"oracleId":"0xc873…","strikeUsd":70000,"direction":"UP","quantityUsd":5}'
+deepbookie call mint '{"oracleId":"0xc873…","strikeUsd":70000,"direction":"UP","quantityUsd":5}'
+```
+
+## Bet a price band
+
+Instead of "above $X", bet the price *lands inside* a band — pays out if BTC settles in `(lower, higher]` at expiry. Price it with `get_range_quote`, then `mint_range`.
+
+```bash
+deepbookie call get_range_quote '{"oracleId":"0xc873…","lowerStrikeUsd":68000,"higherStrikeUsd":72000,"quantityUsd":5}'
+deepbookie call mint_range '{"oracleId":"0xc873…","lowerStrikeUsd":68000,"higherStrikeUsd":72000,"quantityUsd":5}'
+```
+
+## Close a bet early
+
+You don't have to wait for expiry. `redeem` sells a binary position back at the current model price (or settles it after expiry). The payout lands in your manager balance. Use `redeem_range` for a band.
+
+```bash
+deepbookie call get_positions '{}'   # find the open position
+deepbookie call redeem '{"oracleId":"0xc873…","strikeUsd":70000,"direction":"UP","quantityUsd":5}'
+```
+
+## Provide liquidity to the vault
+
+Be the house, not the bettor. `supply` deposits dUSDC into the vault and mints you PLP shares. `withdraw` burns a PLP coin back to dUSDC. Check `get_vault` for share price and utilization first.
+
+<Steps items={[
+  { title: 'Read the vault', body: 'get_vault — total value, available liquidity, share price, utilization.' },
+  { title: 'Supply', body: 'supply dUSDC → receive PLP shares.' },
+  { title: 'Exit when you want', body: 'withdraw burns the PLP coin → dUSDC back, including accrued fees.' },
+]} />
+
+```bash
+deepbookie call get_vault '{}'
+deepbookie call supply '{"amountUsd":50}'
+```
+
+## Watch markets with no keys (read-only)
+
+No keys, no risk — just reads. Chain `list_markets` → `get_odds` → `get_recent_bets` to watch markets and alert when probabilities cross a threshold. Every call here is free and never touches a wallet.
+
+```bash
+deepbookie call list_markets '{}'
+deepbookie call get_odds '{"oracleId":"0xc873…"}'
+deepbookie call get_recent_bets '{"limit":20}'
+```
+
+## A keeper bot (settle expired positions)
+
+This recipe switches to **TypeScript**. A keeper is a long-running loop, not a one-shot command — it polls, decides, and signs in code. That's the Node SDK's job, so we import the tools from `@deepbookie/core` and call them directly.
+
+`redeem_permissionless` lets a keeper settle *anyone's* expired position into that owner's manager — no signature from the owner. You poll the activity tape, find positions past their expiry, and settle each one.
+
+```ts
+import { allTools } from '@deepbookie/core';
+
+const call = (name: string, args: object) =>
+  allTools.find((t) => t.name === name)!.execute(ctx, args); // ctx = your Sui client + signer
+
+// get_recent_bets returns: { oracleId, expiry, strikeUsd, direction, quantityUsd, managerId, ... }
+const bets = await call('get_recent_bets', { limit: 100 });
+const now = Date.now();
+
+for (const bet of bets.filter((b) => b.expiry <= now)) {
+  const unsignedTx = await call('redeem_permissionless', {
+    managerId: bet.managerId,   // settle into the owner's manager
+    oracleId: bet.oracleId,
+    strikeUsd: bet.strikeUsd,
+    direction: bet.direction,   // "UP" | "DOWN"
+    quantityUsd: bet.quantityUsd,
+  });
+  await signAndSubmit(unsignedTx); // your local key signs at the edge
+}
+```
+
+<Callout type="tip">
+Pair this with the [Claude skill](/surfaces/skill) and run it on a cron. The skill carries the playbook; the SDK (or CLI/MCP) supplies the tools to call.
+</Callout>
+
+## Embed DeepBookie in your own chat app
+
+The whole registry is one import. Mount `allTools` from `@deepbookie/core` into your own agent loop, wire a `ToolContext` (a Sui client plus the signer at *your* edge), and your app speaks Predict and Spot.
+
+```ts
+import { allTools } from '@deepbookie/core';
+
+// Reads run immediately. Writes return an unsigned tx for YOUR wallet to sign.
+const odds = await allTools.find((t) => t.name === 'get_odds')!.execute(ctx, { oracleId: '0xc873…' });
+```
+
+<Callout type="note">
+Writes return an unsigned Sui transaction — your app owns the signing step. See [Sign at the edge](/concepts/sign-at-edge) for the trust model, the [core SDK](/sdk/core) for `ToolContext`, and [Testnet](/reference/testnet) for package IDs and the dUSDC quirk.
+</Callout>
