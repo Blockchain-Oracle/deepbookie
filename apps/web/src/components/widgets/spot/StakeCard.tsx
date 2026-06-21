@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSpotWriteCard } from '@/components/widgets/spot/useSpotWriteCard';
+import { NoBalanceManagerNotice } from '@/components/widgets/spot/NoBalanceManagerNotice';
 import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/widgets/ReceiptController';
 import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt';
 import { useSpotAccount, useSpotBalance } from '@/lib/hooks/useSpotRead';
@@ -73,60 +74,10 @@ export function StakeCard({
     );
   }
 
-  // No BalanceManager → staking lives in the spot account. Resolve the tool call via Dismiss (so the
-  // assistant turn never wedges) and, on a resolver failure, offer Retry instead of implying "create".
+  // No BalanceManager → staking lives in the spot account. The shared notice resolves the tool call via
+  // Dismiss (so the assistant turn never wedges) and offers Retry only on a resolver failure.
   if (!w.hasBalanceManager && !w.bmLoading) {
-    return (
-      <div className="flex w-full flex-col justify-center gap-[11px] rounded-card border border-line bg-card p-5">
-        <div className="text-[9.5px] font-semibold uppercase tracking-[0.13em] text-faint">{title}</div>
-        {w.bmError || w.storageBlocked ? (
-          <>
-            <div className="text-[16px] font-bold leading-[1.3] tracking-[-0.02em] text-ink">Couldn’t detect your account</div>
-            <div className="text-[12px] leading-[1.45] text-muted">
-              {w.storageBlocked
-                ? 'Your browser is blocking storage, so we can’t tell if you already have an account — don’t create a second one.'
-                : 'A network hiccup checking your balance manager — retry in a moment; don’t create a new one.'}
-            </div>
-          </>
-        ) : !w.connected ? (
-          <>
-            <div className="text-[16px] font-bold leading-[1.3] tracking-[-0.02em] text-ink">Connect your wallet to stake</div>
-            <div className="text-[12px] leading-[1.45] text-muted">
-              Staking lives in your spot account — connect your wallet first, then stake DEEP from it.
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="text-[16px] font-bold leading-[1.3] tracking-[-0.02em] text-ink">
-              A balance manager
-              <br />
-              is required to stake
-            </div>
-            <div className="text-[12px] leading-[1.45] text-muted">
-              Staking lives in your spot account — open one (the spot account card), then stake DEEP from it.
-            </div>
-          </>
-        )}
-        <div className="mt-0.5 flex gap-2.5">
-          {w.bmError && (
-            <button
-              type="button"
-              onClick={w.bmRefetch}
-              className="flex-1 rounded-[9px] border border-line-strong py-3 text-[13px] font-semibold text-ink transition hover:bg-paper"
-            >
-              Retry
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={w.cancel}
-            className="flex-1 rounded-[9px] border border-line-strong py-3 text-[13px] font-semibold text-[#7d7870] transition hover:bg-paper"
-          >
-            Dismiss
-          </button>
-        </div>
-      </div>
-    );
+    return <NoBalanceManagerNotice w={w} title={title} action="stake DEEP" variant="card" onRetry={w.bmRefetch} onDismiss={w.cancel} />;
   }
 
   const amt = Number(amount);

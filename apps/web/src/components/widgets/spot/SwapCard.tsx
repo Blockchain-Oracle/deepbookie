@@ -68,7 +68,9 @@ export function SwapCard({
     minOut: number;
     deepRequired: number;
     rate: number;
-    whitelisted: boolean;
+    // undefined = pool params weren't loaded at sign time, so the fee MODEL is unknown → show "—" on the
+    // receipt rather than a misleading "0.0000 DEEP" (the signed deepAmount is correct regardless).
+    whitelisted: boolean | undefined;
   } | null>(null);
 
   const params = useSpotPoolParams(active ? poolKey || undefined : undefined);
@@ -93,7 +95,8 @@ export function SwapCard({
   const deepRequired = showSnap ? (signed?.deepRequired ?? liveDeep) : liveDeep;
   const minOut = showSnap ? (signed?.minOut ?? liveMinOut) : liveMinOut;
   const rate = showSnap ? (signed?.rate ?? liveRate) : liveRate;
-  const whitelisted = showSnap ? (signed?.whitelisted ?? liveWhitelisted) : liveWhitelisted;
+  // On the receipt, use the captured value verbatim (may be undefined = "fee model unknown at sign").
+  const whitelisted = showSnap ? signed?.whitelisted : liveWhitelisted;
   const quoting = quote.isFetching && amt > 0;
   const emptyBook = amt > 0 && quote.data != null && out <= 0;
   const docNumber = docNumberFor(part.toolCallId);
@@ -111,7 +114,7 @@ export function SwapCard({
       { label: `Min received · ${slip}%`, value: `${fmtRate(minOut)} ${to}` },
       {
         label: 'Fee',
-        value: whitelisted ? 'from input coin' : `${formatUsd(deepRequired, 4)} DEEP`,
+        value: whitelisted === undefined ? '—' : whitelisted ? 'from input coin' : `${formatUsd(deepRequired, 4)} DEEP`,
         strong: true,
       },
     ];
@@ -240,7 +243,8 @@ export function SwapCard({
               minOut: liveMinOut,
               deepRequired: liveDeep,
               rate: liveRate,
-              whitelisted: liveWhitelisted,
+              // Only record the fee model if params actually loaded — else undefined → "—" on the receipt.
+              whitelisted: params.isSuccess ? liveWhitelisted : undefined,
             });
             w.sign({ poolKey, amount: amt, minOut: liveMinOut, deepAmount: liveWhitelisted ? 0 : liveDeep * DEEP_FEE_BUFFER });
           }}

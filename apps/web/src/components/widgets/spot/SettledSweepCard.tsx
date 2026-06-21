@@ -1,6 +1,7 @@
 'use client';
 
 import { useSpotWriteCard } from '@/components/widgets/spot/useSpotWriteCard';
+import { NoBalanceManagerNotice } from '@/components/widgets/spot/NoBalanceManagerNotice';
 import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/widgets/ReceiptController';
 import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt';
 import { useSpotAccount } from '@/lib/hooks/useSpotRead';
@@ -80,40 +81,10 @@ export function SettledSweepCard({
     );
   }
 
-  // No BalanceManager → can't sweep. Resolve the tool call via Dismiss so the assistant turn never
-  // wedges (and Retry on a resolver blip, not "create" which could orphan a second manager).
+  // No BalanceManager → can't sweep. The shared notice resolves the tool call via Dismiss (so the
+  // assistant turn never wedges) and offers Retry only on a resolver failure.
   if (!w.hasBalanceManager && !w.bmLoading) {
-    return (
-      <div className="flex w-full flex-col gap-3 rounded-card border border-dashed border-[#CBC6BB] bg-[#FBFAF7] px-[15px] py-3.5">
-        <span className="text-[12.5px] text-muted">
-          {w.bmError
-            ? 'Couldn’t reach your account — retry in a moment.'
-            : w.storageBlocked
-              ? 'Your browser is blocking storage — we can’t detect your account; don’t create a second one.'
-              : !w.connected
-                ? `Connect your wallet first to sweep ${poolName} proceeds.`
-                : `Open a DeepBook account first to sweep ${poolName} proceeds.`}
-        </span>
-        <div className="flex gap-2.5">
-          {w.bmError && (
-            <button
-              type="button"
-              onClick={w.bmRefetch}
-              className="rounded-[9px] border border-line-strong px-4 py-2 text-[12px] font-semibold text-ink transition hover:bg-paper"
-            >
-              Retry
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={w.cancel}
-            className="rounded-[9px] border border-line-strong px-4 py-2 text-[12px] font-semibold text-[#7d7870] transition hover:bg-paper"
-          >
-            Dismiss
-          </button>
-        </div>
-      </div>
-    );
+    return <NoBalanceManagerNotice w={w} title="Sweep settled proceeds" action={`sweep ${poolName} proceeds`} variant="card" onRetry={w.bmRefetch} onDismiss={w.cancel} />;
   }
 
   // Still resolving the account read — hold space rather than flash an empty state.

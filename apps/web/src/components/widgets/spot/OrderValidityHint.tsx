@@ -22,7 +22,7 @@ export function OrderValidityHint({
   return (
     <div className={`flex items-center gap-[7px] rounded-[8px] border border-[#E6C9BE] bg-[#FBF1EC] px-3 py-2 ${className}`}>
       <span className="flex size-4 flex-none items-center justify-center rounded-full bg-clay text-[10px] text-white">✗</span>
-      <span className="text-[11.5px] font-semibold text-[#8a2f1c]">Can&apos;t place — insufficient balance or size</span>
+      <span className="text-[11.5px] font-semibold text-[#8a2f1c]">Order can&apos;t be placed as entered</span>
     </div>
   );
 }

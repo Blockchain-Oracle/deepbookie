@@ -50,6 +50,29 @@ export default function HistoryPage() {
 
   const sessions = chats.data ?? [];
 
+  // A FAILED fetch (429 rate-limit / 502 / network) must NOT read as "no sessions" — that would tell a
+  // user with real saved history they have none. Distinguish error from genuine empty (mirrors the
+  // resolver-failed-vs-no-account branch in BalanceManagerPanel).
+  if (!chats.isLoading && !chats.data && chats.isError) {
+    return (
+      <div className="flex h-full items-center justify-center p-6">
+        <div className="max-w-md text-center">
+          <div className="text-[15px] font-semibold">Couldn’t load your history</div>
+          <p className="mx-auto mt-2 text-sm text-muted">
+            A network hiccup reaching your saved sessions — your history isn’t gone, we just couldn’t fetch it. Retry in a moment.
+          </p>
+          <button
+            type="button"
+            onClick={() => void chats.refetch()}
+            className="mt-5 inline-flex rounded-card-in bg-ink px-4 py-2.5 text-sm font-semibold text-paper transition hover:opacity-90"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!chats.isLoading && sessions.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-6">

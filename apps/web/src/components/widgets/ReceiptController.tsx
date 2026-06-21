@@ -113,6 +113,8 @@ export function ReceiptController({
   };
 
   const onCancel = () => {
+    if (inFlight.current) return; // drop a double-tap (or a cancel mid-sign) — one terminal resolution only
+    inFlight.current = true;
     addToolResult({ tool: toolName, toolCallId: part.toolCallId, output: { status: 'cancelled' } });
     onOutcome?.({ toolCallId: part.toolCallId, toolName, status: 'cancelled' });
   };

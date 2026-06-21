@@ -20,6 +20,10 @@ export function reasonFor(e: unknown): string {
   const m = (e instanceof Error ? e.message : String(e)).toLowerCase();
   if (m.includes('reject') || m.includes('denied') || m.includes('cancel'))
     return 'Signature declined in your wallet. No funds moved.';
+  // A settled/expired market is the most common terminal-state abort; check its specific strings BEFORE
+  // the generic MoveAbort branch (a settlement abort is itself a MoveAbort whose text names "settled").
+  if (m.includes('settled') || m.includes('not active') || m.includes('expired'))
+    return 'This market has settled — it can no longer be traded.';
   // On-chain abort (MoveAbort) — check before "manager"/"balance" since the abort string often names them.
   if (m.includes('moveabort') || m.includes('abort'))
     return 'The transaction was rejected on-chain — usually not enough balance, or the market/order changed. Try again.';
@@ -28,8 +32,6 @@ export function reasonFor(e: unknown): string {
   if (m.includes('no dusdc')) return 'No dUSDC in your wallet — fund from the faucet first.';
   if (m.includes('manager')) return 'Create your account first, then place this bet.';
   if (m.includes('insufficient') || m.includes('balance')) return 'Not enough balance to cover this.';
-  if (m.includes('settled') || m.includes('not active') || m.includes('expired'))
-    return 'This market has settled — it can no longer be traded.';
   if (m.includes('timeout') || m.includes('indexer')) return 'Couldn’t reach the market right now — try again.';
   return 'The transaction failed. No funds moved.';
 }
@@ -113,17 +115,18 @@ export function useSubmitTx() {
         }
       }
 
-      // Refresh now (responsive), then again after finality lands (fresh chain state). Both non-blocking.
+      // Refresh now (responsive), then again after finality lands (fresh chain state). Both non-blocking,
+      // but log on failure so a chronically-failing revalidate/finality (→ stale data pages) isn't silent.
       bustCaches(qc);
       void fetch('/api/revalidate', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ tags: ['markets', 'activity', 'spot', ...(ids.managerId ? [`manager:${ids.managerId}`] : [])] }),
-      }).catch(() => {});
+      }).catch((e) => clientLogger.warn('post-write revalidate failed', { err: e instanceof Error ? e.message : String(e) }));
       void client
         .waitForTransaction({ digest })
         .then(() => bustCaches(qc))
-        .catch(() => {});
+        .catch((e) => clientLogger.warn('post-write finality wait failed', { err: e instanceof Error ? e.message : String(e) }));
 
       return digest;
     },

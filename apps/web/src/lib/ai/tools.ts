@@ -3,8 +3,13 @@ import { allTools, createContext, getToolsForAdapter } from '@deepbookie/core';
 import { NETWORK } from '@/lib/constants';
 import { cachedAiRead, withReliability } from '@/lib/bff/read';
 
-// redeem_permissionless is a keeper tool, not a user action — exclude it from the agent.
-const EXCLUDED = new Set(['redeem_permissionless']);
+// Tools excluded from the WEB agent (still available in MCP/CLI):
+// - redeem_permissionless: a keeper tool, not a user action.
+// - spot_place_market_order + its pre-flight: no editable card on the keyless web path, so the agent
+//   would sign a fixed market order verbatim — and payWithDeep can be economically wrong on a
+//   non-whitelisted pool with nothing to correct it. SwapCard covers "buy/sell now at market" safely
+//   (whitelist-aware fee + quote + slippage). MCP/CLI keep these for local-key power users.
+const EXCLUDED = new Set(['redeem_permissionless', 'spot_place_market_order', 'spot_can_place_market_order']);
 
 // Reads that depend on the user's PredictManager / DeepBook BalanceManager (or live per-input quote
 // against their account). These run REQUEST-SCOPED against the wallet ctx (never shared-cached), but
@@ -16,7 +21,6 @@ const WALLET_SCOPED = new Set([
   'spot_balance',
   'spot_open_orders',
   'spot_can_place_limit_order',
-  'spot_can_place_market_order',
 ]);
 
 /**

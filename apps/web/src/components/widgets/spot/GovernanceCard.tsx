@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSpotWriteCard } from '@/components/widgets/spot/useSpotWriteCard';
+import { NoBalanceManagerNotice } from '@/components/widgets/spot/NoBalanceManagerNotice';
 import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/widgets/ReceiptController';
 import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt';
 import { useSpotAccount, useSpotPoolParams } from '@/lib/hooks/useSpotRead';
@@ -185,20 +186,7 @@ export function GovernanceCard({
       )}
 
       {!w.hasBalanceManager && !w.bmLoading && (
-        <div className="mt-2 text-center text-[11px] text-faint">
-          {w.bmError
-            ? 'Couldn’t reach your account.'
-            : w.storageBlocked
-              ? 'Storage is blocked — we can’t detect your account; don’t create a second one.'
-              : !w.connected
-                ? 'Connect your wallet first to use governance.'
-                : 'Create a DeepBook account first to use governance.'}
-          {w.bmError && (
-            <button type="button" onClick={w.bmRefetch} className="ml-1 font-semibold text-ink underline underline-offset-2">
-              Retry
-            </button>
-          )}
-        </div>
+        <NoBalanceManagerNotice w={w} action="use governance" variant="inline" onRetry={w.bmRefetch} onDismiss={w.cancel} />
       )}
       <button
         type="button"

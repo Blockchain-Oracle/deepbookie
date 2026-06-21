@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useSpotWriteCard } from '@/components/widgets/spot/useSpotWriteCard';
+import { NoBalanceManagerNotice } from '@/components/widgets/spot/NoBalanceManagerNotice';
 import { OrderValidityHint } from '@/components/widgets/spot/OrderValidityHint';
 import { useSpotPoolParams, useSpotCanPlaceLimit } from '@/lib/hooks/useSpotRead';
 import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/widgets/ReceiptController';
@@ -207,20 +208,7 @@ export function LimitOrderTicket({
           <OrderValidityHint valid={canPlace} className="mb-[11px]" />
         ))}
       {!w.hasBalanceManager && !w.bmLoading && (
-        <div className="mb-[11px] rounded-[8px] border border-[#E6C9BE] bg-[#FBF1EC] px-3 py-2 text-[11.5px] font-medium text-[#8a2f1c]">
-          {w.bmError
-            ? 'Couldn’t reach your account — don’t create a new one.'
-            : w.storageBlocked
-              ? 'Your browser is blocking storage — we can’t detect your account; don’t create a second one.'
-              : !w.connected
-                ? 'Connect your wallet first to place maker orders.'
-                : 'You need a BalanceManager before placing maker orders.'}
-          {w.bmError && (
-            <button type="button" onClick={w.bmRefetch} className="ml-1.5 font-semibold underline underline-offset-2">
-              Retry
-            </button>
-          )}
-        </div>
+        <NoBalanceManagerNotice w={w} action="place maker orders" variant="inline" onRetry={w.bmRefetch} onDismiss={w.cancel} />
       )}
 
       <div className="flex gap-2.5">

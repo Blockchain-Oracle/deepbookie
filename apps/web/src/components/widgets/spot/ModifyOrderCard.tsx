@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSpotWriteCard } from '@/components/widgets/spot/useSpotWriteCard';
+import { NoBalanceManagerNotice } from '@/components/widgets/spot/NoBalanceManagerNotice';
 import { useSpotOpenOrders, useSpotPoolParams } from '@/lib/hooks/useSpotRead';
 import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/widgets/ReceiptController';
 import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt';
@@ -33,8 +34,11 @@ export function ModifyOrderCard({
   // carries {poolKey, orderId, newQuantity}, so current/filled/price/isBid are stripped before us).
   const orders = useSpotOpenOrders(w.state === 'proposed' && w.hasBalanceManager && poolKey ? poolKey : undefined);
   const order = orders.data?.find((o) => o.orderId === orderId);
-  const isBid = order?.isBid ?? p.isBid === true;
-  const price = order?.price ?? num(p.price);
+  // All bounds come from the LIVE order; spot_modify_order's schema carries only {poolKey, orderId,
+  // newQuantity}, so there is no agent-supplied isBid/price to fall back to. The header that uses these
+  // only renders after the `!order`/loading guards below, so order is defined by then.
+  const isBid = order?.isBid ?? false;
+  const price = order?.price ?? 0;
   const current = order?.quantity ?? 0;
   const filled = order?.filledQuantity ?? 0;
 
@@ -104,20 +108,10 @@ export function ModifyOrderCard({
     );
   }
 
-  // A BalanceManager is required to read/modify orders. On a resolver failure show retry (don't imply
-  // "create one"); each Notice resolves the tool call via Dismiss so the assistant turn never wedges.
+  // A BalanceManager is required to read/modify orders. The shared notice resolves the tool call via
+  // Dismiss (so the assistant turn never wedges) and offers Retry only on a resolver failure.
   if (!w.hasBalanceManager && !w.bmLoading) {
-    if (w.storageBlocked) {
-      return <Notice title={TITLE} text="Your browser is blocking storage — we can’t detect your account; don’t create a second one." onCancel={w.cancel} />;
-    }
-    if (w.bmError) {
-      return <Notice title={TITLE} text="Couldn’t reach your account — retry, don’t create a new one." onCancel={w.cancel} onRetry={w.bmRefetch} />;
-    }
-    return w.connected ? (
-      <Notice title={TITLE} text="A balance manager is required to modify orders." onCancel={w.cancel} />
-    ) : (
-      <Notice title={TITLE} text="Connect your wallet first to modify orders." onCancel={w.cancel} />
-    );
+    return <NoBalanceManagerNotice w={w} title={TITLE} action="modify orders" variant="card" onRetry={w.bmRefetch} onDismiss={w.cancel} />;
   }
 
   // Resolving the live order / pool limits — hold space rather than render a dead slider.
