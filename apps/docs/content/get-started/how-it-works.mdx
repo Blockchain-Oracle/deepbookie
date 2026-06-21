@@ -1,19 +1,19 @@
 ---
 title: How a trade works
-description: From a plain-English ask to a signed bet in your wallet — how DeepBookie prices a trade, proposes it, and lets you sign.
+description: From a plain-English ask to a signed trade in your wallet — how DeepBookie prices it, builds it, and lets you sign.
 ---
 
 # How a trade works
 
-You ask in words. DeepBookie does the pricing and builds the transaction. You
-sign. The agent holds no key, so a trade is never live until **your** wallet
-signs it. Here is the full loop, from question to confirmation.
+You ask in words. DeepBookie prices it, builds the transaction, and shows you
+the receipt. You sign — and a trade is never live until **your** wallet signs
+it. Here is the full loop, from question to confirmation.
 
 <Steps
   items={[
-    { title: 'You ask in plain language', body: '“Bet $50 that BTC is above $70k Friday.” No order forms, no strike pickers. The AI turns your words into a Predict market: which price, which expiry, how much to stake.' },
-    { title: 'It prices the trade', body: 'DeepBookie reads the live market odds and computes the exact cost and payout. This is a free read — nothing is committed yet.' },
-    { title: 'It proposes a transaction', body: 'You get an unsigned Sui transaction with a plain receipt: stake, price, expiry, the odds, and what you stand to win. Review it before anything moves.' },
+    { title: 'You ask in plain language', body: '“Bet $50 that BTC is above $70k Friday.” Or “Swap 1 SUI for dUSDC.” No order forms, no strike pickers. DeepBookie turns your words into the right trade.' },
+    { title: 'DeepBookie prices it', body: 'It reads the live market — odds for Predict, the order book for Spot — and computes the exact cost and payout. This is a free read; nothing is committed yet.' },
+    { title: 'DeepBookie builds the transaction', body: 'You get an unsigned Sui transaction with a plain receipt: the amount, the price, what you stand to win. Review it before anything moves.' },
     { title: 'You sign in your wallet', body: 'Approve in your browser wallet (web), or with a local key on your machine (CLI/MCP). Signing is the only step that touches the chain. The receipt updates the moment it lands.' },
   ]}
 />
@@ -55,7 +55,7 @@ is the receipt in all six states, from loading to signed:
 The price is not a guess. DeepBookie computes it from a live volatility model —
 see [Pricing](/concepts/pricing) if you want the math.
 
-And the agent never holds your key. It builds the transaction; you sign it
+And DeepBookie never holds your key. It builds the transaction; you sign it
 yourself, in your wallet or on your machine — never in the cloud. That split is
 the whole design. Read [Sign at the edge](/concepts/sign-at-edge) for how it
 keeps your funds yours.

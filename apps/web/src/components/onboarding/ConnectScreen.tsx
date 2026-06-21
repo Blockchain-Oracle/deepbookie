@@ -16,18 +16,18 @@ export function ConnectScreen() {
         </div>
         <div>
           <h2 className="text-4xl font-extrabold leading-[1.0] tracking-[-0.04em]">
-            The agent proposes.
+            Trade DeepBook
             <br />
-            You sign.
+            just by
             <br />
-            <span className="text-mint">It holds no key.</span>
+            <span className="text-mint">chatting.</span>
           </h2>
           <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-[#cfc9bd]">
-            Connect a Sui wallet to begin. DeepBookie can only propose trades — you authorize every
-            one yourself.
+            Connect your Sui wallet to start trading. DeepBookie builds the trade — you sign every
+            one in your own wallet.
           </p>
         </div>
-        <div className="font-mono text-xs text-[#6b675e]">non-custodial · open protocol</div>
+        <div className="font-mono text-xs text-[#6b675e]">you sign every trade</div>
       </div>
 
       <div className="flex flex-col justify-center gap-4 bg-paper p-10">

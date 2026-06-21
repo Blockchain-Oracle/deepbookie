@@ -37,15 +37,15 @@ export function OddsGlimpse() {
       <div className="mx-auto flex max-w-[1180px] flex-wrap items-center gap-12 px-6 py-16 sm:px-10 lg:gap-16 lg:py-[90px]">
         <div className="max-w-[440px] flex-[1_1_360px]">
           <div className="mb-[22px] font-mono text-[11px] uppercase tracking-[0.12em] text-muted">
-            Real odds, not vibes
+            Predict — live BTC odds
           </div>
           <h2 className="m-0 text-[34px] font-bold leading-[1.02] tracking-[-0.035em] sm:text-[42px]">
-            Priced on-chain, updated every few seconds.
+            Real odds, priced on-chain, updated every few seconds.
           </h2>
           <p className="mb-7 mt-[22px] text-[17px] leading-[1.55] text-[#615c53]">
-            The curve is the probability of finishing above each strike, derived
-            from a live volatility model on DeepBook Predict. It moves with the
-            market — so the odds you sign are the odds right now.
+            The curve is the chance BTC closes above each price by the deadline.
+            It moves with the market — so the odds you sign are the odds right
+            now. (DeepBookie also trades Spot — same chat.)
           </p>
           <div className="flex gap-9">
             {STATS.map((s) => (

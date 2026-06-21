@@ -5,7 +5,7 @@
 <h1 align="center">DeepBookie</h1>
 
 <p align="center">
-  An AI agent for trading <b>DeepBook</b> on Sui — you talk, it reads the live market and proposes the trade, <b>you sign every transaction yourself</b>.
+  A chat app for trading <b>DeepBook</b> on Sui — describe a trade in plain English, DeepBookie builds it, <b>you sign every one in your own wallet</b>.
 </p>
 
 <p align="center">

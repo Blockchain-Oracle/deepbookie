@@ -23,7 +23,7 @@ export function Footer() {
             </span>
           </div>
           <div style={{ fontSize: 12.5, color: '#8a857b', lineHeight: 1.5 }}>
-            Built on DeepBook · Sui testnet. The agent proposes; you sign.
+            Trade DeepBook by chatting — you sign every trade. Built on Sui.
           </div>
         </div>
         <div style={{ display: 'flex', gap: 48, flexWrap: 'wrap' }}>

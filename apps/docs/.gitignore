@@ -11,3 +11,4 @@ next-env.d.ts
 
 # pagefind search index (generated)
 /public/_pagefind/
+.vercel

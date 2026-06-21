@@ -21,3 +21,32 @@ coverage/
 
 # npm auth (token — never commit)
 .npmrc
+
+# on-chain integration test key (never commit)
+.integration/
+
+# --- AI-agent scratch / artifacts (never ship to the public repo) ---
+/prompt*.md
+/GOAL.md
+/HANDOFF.md
+/handoff/
+/research/
+/docs/superpowers/
+/docs/DESIGNER-BRIEF.md
+/docs/DOCS-SITE-DESIGNER-BRIEF.md
+/docs/HANDOVER-docs-site.md
+/docs/brief-chat-carousel.md
+/docs/designer/
+/scripts/wf-*.mjs
+/.playwright-mcp/
+/.firecrawl/
+# the founder's pitch/demo prep (script, deck brief, recordings) stays local
+/pitch/
+# loose screenshots / demo-video files at the repo ROOT only (not apps/*/public assets)
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+/*.mp4
+/*.mov
+/*.webm

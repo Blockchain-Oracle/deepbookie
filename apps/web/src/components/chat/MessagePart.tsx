@@ -231,7 +231,9 @@ export function MessagePart({
     case 'get_odds': {
       // Carry the FULL context the user picked on the card (market + strike + direction + amount) so the
       // agent quotes + proposes the exact bet — no re-picking a market/strike, no lost context.
-      const oracleId = (tp.input as { oracleId?: string }).oracleId ?? '';
+      // `tp.input` is undefined while the call is still streaming (input-streaming) or on a restored
+      // part with no saved input — optional-chain it so this read can never crash the whole chat.
+      const oracleId = (tp.input as { oracleId?: string } | undefined)?.oracleId ?? '';
       return (
         <OddsCurveCard
           status={ready ? 'live' : 'loading'}

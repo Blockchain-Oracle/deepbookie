@@ -48,11 +48,11 @@ export default function HomePage() {
               textWrap: 'balance',
             }}
           >
-            Real odds.
+            Trade DeepBook
             <br />
-            Priced live.
+            just by
             <br />
-            <span style={{ color: '#2C5E4A' }}>You sign.</span>
+            <span style={{ color: '#2C5E4A' }}>chatting.</span>
           </h1>
           <p
             style={{
@@ -63,9 +63,9 @@ export default function HomePage() {
               maxWidth: 440,
             }}
           >
-            DeepBookie is an AI agent for DeepBook Predict. Talk to it in plain language; it
-            prices bets off a live volatility model, proposes an unsigned transaction, and you
-            sign every trade in your own wallet.
+            DeepBookie is a chat app for trading DeepBook on Sui — two markets, one chat:{' '}
+            <b>Predict</b> (yes/no BTC bets) and <b>Spot</b> (the order book). Describe a trade in
+            plain English; DeepBookie builds it and you sign in your own wallet.
           </p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <a
@@ -83,7 +83,7 @@ export default function HomePage() {
                 borderRadius: 99,
               }}
             >
-              Start trading by talking →
+              Launch app →
             </a>
             <Link
               href="/get-started/introduction"
@@ -123,7 +123,7 @@ export default function HomePage() {
       >
         <span>Built on</span>
         <span style={{ fontWeight: 700, fontSize: 15, color: '#4DA2FF' }}>DeepBook</span>
-        <span>· Sui testnet · the agent holds no key</span>
+        <span>· Sui testnet · you sign every trade</span>
       </div>
       </div>
     </PageLayout>

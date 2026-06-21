@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq, sql } from 'drizzle-orm';
 import { getDb } from './client';
 import { chats, txOutcomes, type ChatRow, type TxOutcomeRow } from './schema';
 
@@ -6,6 +6,8 @@ export interface ChatSummary {
   id: string;
   title: string;
   updatedAt: string;
+  /** How many writes were actually SIGNED in this session — powers the History "journal" cards. */
+  signed: number;
 }
 
 /** A wallet's sessions, newest first. Wallet-scoped (isolation) — never returns another wallet's chats. */
@@ -13,12 +15,17 @@ export async function listChats(wallet: string): Promise<ChatSummary[]> {
   const db = getDb();
   if (!db) return [];
   const rows = await db
-    .select({ id: chats.id, title: chats.title, updatedAt: chats.updatedAt })
+    .select({ id: chats.id, title: chats.title, updatedAt: chats.updatedAt, signed: count(txOutcomes.toolCallId) })
     .from(chats)
-    .where(eq(chats.walletAddress, wallet))
+    // Per-session count of SIGNED outcomes (left join → 0 when none).
+    .leftJoin(txOutcomes, and(eq(txOutcomes.chatId, chats.id), eq(txOutcomes.status, 'signed')))
+    // Only sessions with an actual transcript — never list the empty "New chat" stubs that
+    // `ensureChat` creates when a sign outcome is recorded before the transcript save lands.
+    .where(and(eq(chats.walletAddress, wallet), sql`jsonb_array_length(${chats.messages}) > 0`))
+    .groupBy(chats.id, chats.title, chats.updatedAt)
     .orderBy(desc(chats.updatedAt))
     .limit(60);
-  return rows.map((r) => ({ id: r.id, title: r.title, updatedAt: r.updatedAt.toISOString() }));
+  return rows.map((r) => ({ id: r.id, title: r.title, updatedAt: r.updatedAt.toISOString(), signed: Number(r.signed) }));
 }
 
 /** One session — ownership-checked (must match the wallet) to prevent cross-wallet IDOR. */

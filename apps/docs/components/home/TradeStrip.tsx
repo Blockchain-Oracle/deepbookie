@@ -15,7 +15,7 @@ const STEPS = [
   },
   {
     n: 3,
-    kicker: 'It proposes',
+    kicker: 'It builds it',
     title: 'An unsigned receipt',
     body: 'A confirmation you can read line by line — and an unsigned transaction.',
   },
@@ -63,7 +63,7 @@ export function TradeStrip() {
             How a trade works
           </div>
           <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em' }}>
-            Propose → sign → receipt, in four steps
+            Ask → build → sign, in four steps
           </div>
         </div>
         <Link

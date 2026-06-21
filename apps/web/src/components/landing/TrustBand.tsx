@@ -14,8 +14,8 @@ interface TrustStep {
 const STEPS: readonly TrustStep[] = [
   {
     n: '01',
-    title: 'It proposes',
-    body: 'A clickable odds curve and an itemized receipt — never an executed trade.',
+    title: 'DeepBookie builds it',
+    body: 'A clickable receipt — never an executed trade.',
   },
   {
     n: '02',
@@ -34,19 +34,19 @@ export function TrustBand() {
     <section aria-label="Non-custodial trust" className="bg-ink text-paper">
       <div className="mx-auto max-w-[1180px] px-6 py-20 sm:px-10 sm:py-24">
         <div className="mb-7 font-mono text-[11px] uppercase tracking-[0.14em] text-[#7d8a82]">
-          The trust story
+          How your money stays yours
         </div>
         <div className="flex flex-wrap items-start gap-x-16 gap-y-12">
           <h2 className="m-0 flex-[1_1_420px] text-[40px] font-extrabold leading-[1.0] tracking-[-0.04em] sm:text-[52px]">
-            The agent is smart,
+            DeepBookie builds it.
             <br />
-            but <span className="text-mint">powerless</span>.
+            <span className="text-mint">You sign it.</span>
           </h2>
           <div className="flex-[1_1_360px] sm:max-w-[460px]">
             <p className="m-0 mb-7 text-[17px] leading-[1.55] text-[#cfc9bd] sm:text-[18px]">
-              It can read the market and propose a trade — but it can&apos;t move a cent. Every
-              action is a request you approve in your own wallet, seeing exactly what you sign. No
-              key. No custody. No surprises.
+              The AI builds the trade and shows you the receipt — but it can&apos;t move a cent.
+              Every trade is a request you approve in your own wallet, seeing exactly what you sign.
+              It never holds your keys.
             </p>
             <ol className="m-0 flex list-none flex-col gap-0 p-0">
               {STEPS.map((step, i) => (

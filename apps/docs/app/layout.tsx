@@ -6,11 +6,11 @@ import { DocsShell } from '@/components/shell/DocsShell';
 
 export const metadata: Metadata = {
   title: {
-    default: 'DeepBookie Docs — the agent proposes, you sign',
+    default: 'DeepBookie Docs — trade DeepBook by chatting',
     template: '%s · DeepBookie Docs',
   },
   description:
-    'Documentation for DeepBookie — an AI agent for trading DeepBook Predict on Sui. One tool registry powers the web app, MCP server, CLI, and skill; every write is an unsigned transaction you sign at the edge.',
+    'Docs for DeepBookie — a chat app for trading DeepBook on Sui. Describe a trade in plain English; DeepBookie builds it and you sign in your own wallet. Two markets: Predict (yes/no BTC bets) and Spot (the order book).',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
