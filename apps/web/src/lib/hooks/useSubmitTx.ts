@@ -33,7 +33,9 @@ export function reasonFor(e: unknown): string {
   if (m.includes('manager')) return 'Create your account first, then place this bet.';
   if (m.includes('insufficient') || m.includes('balance')) return 'Not enough balance to cover this.';
   if (m.includes('timeout') || m.includes('indexer')) return 'Couldn’t reach the market right now — try again.';
-  return 'The transaction failed. No funds moved.';
+  // Unknown failure: the tx may already have broadcast (we sign+execute), so DON'T assert "no funds moved"
+  // here — only the wallet-decline branch above can promise that.
+  return 'The transaction failed or its result couldn’t be confirmed — check your wallet history before retrying.';
 }
 
 type ObjChange = { type: string; objectType?: string; objectId?: string };
@@ -87,6 +89,7 @@ export function useSubmitTx() {
       // silently strand the id and later guide the user into creating a duplicate (orphaning funds).
       if (toolName === 'spot_create_balance_manager') {
         let captured = false;
+        let lastErr: unknown;
         for (let attempt = 0; attempt < 3 && !captured; attempt++) {
           try {
             const tb = await client.waitForTransaction({ digest, options: { showObjectChanges: true } });
@@ -98,8 +101,8 @@ export function useSubmitTx() {
               qc.setQueryData(['balanceManager', owner], { balanceManagerId: created.objectId });
               captured = true;
             }
-          } catch {
-            /* retry */
+          } catch (e) {
+            lastErr = e; // keep the last cause so the final warn names WHY, not just "failed"
           }
         }
         // Capture failed on every attempt → the shared BM id is unknown AND the on-chain resolver can't
@@ -110,6 +113,7 @@ export function useSubmitTx() {
           clientLogger.warn('BalanceManager id capture failed after retries — id unrecoverable this session', {
             digest,
             owner,
+            err: lastErr instanceof Error ? lastErr.message : lastErr ? String(lastErr) : undefined,
           });
           qc.setQueryData(['balanceManager', owner], { balanceManagerId: null, error: true });
         }

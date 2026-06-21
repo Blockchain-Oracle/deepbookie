@@ -17,7 +17,6 @@ import type {
 } from '@/lib/bff/spot-types';
 
 interface SpotReadOpts {
-  enabled?: boolean;
   refetchInterval?: number;
   staleTime?: number;
 }
@@ -33,7 +32,7 @@ export function useSpotRead<T>(tool: string, args: Record<string, unknown> | und
   const balanceManagerId = useBalanceManager(owner).data?.balanceManagerId ?? null;
   return useQuery<T>({
     queryKey: ['spot', tool, args ?? null, owner ?? null, balanceManagerId],
-    enabled: (opts.enabled ?? true) && args !== undefined,
+    enabled: args !== undefined,
     queryFn: () => apiPost<T>('/api/spot/read', { tool, args, owner, balanceManagerId }),
     refetchInterval: opts.refetchInterval,
     staleTime: opts.staleTime ?? 4_000,

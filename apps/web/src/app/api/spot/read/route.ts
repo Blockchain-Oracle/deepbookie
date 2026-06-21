@@ -22,7 +22,6 @@ const ALLOWED = new Set([
   'spot_account',
   'spot_open_orders',
   'spot_can_place_limit_order',
-  'spot_can_place_market_order',
 ]);
 
 // These reads inspect the wallet's BalanceManager, so they need it resolved into the ctx.
@@ -31,7 +30,6 @@ const BM_SCOPED = new Set([
   'spot_account',
   'spot_open_orders',
   'spot_can_place_limit_order',
-  'spot_can_place_market_order',
 ]);
 
 /** Generic spot read proxy: validates the tool, resolves the BalanceManager for account reads, runs

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { isValidSuiAddress } from '@mysten/sui/utils';
 import { useSpotWriteCard } from '@/components/widgets/spot/useSpotWriteCard';
 import { NoBalanceManagerNotice } from '@/components/widgets/spot/NoBalanceManagerNotice';
 import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/widgets/ReceiptController';
@@ -17,6 +18,9 @@ const seed = (v: unknown) => (num(v) > 0 ? String(num(v)) : '');
 const seedPct = (v: unknown) => (typeof v === 'number' ? String(v * 100) : '');
 /** Percent input → on-chain fraction (0.08% → 0.0008). The proposal tool wants the fraction. */
 const toFrac = (percentStr: string) => Number(percentStr) / 100;
+/** A DeepBook proposal id is a numeric index or a Sui object id — reject a typo'd string before it
+ *  signs and aborts on-chain (the spot_vote schema is a bare z.string()). */
+const proposalIdValid = (id: string) => /^\d+$/.test(id) || isValidSuiAddress(id);
 
 type Mode = 'propose' | 'vote' | 'claim';
 const DARK_BTN = 'w-full rounded-card-in bg-ink py-3 text-[13.5px] font-semibold text-paper transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
@@ -143,7 +147,7 @@ export function GovernanceCard({
           </div>
           <button
             type="button"
-            disabled={!w.hasBalanceManager || accountErr || voteWeight <= 0 || proposalId.trim().length < 3}
+            disabled={!w.hasBalanceManager || accountErr || voteWeight <= 0 || !proposalIdValid(proposalId.trim())}
             onClick={() => void w.sign({ poolKey, proposalId: proposalId.trim() }, { proposalId: proposalId.trim() })}
             className={DARK_BTN}
           >

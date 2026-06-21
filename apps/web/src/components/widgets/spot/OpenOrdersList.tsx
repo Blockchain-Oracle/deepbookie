@@ -17,7 +17,13 @@ function fillPct(o: SpotOpenOrder): number {
   return Math.max(0, Math.min(100, Math.round((o.filledQuantity / o.quantity) * 100)));
 }
 
-/** Spot maker orders — fill progress + per-row & bulk direct-sign cancels (mirrors PositionsTable). */
+/**
+ * Spot maker orders — fill progress + per-row & bulk direct-sign cancels (mirrors PositionsTable).
+ * NOTE: these cancels are user-initiated convenience actions on a READ widget, not AI tool calls, so
+ * they have no toolCallId and are deliberately NOT written to the durable tx-outcome ledger (which is
+ * keyed by toolCallId for replayable chat writes). Failures ARE surfaced inline (per-row ✗ Retry +
+ * banner). An agent-PROPOSED cancel routes through ReceiptController instead and IS ledgered.
+ */
 export function OpenOrdersList({ orders }: { orders: SpotOpenOrder[] }) {
   const account = useCurrentAccount();
   const bm = useBalanceManager(account?.address);

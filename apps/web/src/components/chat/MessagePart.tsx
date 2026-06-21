@@ -142,7 +142,9 @@ export function MessagePart({
   // agent's proposed values (the React key is stable, so there's no remount to re-seed).
   const SpotInputCard = SPOT_INPUT[name];
   if (SpotInputCard) {
-    if (tp.state === 'input-streaming') return skeleton('h-40');
+    // Wait for the FINAL streamed input: both the streaming state AND a present `input` object — a
+    // one-shot lazy seed captured against undefined input would silently drop the agent's proposal.
+    if (tp.state === 'input-streaming' || !tp.input) return skeleton('h-40');
     return (
       <SpotInputCard
         part={tp as WriteToolPart}
@@ -255,7 +257,6 @@ export function MessagePart({
     case 'spot_account':
       return <BalanceManagerPanel onAction={onAction} />;
     case 'spot_can_place_limit_order':
-    case 'spot_can_place_market_order':
       return ready ? <OrderValidityHint valid={(out as SpotCanPlace).canPlace} /> : skeleton('h-10');
     case 'spot_mid_price':
     case 'spot_pool_params':

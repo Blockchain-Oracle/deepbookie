@@ -73,7 +73,8 @@ export function ModifyOrderCard({
   // lotSize<=0 means snap() can't lot-align (would sign a raw qty that aborts on-chain) → never sign.
   const invalid = !order || newQty >= current || signQty <= filled || belowMin || !paramsReady || lotSize <= 0;
   const filledPct = current > 0 ? Math.min(100, (filled / current) * 100) : 0;
-  const knobPct = current > 0 ? Math.min(100, (newQty / current) * 100) : 0;
+  // Track from signQty (the lot-aligned, to-be-signed value) so the ink bar matches the numeric readout.
+  const knobPct = current > 0 ? Math.min(100, (signQty / current) * 100) : 0;
   const activeWidth = Math.max(0, knobPct - filledPct);
 
   if (w.dismissed) return null;

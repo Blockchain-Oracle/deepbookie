@@ -201,7 +201,7 @@ export function SwapCard({
       <Kv
         label="Fee"
         loading={quoting}
-        value={whitelisted ? `from ${from}` : `${formatUsd(deepRequired, 4)} DEEP`}
+        value={!params.isSuccess ? '—' : whitelisted ? `from ${from}` : `${formatUsd(deepRequired, 4)} DEEP`}
       />
 
       {/* slippage */}
