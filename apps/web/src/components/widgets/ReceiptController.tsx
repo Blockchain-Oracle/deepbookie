@@ -24,6 +24,9 @@ export interface WriteToolPart {
     makerFee?: number;
     stakeRequired?: number;
     proposalId?: string;
+    newQuantity?: number;
+    reducingBy?: number;
+    base?: string;
   };
   toolCallId: string;
   errorText?: string;

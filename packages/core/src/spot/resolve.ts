@@ -2,7 +2,12 @@ import type { ToolContext } from '../context.js';
 import { spotClient } from './client.js';
 import { BALANCE_MANAGER_TYPE } from './constants.js';
 
-/** Best-effort scan depth (pages of 50 txs) for the shared-BalanceManager fallback. */
+/**
+ * Best-effort scan depth (pages of 50 txs) for the shared-BalanceManager fallback. Bounded to keep the
+ * fallback cheap — so a BM created more than ~150 txs ago on a FRESH device (no captured localStorage
+ * id) won't be found and reads as "no account". The durable cross-device fix is a server/indexer-backed
+ * BM registry or a SIWS session store (the documented follow-up); same-device use relies on bmStore.
+ */
 const TX_SCAN_PAGES = 3;
 const TX_SCAN_PAGE_SIZE = 50;
 

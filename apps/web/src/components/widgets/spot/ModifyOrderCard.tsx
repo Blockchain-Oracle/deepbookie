@@ -74,7 +74,13 @@ export function ModifyOrderCard({
   const docNumber = docNumberFor(part.toolCallId);
 
   if (w.state !== 'proposed') {
-    const s = signed ?? { newQty: signQty, reducingBy, base };
+    // Prefer the in-session snapshot; on a remount/History replay (snapshot gone, live order gone) read
+    // the figures persisted to the durable tool output so the receipt doesn't render "0".
+    const s = signed ?? {
+      newQty: num(part.output?.newQuantity) || signQty,
+      reducingBy: num(part.output?.reducingBy) || reducingBy,
+      base: str(part.output?.base) || base,
+    };
     const lines: ReceiptLine[] = [
       { label: 'Pair', value: pair },
       { label: 'New quantity', value: `${qty(s.newQty)} ${s.base}`, strong: true, accent: true },
@@ -245,7 +251,8 @@ export function ModifyOrderCard({
           disabled={!canSign}
           onClick={() => {
             setSigned({ newQty: signQty, reducingBy, base });
-            void w.sign({ poolKey, orderId, newQuantity: signQty });
+            // Persist the figures so the receipt survives a remount / History replay (live order is gone).
+            void w.sign({ poolKey, orderId, newQuantity: signQty }, { newQuantity: signQty, reducingBy, base });
           }}
           className={
             invalid

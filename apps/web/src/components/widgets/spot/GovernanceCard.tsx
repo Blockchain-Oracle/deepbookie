@@ -177,10 +177,15 @@ export function GovernanceCard({
       {!w.hasBalanceManager && (
         <div className="mt-2 text-center text-[11px] text-faint">
           {w.bmError
-            ? 'Couldn’t reach your account — retry in a moment.'
+            ? 'Couldn’t reach your account.'
             : w.storageBlocked
               ? 'Storage is blocked — we can’t detect your account; don’t create a second one.'
               : 'Create a DeepBook account first to use governance.'}
+          {w.bmError && (
+            <button type="button" onClick={w.bmRefetch} className="ml-1 font-semibold text-ink underline underline-offset-2">
+              Retry
+            </button>
+          )}
         </div>
       )}
       <button

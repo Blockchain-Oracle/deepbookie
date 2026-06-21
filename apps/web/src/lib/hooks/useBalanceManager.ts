@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { STALE } from '@/lib/constants';
 import { getStoredBalanceManager, isStorageAvailable } from '@/lib/spot/bmStore';
 import { apiGet } from './client';
@@ -19,6 +19,7 @@ interface BmResult {
  * immediately when present, and only fall back to the BFF resolver for a wallet with no local record.
  */
 export function useBalanceManager(owner?: string) {
+  const qc = useQueryClient();
   return useQuery({
     queryKey: ['balanceManager', owner],
     enabled: !!owner,
@@ -33,7 +34,17 @@ export function useBalanceManager(owner?: string) {
       // isError + undefined data → cards/panel fall through to the duplicate-BM "create" path. This
       // also avoids React Query's silent 3× retry wait before the user sees the retry state.
       try {
-        return await apiGet<BmResult>(`/api/spot/balance-manager?owner=${owner}`);
+        const res = await apiGet<BmResult>(`/api/spot/balance-manager?owner=${owner}`);
+        // If a prior capture-failure seeded {error:true} (just-created BM whose id we couldn't capture)
+        // and the resolver STILL can't find the shared BM, keep the error so the panel shows Retry —
+        // don't let a clean null clobber the seed and invite a duplicate create. A real id (or a throw)
+        // correctly overrides it. (The bustCaches after create invalidates this query, so without this
+        // the synchronous refetch would overwrite the seed.)
+        if (res.balanceManagerId == null && !res.error) {
+          const prev = qc.getQueryData<BmResult>(['balanceManager', owner]);
+          if (prev?.error) return { balanceManagerId: null, error: true };
+        }
+        return res;
       } catch {
         return { balanceManagerId: null, error: true };
       }

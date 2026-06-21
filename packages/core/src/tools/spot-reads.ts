@@ -64,8 +64,9 @@ const swapQuote = defineRead({
   surface: 'spot',
   inputSchema: poolInput
     .extend({ baseQuantity: z.number().nonnegative().optional(), quoteQuantity: z.number().nonnegative().optional() })
-    .refine((v) => (v.baseQuantity ?? 0) > 0 || (v.quoteQuantity ?? 0) > 0, {
-      message: 'provide baseQuantity (to sell base) or quoteQuantity (to buy base)',
+    // Exactly one side — getQuantityOut is a single-direction dry-run; both>0 yields a garbage quote.
+    .refine((v) => ((v.baseQuantity ?? 0) > 0) !== ((v.quoteQuantity ?? 0) > 0), {
+      message: 'provide exactly one of baseQuantity (sell base) or quoteQuantity (buy base)',
     }),
   read: async (a, ctx) => {
     const q = await spotClient(ctx).getQuantityOut(a.poolKey, a.baseQuantity ?? 0, a.quoteQuantity ?? 0);

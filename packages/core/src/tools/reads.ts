@@ -20,6 +20,7 @@ import type { PositionEntry } from '@deepbookie/predict-client';
 import { z } from 'zod';
 import { defineRead } from '../tool.js';
 import { resolveMarket } from './helpers.js';
+import { ZERO_ADDRESS } from '../spot/constants.js';
 
 function mapPosition(p: PositionEntry) {
   return {
@@ -36,8 +37,6 @@ function mapPosition(p: PositionEntry) {
     managerId: p.manager_id ?? null,
   };
 }
-
-const ZERO_ADDRESS = `0x${'0'.repeat(64)}`;
 
 const listMarkets = defineRead({
   name: 'list_markets',

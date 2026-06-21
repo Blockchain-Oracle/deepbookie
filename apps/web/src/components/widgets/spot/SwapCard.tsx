@@ -13,6 +13,8 @@ const SLIPPAGES = [0.5, 1] as const;
 // quote time, so we budget +5% to absorb a small move between quote and signature; unused DEEP is
 // returned to the wallet by the swap's transferObjects.
 const DEEP_FEE_BUFFER = 1.05;
+/** Rate display: 4dp for ≥1, but precision-aware below 1 so a tiny rate doesn't show "0.0000". */
+const fmtRate = (r: number) => (r >= 1 ? formatUsd(r, 4) : r > 0 ? r.toPrecision(4) : '0');
 // Coin disc tints from the design system (Components-Spot.dc.html §2).
 const COIN_BG: Record<string, string> = { SUI: '#4DA2FF', WAL: '#7d6f3a' };
 const COIN_GLYPH: Record<string, string> = { DBUSDC: '$', DBUSDT: '$', DBTC: '₿' };
@@ -101,7 +103,7 @@ export function SwapCard({
     const lines: ReceiptLine[] = w.state !== 'signed'
       ? []
       : [
-      { label: 'Rate', value: `1 ${from} = ${formatUsd(rate, 4)} ${to}` },
+      { label: 'Rate', value: `1 ${from} = ${fmtRate(rate)} ${to}` },
       { label: `Min received · ${slip}%`, value: `${formatUsd(minOut, out >= 1000 ? 2 : 4)} ${to}` },
       {
         label: 'Fee',
@@ -184,7 +186,7 @@ export function SwapCard({
       </div>
 
       {/* preview lines */}
-      <Kv label="Rate" loading={quoting} value={`1 ${from} = ${formatUsd(rate, 4)}`} />
+      <Kv label="Rate" loading={quoting} value={`1 ${from} = ${fmtRate(rate)}`} />
       <Kv label={`Min received · ${slip}%`} loading={quoting} value={formatUsd(minOut, out >= 1000 ? 2 : 4)} />
       <Kv
         label="Fee"
