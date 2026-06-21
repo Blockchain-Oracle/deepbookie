@@ -7,7 +7,6 @@ import { ArchDiagram } from '@/components/content/ArchDiagram';
 import { OddsCurve } from '@/components/content/OddsCurve';
 import { PromptDemo } from '@/components/content/PromptDemo';
 import { SignReceiptStates } from '@/components/content/SignReceiptStates';
-import { Roadmap } from '@/components/content/Roadmap';
 
 const nextraComponents = getNextraComponents({
   wrapper({ children, toc }) {
@@ -25,7 +24,6 @@ export function useMDXComponents(components?: MDXComponents): MDXComponents {
     OddsCurve,
     PromptDemo,
     SignReceiptStates,
-    Roadmap,
     ...components,
   };
 }
