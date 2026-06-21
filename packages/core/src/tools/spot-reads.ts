@@ -40,7 +40,18 @@ const midPrice = defineRead({
   description: 'Current mid price of a DeepBook spot pool (e.g. SUI_DBUSDC).',
   surface: 'spot',
   inputSchema: poolInput,
-  read: async (a, ctx) => ({ poolKey: a.poolKey, midPrice: await spotClient(ctx).midPrice(a.poolKey) }),
+  read: async (a, ctx) => {
+    // The SDK's midPrice() reads level-2 [0] and THROWS on an empty book ("Cannot read properties of
+    // undefined (reading '0')"). An empty book is a valid state (no orders yet), not a 502 — return
+    // null so the UI shows "—" / "no liquidity" instead of erroring, and the agent can say so.
+    let midPrice: number | null = null;
+    try {
+      midPrice = await spotClient(ctx).midPrice(a.poolKey);
+    } catch {
+      midPrice = null;
+    }
+    return { poolKey: a.poolKey, midPrice };
+  },
 });
 
 const orderbook = defineRead({

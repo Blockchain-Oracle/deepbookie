@@ -15,6 +15,33 @@ export const maxDuration = 60;
 
 const MAX_STEPS = 8;
 
+/**
+ * Safety net for the chat loop: an assistant `tool-*` part with no result (state not output-*) makes
+ * `convertToModelMessages` throw `AI_MissingToolResultsError`, which wedges every subsequent turn. The
+ * client gates against orphaning a proposal, but a restored/edge history can still carry one — so here
+ * we coerce any unresolved tool call to a terminal "cancelled" output before the model ever sees it.
+ */
+function resolveOrphanToolParts(messages: UIMessage[]): UIMessage[] {
+  return messages.map((m) => {
+    if (m.role !== 'assistant') return m;
+    let changed = false;
+    const parts = m.parts.map((p) => {
+      const part = p as { type?: string; state?: string };
+      if (
+        typeof part.type === 'string' &&
+        part.type.startsWith('tool-') &&
+        part.state !== 'output-available' &&
+        part.state !== 'output-error'
+      ) {
+        changed = true;
+        return { ...(p as object), state: 'output-available', output: { status: 'cancelled' } } as typeof p;
+      }
+      return p;
+    });
+    return changed ? { ...m, parts } : m;
+  });
+}
+
 /** First user line → session title (History list label). */
 function titleFrom(messages: UIMessage[]): string {
   const firstUser = messages.find((m) => m.role === 'user');
@@ -109,14 +136,21 @@ export async function POST(req: Request) {
   // Tell the agent the account status it can't otherwise see (the managerId lives in the tool ctx,
   // not the conversation) — so it goes straight to the trade for existing users, only proposes
   // create for genuinely new ones, and does NOT proactively propose create when the check failed.
+  // A server-resolved null is NOT proof the user has no manager: the Predict indexer lags ~7s after
+  // creation and the DeepBook resolver can't see shared objects at all. So unless the CLIENT provided a
+  // cached id, treat a null as UNKNOWN (attempt-then-create) rather than nagging "create" every turn —
+  // which is the user's #1 complaint. Only a genuine client-confirmed absence would propose create.
+  const managerUnknown = mgr.failed || (!clientManagerId && !managerId);
   const accountStatus = managerId
     ? '\n\nAccount status: the user ALREADY has a PredictManager. Do NOT call create_manager — go straight to the trade (mint/redeem/supply/withdraw).'
-    : mgr.failed
-      ? '\n\nAccount status: UNKNOWN — could not check right now. Do NOT proactively propose create_manager; attempt the action and only if it fails for a missing account, then propose create_manager.'
+    : managerUnknown
+      ? '\n\nAccount status: UNKNOWN — could not confirm. Do NOT proactively propose create_manager; proceed with the flow (quote etc.) and only if a write actually fails for a missing account, then propose create_manager once.'
       : '\n\nAccount status: the user has NO PredictManager yet. Before any bet, propose create_manager first, then the trade next turn.';
-  // `clientBalanceManagerUnknown` = the client couldn't read its captured id (storage blocked); since
-  // the on-chain resolver can't find shared BMs either, existence is genuinely UNKNOWN, not "none".
-  const spotUnknown = bmr.failed || (clientBalanceManagerUnknown ?? false);
+  // `clientBalanceManagerUnknown` = the client couldn't read its captured id (storage blocked). Plus a
+  // server-resolved null can't be trusted (the resolver can't find shared BMs) — so unless the client
+  // provided a cached id, existence is UNKNOWN, not "none" (prevents the duplicate-create nag).
+  const spotUnknown =
+    bmr.failed || (clientBalanceManagerUnknown ?? false) || (!clientBalanceManagerId && !balanceManagerId);
   const spotStatus = balanceManagerId
     ? '\n\nSpot account: the user ALREADY has a DeepBook BalanceManager. Do NOT call spot_create_balance_manager — go straight to the spot action (deposit/swap/order/stake).'
     : spotUnknown
@@ -126,7 +160,7 @@ export async function POST(req: Request) {
   const result = streamText({
     model: getModel(),
     system: SYSTEM_PROMPT + accountStatus + spotStatus,
-    messages: await convertToModelMessages(messages),
+    messages: await convertToModelMessages(resolveOrphanToolParts(messages)),
     tools: buildAiTools({
       walletAddress,
       managerId: managerId ?? undefined,

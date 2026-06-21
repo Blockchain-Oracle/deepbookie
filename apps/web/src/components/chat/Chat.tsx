@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from 'ai';
-import { useCurrentAccount } from '@mysten/dapp-kit';
+import { ConnectModal, useCurrentAccount } from '@mysten/dapp-kit';
 import { Composer } from './Composer';
 import { MessageList } from './MessageList';
 import { FundingBanner } from '@/components/onboarding/FundingBanner';
@@ -13,7 +13,9 @@ import type { AddToolResult, SignOutcome } from '@/components/widgets/ReceiptCon
 
 export function Chat() {
   const account = useCurrentAccount();
+  const connected = !!account;
   const [input, setInput] = useState('');
+  const [connectOpen, setConnectOpen] = useState(false);
   // Stable per session — keys this conversation in History (persisted server-side per turn).
   const [chatId] = useState(() => crypto.randomUUID());
   // The wallet's manager, resolved + cached client-side (React Query). Passed to the route so the
@@ -58,9 +60,28 @@ export function Chat() {
     }
   }, [sendMessage]);
 
+  // A proposed write that hasn't been signed/cancelled is an UNRESOLVED tool call. Sending a new
+  // message while one is pending orphans it → the next turn throws AI_MissingToolResultsError and the
+  // chat loops. So block sending until every tool call in the last assistant turn is resolved.
+  const pendingProposal = useMemo(() => {
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== 'assistant') return false;
+    return last.parts.some((p) => {
+      const part = p as { type?: string; state?: string };
+      return (
+        typeof part.type === 'string' &&
+        part.type.startsWith('tool-') &&
+        part.state !== 'output-available' &&
+        part.state !== 'output-error'
+      );
+    });
+  }, [messages]);
+
   const onSend = () => {
     const text = input.trim();
-    if (!text || status !== 'ready') return;
+    if (!text) return;
+    if (!connected) return setConnectOpen(true); // wallet-gate: a disconnected send opens the modal
+    if (status !== 'ready' || pendingProposal) return; // don't orphan a pending proposal (the loop)
     sendMessage({ text });
     setInput('');
   };
@@ -120,7 +141,23 @@ export function Chat() {
       <div className="px-4">
         <FundingBanner />
       </div>
-      <Composer value={input} onChange={setInput} onSend={onSend} disabled={status !== 'ready'} />
+      <Composer
+        value={input}
+        onChange={setInput}
+        onSend={onSend}
+        // When disconnected the button stays enabled so a click can OPEN the connect modal; once
+        // connected, it disables while the stream is busy or a proposal is awaiting sign/cancel.
+        disabled={connected && (status !== 'ready' || pendingProposal)}
+        hint={
+          !connected
+            ? 'Connect your wallet to start.'
+            : pendingProposal
+              ? 'Sign or cancel the action above to continue.'
+              : undefined
+        }
+      />
+      {/* Controlled connect modal; trigger is a focusable sr-only sentinel (focus-return on close). */}
+      <ConnectModal trigger={<span tabIndex={-1} aria-hidden className="sr-only" />} open={connectOpen} onOpenChange={setConnectOpen} />
     </div>
   );
 }

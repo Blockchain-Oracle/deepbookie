@@ -58,7 +58,7 @@ function PoolRow({
   const mid = useSpotMid(pool.poolKey);
   const params = useSpotPoolParams(pool.poolKey);
   const whitelisted = !!params.data?.whitelisted;
-  const midTxt = mid.data ? fmtMid(mid.data.midPrice) : '—';
+  const midTxt = mid.data?.midPrice != null ? fmtMid(mid.data.midPrice) : '—';
   const takerTxt = params.data ? fmtPct(params.data.takerFee) : '—';
 
   return (

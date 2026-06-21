@@ -28,10 +28,10 @@ export interface SpotPool {
   poolId: string;
 }
 
-/** spot_mid_price */
+/** spot_mid_price — midPrice is null when the book is empty (no orders), not an error. */
 export interface SpotMid {
   poolKey: string;
-  midPrice: number;
+  midPrice: number | null;
 }
 
 export interface SpotLevel {

@@ -31,7 +31,10 @@ function factsFor(name: string, data: unknown): { label: string; rows: { label: 
   switch (name) {
     case 'spot_mid_price': {
       const m = data as SpotMid;
-      return { label: `${pool} · mid price`, rows: [{ label: 'Mid', value: formatUsd(num(m.midPrice), 4) }] };
+      return {
+        label: `${pool} · mid price`,
+        rows: [{ label: 'Mid', value: m.midPrice != null ? formatUsd(m.midPrice, 4) : '— no liquidity' }],
+      };
     }
     case 'spot_pool_params': {
       const p = data as SpotPoolParams;
