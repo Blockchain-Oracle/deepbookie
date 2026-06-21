@@ -88,13 +88,25 @@ function Hero({ category, dim }: { category: Category; dim?: boolean }) {
 
 function Compact({ category, dim }: { category: Category; dim?: boolean }) {
   return (
-    <div className={dim ? 'opacity-60' : ''}>
+    <div>
       <div className="flex items-center justify-between">
         <TileIcon kind={category.motif} />
-        <span className="flex-none text-[14px] leading-none text-[#c2bcb0] transition-transform duration-150 group-active:translate-x-0.5">→</span>
+        {dim ? (
+          <span className="size-1.5 flex-none rounded-full bg-wallet" />
+        ) : (
+          <span className="flex-none text-[14px] leading-none text-[#c2bcb0] transition-transform duration-150 group-active:translate-x-0.5">→</span>
+        )}
       </div>
       <div className="mb-0.5 mt-[9px] text-[13px] font-bold tracking-[-0.01em]">{category.title}</div>
-      <div className="text-[10.5px] leading-[1.3] text-muted">{category.mobileDesc}</div>
+      <div className="text-[10.5px] leading-[1.3] text-muted">
+        {dim ? (
+          <span className="inline-flex items-center gap-1 font-semibold text-wallet">
+            <span className="size-1.5 rounded-full bg-wallet" /> Connect wallet to use
+          </span>
+        ) : (
+          category.mobileDesc
+        )}
+      </div>
     </div>
   );
 }
