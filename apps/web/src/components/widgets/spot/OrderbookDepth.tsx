@@ -2,6 +2,7 @@
 
 import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { poolLabel } from '@/lib/format';
 import type { SpotLevel, SpotOrderbook } from '@/lib/bff/spot-types';
 
 const PRICE_DP = 4;
@@ -71,7 +72,7 @@ function BidRow({ level, depth }: { level: SpotLevel; depth: number }) {
 function Header({ poolKey, ticks }: { poolKey: string; ticks: number }) {
   return (
     <div className="mb-3 flex items-center justify-between">
-      <span className="text-[13.5px] font-bold text-ink">{poolKey.replace(/_/g, '/')}</span>
+      <span className="text-[13.5px] font-bold text-ink">{poolLabel(poolKey)}</span>
       <div className="flex items-center gap-1.5">
         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#2C5E4A]" />
         <span className="font-mono text-[10.5px] font-medium text-[#2C5E4A]">
@@ -115,7 +116,7 @@ function EmptyState({ poolKey }: { poolKey: string }) {
     <Card className="flex w-full max-w-[380px] flex-col items-center justify-center gap-1.5 px-4 py-7">
       <span className="text-[13.5px] font-semibold text-ink">Empty book</span>
       <span className="text-[12px] text-muted">
-        No resting orders on {poolKey.replace(/_/g, '/')}.
+        No resting orders on {poolLabel(poolKey)}.
       </span>
     </Card>
   );

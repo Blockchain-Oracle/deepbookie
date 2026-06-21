@@ -45,7 +45,9 @@ export function ModifyOrderCard({
   const lotSize = params.data?.lotSize ?? 0;
   const minSize = params.data?.minSize ?? 0;
   const paramsReady = !!params.data;
-  const snap = (v: number) => (lotSize > 0 ? Math.floor(v / lotSize) * lotSize : v);
+  // +epsilon before flooring so an on-grid slider value (e.g. 2.3/0.1 = 22.9999…) doesn't drop a whole
+  // lot; round the product back to clean decimals to avoid float dust (2.2000000000000002).
+  const snap = (v: number) => (lotSize > 0 ? Math.round(Math.floor(v / lotSize + 1e-9) * lotSize * 1e9) / 1e9 : v);
 
   // The user drags the lot-aligned slider down to reduce; seed at the agent's in-range proposal, else
   // the current size (a no-op until dragged down). `override` tracks an edit.

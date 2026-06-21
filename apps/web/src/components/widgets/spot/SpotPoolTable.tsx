@@ -79,7 +79,13 @@ function PoolRow({
         )}
         <span className="flex-1 text-right font-mono text-[12px] tabular-nums text-muted">{takerTxt}</span>
         <span className="flex-[1.5] text-center">
-          {loading ? <Skeleton className="mx-auto h-4 w-16 rounded-pill" /> : <FeeChip whitelisted={whitelisted} />}
+          {params.isLoading ? (
+            <Skeleton className="mx-auto h-4 w-16 rounded-pill" />
+          ) : params.data ? (
+            <FeeChip whitelisted={whitelisted} />
+          ) : (
+            <span className="font-mono text-[10px] text-faint">—</span>
+          )}
         </span>
         <span className="flex-[1.1] text-right">
           <button type="button" onClick={() => onTrade(pool.poolKey)} className={CTA}>
@@ -99,7 +105,13 @@ function PoolRow({
               {pool.base}/{pool.quote}
             </span>
           </div>
-          {loading ? <Skeleton className="h-4 w-16 rounded-pill" /> : <FeeChip whitelisted={whitelisted} />}
+          {params.isLoading ? (
+            <Skeleton className="h-4 w-16 rounded-pill" />
+          ) : params.data ? (
+            <FeeChip whitelisted={whitelisted} />
+          ) : (
+            <span className="font-mono text-[10px] text-faint">—</span>
+          )}
         </div>
         <div className="flex items-end justify-between">
           <div>

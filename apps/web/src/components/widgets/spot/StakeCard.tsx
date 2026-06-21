@@ -186,7 +186,7 @@ export function StakeCard({
             <div className="mb-1.5 flex justify-between">
               <span className="text-[9.5px] font-semibold uppercase tracking-[0.13em] text-faint">Amount to stake</span>
               <span className="font-mono text-[10.5px] text-muted">
-                bal {deep(wallet)} ·{' '}
+in account {deep(wallet)} ·{' '}
                 <button type="button" onClick={() => setAmount(String(wallet))} className="font-bold text-green">
                   Max
                 </button>

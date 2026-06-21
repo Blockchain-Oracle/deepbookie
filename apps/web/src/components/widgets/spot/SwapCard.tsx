@@ -95,9 +95,10 @@ export function SwapCard({
   if (w.dismissed) return null;
 
   if (w.state !== 'proposed') {
-    // Only show the economics on a receipt the user actually authorized (`signed` set at sign time);
-    // a cancelled/void receipt has no snapshot, so we'd otherwise render a misleading "rate 0".
-    const lines: ReceiptLine[] = !signed
+    // Only show economics on the SIGNED (succeeded) receipt. `signed` is captured synchronously at
+    // click — so it's also set on a declined swap — hence gate on the terminal state, not the snapshot,
+    // so a cancelled/failed receipt doesn't render the committed terms as if the swap happened.
+    const lines: ReceiptLine[] = w.state !== 'signed'
       ? []
       : [
       { label: 'Rate', value: `1 ${from} = ${formatUsd(rate, 4)} ${to}` },

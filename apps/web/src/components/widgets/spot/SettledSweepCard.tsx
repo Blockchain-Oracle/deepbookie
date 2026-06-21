@@ -6,7 +6,7 @@ import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt'
 import { useSpotAccount } from '@/lib/hooks/useSpotRead';
 import type { SpotBalances } from '@/lib/bff/spot-types';
 import { SUISCAN_TX } from '@/lib/constants';
-import { docNumberFor, formatUsd, splitPool } from '@/lib/format';
+import { docNumberFor, formatUsd, poolLabel, splitPool } from '@/lib/format';
 
 const DEFAULT_POOL = 'SUI_DBUSDC';
 const ZERO: SpotBalances = { base: 0, quote: 0, deep: 0 };
@@ -46,7 +46,7 @@ export function SettledSweepCard({
   const w = useSpotWriteCard(part, addToolResult, onOutcome);
   const poolKey = (typeof w.proposed.poolKey === 'string' && w.proposed.poolKey) || DEFAULT_POOL;
   const { base, quote } = splitPool(poolKey);
-  const poolLabel = poolKey.replace(/_/g, '/');
+  const poolName = poolLabel(poolKey);
 
   const account = useSpotAccount(w.state === 'proposed' && w.hasBalanceManager ? poolKey : undefined);
   // spot_withdraw_settled_amounts sweeps the account's SETTLED balances (filled-order proceeds) — NOT
@@ -62,8 +62,8 @@ export function SettledSweepCard({
   // Terminal states render the receipt (title + Pool/Proceeds lines).
   if (w.state !== 'proposed') {
     const lines: ReceiptLine[] = [
-      { label: 'Pool', value: poolLabel },
-      { label: 'Proceeds', value: proceedsText || `${poolLabel} balances`, strong: true, accent: true },
+      { label: 'Pool', value: poolName },
+      { label: 'Proceeds', value: proceedsText || `${poolName} balances`, strong: true, accent: true },
     ];
     return (
       <SignReceipt
@@ -90,7 +90,7 @@ export function SettledSweepCard({
             ? 'Couldn’t reach your account — retry in a moment.'
             : w.storageBlocked
               ? 'Your browser is blocking storage — we can’t detect your account; don’t create a second one.'
-              : `Open a DeepBook account first to sweep ${poolLabel} proceeds.`}
+              : `Open a DeepBook account first to sweep ${poolName} proceeds.`}
         </span>
         <div className="flex gap-2.5">
           {w.bmError && (
@@ -136,7 +136,7 @@ export function SettledSweepCard({
         className="flex w-full items-center justify-between gap-2.5 rounded-card border border-dashed border-[#CBC6BB] bg-[#FBFAF7] px-[15px] py-3.5 text-left transition hover:bg-paper"
       >
         <span className="text-[12.5px] text-muted">
-          Couldn’t check settled proceeds on <span className="font-semibold text-ink-soft">{poolLabel}</span>.
+          Couldn’t check settled proceeds on <span className="font-semibold text-ink-soft">{poolName}</span>.
         </span>
         <span className="flex-none text-[11.5px] font-semibold text-ink underline underline-offset-2">Retry</span>
       </button>
@@ -151,7 +151,7 @@ export function SettledSweepCard({
           ✓
         </span>
         <span className="text-[12.5px] text-muted">
-          Nothing to sweep on <span className="font-semibold text-ink-soft">{poolLabel}</span> — all proceeds are settled.
+          Nothing to sweep on <span className="font-semibold text-ink-soft">{poolName}</span> — all proceeds are settled.
         </span>
       </div>
     );
