@@ -8,23 +8,23 @@ import {
   buildRedeemRange,
   buildSupply,
   buildWithdraw,
-  getRangeTradeAmounts,
-  getTradeAmounts,
   toDusdc,
 } from '@deepbookie/predict-client';
 import { z } from 'zod';
-import { ZERO_ADDRESS, type ToolContext } from '../context.js';
+import type { ToolContext } from '../context.js';
 import { defineWrite } from '../tool.js';
 import { resolveMarket } from './helpers.js';
 
-/** +5% over the exact mint cost — absorbs odds drift between the quote and the signature. */
-const FUND_BUFFER_BPS = 10_500n;
-const withBuffer = (cost: bigint) => (cost * FUND_BUFFER_BPS) / 10_000n;
-/** Pick the larger of the agent-supplied fundUsd and the auto-computed cost — never deposit less. */
-const fundAmount = (cost: bigint, fundUsd?: number) => {
+/**
+ * Deposit at least the full position size into the PredictManager. The mint PTB is
+ * deposit → withdraw_with_proof → mint; the withdraw pulls the premium, and on a freshly created
+ * manager the in-tx proof needs the deposit to comfortably exceed the premium or it aborts
+ * ("insufficient", code 3). A binary's premium is always ≤ the position size, so depositing the
+ * quantity is a guaranteed-sufficient margin. Leftover stays staged in the manager for the next bet.
+ */
+const fundAmount = (quantity: bigint, fundUsd?: number) => {
   const requested = fundUsd ? toDusdc(fundUsd) : 0n;
-  const auto = withBuffer(cost);
-  return requested > auto ? requested : auto;
+  return requested > quantity ? requested : quantity;
 };
 
 async function firstDusdcCoin(ctx: ToolContext): Promise<string> {
@@ -79,20 +79,11 @@ const mint = defineWrite({
     const { expiry, snap } = await resolveMarket(a.oracleId);
     const strike = snap(a.strikeUsd);
     const quantity = toDusdc(a.quantityUsd);
-    // ALWAYS fund the PredictManager in the same tx — the bet pays from the manager balance, so an
-    // unfunded manager aborts ("insufficient PredictManager balance"). We compute the exact mint cost
-    // and deposit cost + 5% from a wallet dUSDC coin, so a bet never fails for an empty manager.
-    const { mintCost } = await getTradeAmounts(ctx.client, {
-      oracleId: a.oracleId,
-      expiry,
-      strike,
-      direction: a.direction,
-      quantity,
-      sender: ctx.sender ?? ZERO_ADDRESS,
-    });
+    // ALWAYS fund the manager in the same tx (the bet pays from the manager balance) with at least the
+    // full position size — enough margin for the in-tx withdraw proof, even on a brand-new manager.
     const funding = {
       fundCoinId: await firstDusdcCoin(ctx),
-      depositAmount: fundAmount(mintCost, a.fundUsd),
+      depositAmount: fundAmount(quantity, a.fundUsd),
     };
     return buildMint({
       managerId: requireManager(ctx, a.managerId),
@@ -155,18 +146,10 @@ const mintRange = defineWrite({
     const lowerStrike = snap(a.lowerStrikeUsd);
     const higherStrike = snap(a.higherStrikeUsd);
     const quantity = toDusdc(a.quantityUsd);
-    // Always fund the manager with the exact range cost + 5% (same reason as binary mint).
-    const { mintCost } = await getRangeTradeAmounts(ctx.client, {
-      oracleId: a.oracleId,
-      expiry,
-      lower: lowerStrike,
-      higher: higherStrike,
-      quantity,
-      sender: ctx.sender ?? ZERO_ADDRESS,
-    });
+    // Always fund with at least the full position size — same in-tx proof margin as the binary mint.
     const funding = {
       fundCoinId: await firstDusdcCoin(ctx),
-      depositAmount: fundAmount(mintCost, a.fundUsd),
+      depositAmount: fundAmount(quantity, a.fundUsd),
     };
     return buildMintRange({
       managerId: requireManager(ctx, a.managerId),
