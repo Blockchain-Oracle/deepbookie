@@ -228,14 +228,22 @@ export function MessagePart({
   const out = tp.output;
 
   switch (name) {
-    case 'get_odds':
+    case 'get_odds': {
+      // Carry the FULL context the user picked on the card (market + strike + direction + amount) so the
+      // agent quotes + proposes the exact bet — no re-picking a market/strike, no lost context.
+      const oracleId = (tp.input as { oracleId?: string }).oracleId ?? '';
       return (
         <OddsCurveCard
           status={ready ? 'live' : 'loading'}
           odds={ready ? (out as Odds) : undefined}
-          onBet={readOnly ? undefined : (d, s) => onAction(`Buy ${d} at $${Math.round(s)}.`)}
+          onBet={
+            readOnly
+              ? undefined
+              : (d, s, amt) => onAction(`Place a $${amt} ${d} bet at strike $${Math.round(s)} on market ${oracleId}.`)
+          }
         />
       );
+    }
     case 'get_market':
       return ready ? <MarketHeader market={out as MarketState} /> : skeleton('h-16');
     case 'get_quote':

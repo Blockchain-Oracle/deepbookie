@@ -43,6 +43,24 @@ export function CoinLogo({ asset, size = 30 }: { asset: string; size?: number })
     );
   }
 
+  // DeepBook testnet coins (+ DBTC = testnet BTC) — branded disc + glyph so EVERY asset shows its own
+  // mark, never a hardcoded BTC. (Predict markets are BTC today but may add ETH/SUI; spot has these.)
+  if (key === 'DBTC') {
+    return (
+      <span className="flex items-center justify-center rounded-full font-bold text-paper" style={{ width: size, height: size, fontSize: size * 0.48, background: '#F7931A' }}>
+        ₿
+      </span>
+    );
+  }
+  if (DISC[key]) {
+    const d = DISC[key];
+    return (
+      <span className="flex items-center justify-center rounded-full font-bold text-paper" style={{ width: size, height: size, fontSize: size * 0.44, background: d.bg }}>
+        {d.glyph}
+      </span>
+    );
+  }
+
   return (
     <span
       className="flex items-center justify-center rounded-full bg-ink font-bold text-paper"
@@ -52,3 +70,11 @@ export function CoinLogo({ asset, size = 30 }: { asset: string; size?: number })
     </span>
   );
 }
+
+/** Disc tint + glyph per DeepBook coin — one source of truth for coin marks (used app-wide). */
+const DISC: Record<string, { bg: string; glyph: string }> = {
+  DEEP: { bg: '#2C5E4A', glyph: '◈' },
+  DBUSDC: { bg: '#2775CA', glyph: '$' },
+  DBUSDT: { bg: '#26A17B', glyph: '$' },
+  WAL: { bg: '#7d6f3a', glyph: 'W' },
+};

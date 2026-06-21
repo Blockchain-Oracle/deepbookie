@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { CoinLogo } from '@/components/widgets/CoinLogo';
 import type { Odds, OddsPoint, Direction } from '@/lib/bff/types';
 import { formatCountdown, formatPct, formatStrikeShort, formatUsd } from '@/lib/format';
 
@@ -26,7 +28,7 @@ function CurveHeader({ asset, spot, expiry, settled }: { asset: string; spot: nu
   return (
     <div className="mb-3 flex items-center justify-between">
       <div className="flex items-center gap-2">
-        <span className="flex size-[22px] items-center justify-center rounded-full bg-ink text-[11px] font-bold text-paper">₿</span>
+        <CoinLogo asset={asset} size={22} />
         <span className="text-sm font-bold">{asset}</span>
         <span className="font-mono text-xs text-muted">${formatUsd(spot)}</span>
       </div>
@@ -48,10 +50,14 @@ export interface OddsCurveCardProps {
   asset?: string;
   strikeUsd?: number; // selected strike (defaults to nearest spot)
   settled?: boolean;
-  onBet?: (direction: Direction, strikeUsd: number) => void;
+  onBet?: (direction: Direction, strikeUsd: number, amountUsd: number) => void;
 }
 
 export function OddsCurveCard({ status = 'live', odds, asset = 'BTC', strikeUsd, settled, onBet }: OddsCurveCardProps) {
+  // The user PICKS the strike (slider) + amount here, then bets — the agent never auto-picks. Hooks
+  // must precede the early returns below.
+  const [pick, setPick] = useState<number | null>(null);
+  const [amount, setAmount] = useState('5');
   if (status === 'loading' || (status === 'live' && !odds)) {
     return (
       <Card className="p-4">
@@ -86,7 +92,7 @@ export function OddsCurveCard({ status = 'live', odds, asset = 'BTC', strikeUsd,
     );
   }
 
-  const sel = nearest(odds.curve, strikeUsd ?? odds.spot);
+  const sel = nearest(odds.curve, pick ?? strikeUsd ?? odds.spot);
   const xs = odds.curve.map((p) => p.strike);
   const min = Math.min(...xs);
   const max = Math.max(...xs);
@@ -134,21 +140,55 @@ export function OddsCurveCard({ status = 'live', odds, asset = 'BTC', strikeUsd,
         <Stat label="P(down)" value={formatPct(1 - sel.probabilityUp)} />
       </div>
       {!settled && onBet && (
-        <div className="mt-3 flex gap-2">
-          <button
-            type="button"
-            onClick={() => onBet('UP', sel.strike)}
-            className="flex-1 rounded-card-in bg-ink py-2.5 text-sm font-semibold text-paper transition hover:opacity-90"
-          >
-            Bet UP
-          </button>
-          <button
-            type="button"
-            onClick={() => onBet('DOWN', sel.strike)}
-            className="flex-1 rounded-card-in border border-line-strong py-2.5 text-sm font-semibold text-ink-soft transition hover:bg-paper"
-          >
-            Bet DOWN
-          </button>
+        <div className="mt-3 border-t border-line pt-3">
+          {/* YOU pick the strike (the agent never auto-picks) */}
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-faint">Pick your strike</span>
+            <span className="font-mono text-[11px] tabular-nums text-ink">
+              ${formatUsd(sel.strike, 0)} · {formatPct(sel.probabilityUp)} up
+            </span>
+          </div>
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={Math.max(1, (max - min) / 200)}
+            value={sel.strike}
+            onChange={(e) => setPick(Number(e.target.value))}
+            aria-label="Strike"
+            className="mb-3 h-1.5 w-full cursor-pointer appearance-none rounded-pill bg-[#EDE9E0] accent-ink [&::-webkit-slider-thumb]:size-[15px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-ink [&::-webkit-slider-thumb]:bg-white"
+          />
+          <div className="mb-2.5 flex items-center justify-between rounded-card-in border border-line bg-[#FBFAF7] px-3 py-2">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-faint">Amount</span>
+            <span className="flex items-baseline gap-1">
+              <span className="text-[13px] text-muted">$</span>
+              <input
+                inputMode="decimal"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
+                placeholder="5"
+                className="w-16 bg-transparent text-right font-mono text-[15px] font-semibold tabular-nums text-ink outline-none placeholder:text-faint"
+              />
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={!(Number(amount) > 0)}
+              onClick={() => onBet('UP', sel.strike, Number(amount))}
+              className="flex-1 rounded-card-in bg-green py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Bet UP ↑
+            </button>
+            <button
+              type="button"
+              disabled={!(Number(amount) > 0)}
+              onClick={() => onBet('DOWN', sel.strike, Number(amount))}
+              className="flex-1 rounded-card-in bg-clay py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Bet DOWN ↓
+            </button>
+          </div>
         </div>
       )}
     </Card>
