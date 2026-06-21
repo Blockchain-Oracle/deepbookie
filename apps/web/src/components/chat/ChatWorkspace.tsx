@@ -4,12 +4,13 @@ import { useState } from 'react';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { Chat } from './Chat';
 import { ArchivedSession } from './ArchivedSession';
-import { ChatSessionSidebar } from './ChatSessionSidebar';
+import { ChatSessionDropdown } from './ChatSessionDropdown';
 
 /**
- * The chat surface: a conversation sidebar (when connected) + the main area. The main shows the LIVE
- * chat by default; selecting a past session from the sidebar opens it READ-ONLY (archived). "New chat"
- * remounts a fresh live session (the old one stays saved + archived in History).
+ * The chat surface: a conversation DROPDOWN (when connected) above the main area — tap it to drop down
+ * past sessions + New chat, tap again to close. The main area shows the LIVE chat by default; selecting
+ * a past session opens it READ-ONLY (archived). "New chat" remounts a fresh live session (the old one
+ * stays saved + archived in History). Works on every breakpoint (the old sidebar was desktop-only).
  */
 export function ChatWorkspace() {
   const account = useCurrentAccount();
@@ -22,9 +23,13 @@ export function ChatWorkspace() {
   };
 
   return (
-    <div className="flex h-full min-h-0">
-      {account && <ChatSessionSidebar selected={viewing} onSelect={setViewing} onNew={newChat} />}
-      <div className="min-w-0 flex-1">
+    <div className="flex h-full min-h-0 flex-col">
+      {account && (
+        <div className="flex shrink-0 items-center border-b border-line px-3 py-2 sm:px-4">
+          <ChatSessionDropdown selected={viewing} onSelect={setViewing} onNew={newChat} />
+        </div>
+      )}
+      <div className="min-h-0 min-w-0 flex-1">
         {viewing ? <ArchivedSession id={viewing} onNew={newChat} /> : <Chat key={liveKey} />}
       </div>
     </div>
