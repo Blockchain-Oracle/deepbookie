@@ -30,7 +30,7 @@ function out(data: unknown): void {
 const program = new Command()
   .name('deepbookie')
   .description('Trade DeepBook Predict from the terminal. The tool builds the tx; your local key signs it.')
-  .version('0.0.1');
+  .version('0.1.0');
 
 program
   .command('wallet')

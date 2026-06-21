@@ -1,13 +1,16 @@
 {
   "name": "@deepbookie/mcp",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "DeepBookie MCP server (stdio) — trade DeepBook Predict from any MCP client; signs with a local key.",
   "license": "MIT",
   "type": "module",
   "bin": {
     "deepbookie-mcp": "./dist/index.js"
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
@@ -15,9 +18,34 @@
   },
   "dependencies": {
     "@deepbookie/core": "workspace:*",
-    "@deepbookie/node": "workspace:*",
     "@deepbookie/predict-client": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@mysten/sui": "^2.19.0"
-  }
+    "@mysten/sui": "^2.19.0",
+    "pino": "^9.5.0"
+  },
+  "author": "blockchainoracle <blockchainoracle.dev@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Blockchain-Oracle/deepbookie.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://deepbookie.vercel.app",
+  "bugs": {
+    "url": "https://github.com/Blockchain-Oracle/deepbookie/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "sui",
+    "deepbook",
+    "mcp",
+    "model-context-protocol",
+    "agent",
+    "predict",
+    "trading"
+  ]
 }
