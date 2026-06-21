@@ -82,6 +82,9 @@ export interface SpotBalances {
   deep: number;
 }
 
+/** The all-zero SpotBalances — one named constant so a field rename can't leave an inline literal behind. */
+export const ZERO_SPOT_BALANCES: SpotBalances = { base: 0, quote: 0, deep: 0 };
+
 /** spot_account — your balance-manager account state in a pool. */
 export interface SpotAccount {
   poolKey: string;

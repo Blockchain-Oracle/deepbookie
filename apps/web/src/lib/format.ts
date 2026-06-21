@@ -38,6 +38,16 @@ export function formatPct(p: number, decimals = 1): string {
   return `${(p * 100).toFixed(decimals)}%`;
 }
 
+/** Spot price/amount with a precision ladder: 2dp ≥1000, 4dp ≥1, else 4 significant figures so a tiny
+ *  value (e.g. a sub-1e-4 DBTC amount) doesn't collapse to "0.0000". `empty` shows for a non-positive
+ *  value — pass "—" for a missing read, "0" for a genuine zero. */
+export function formatSpotPrice(n: number, empty = '—'): string {
+  if (!(n > 0)) return empty;
+  if (n >= 1000) return formatUsd(n, 2);
+  if (n >= 1) return formatUsd(n, 4);
+  return n.toPrecision(4);
+}
+
 /** Time-to-expiry as "27m" or "1h 12m" (0 when past). */
 export function formatCountdown(expiryMs: number, nowMs = Date.now()): string {
   const mins = Math.max(0, Math.round((expiryMs - nowMs) / 60_000));

@@ -25,7 +25,10 @@ function applyOutcomes(messages: UIMessage[], outcomes: TxOutcomeRow[]): UIMessa
       const part = p as Record<string, unknown> & { toolCallId?: string };
       const o = part.toolCallId ? byId.get(part.toolCallId) : undefined;
       if (!o) return p;
-      if (o.status === 'signed') return { ...part, state: 'output-available', output: { digest: o.digest } };
+      // Merge (don't replace) so the EDITED figures a card persisted at sign time (stake amount,
+      // reduce qty, governance fees) survive the digest overlay — else the replayed receipt shows 0.
+      if (o.status === 'signed')
+        return { ...part, state: 'output-available', output: { ...(part.output as Record<string, unknown> | undefined), digest: o.digest } };
       if (o.status === 'cancelled') return { ...part, state: 'output-available', output: { status: 'cancelled' } };
       return { ...part, state: 'output-error', errorText: 'The transaction failed.' };
     }) as UIMessage['parts'],

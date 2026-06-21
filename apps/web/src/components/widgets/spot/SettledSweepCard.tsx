@@ -5,12 +5,10 @@ import { NoBalanceManagerNotice } from '@/components/widgets/spot/NoBalanceManag
 import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/widgets/ReceiptController';
 import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt';
 import { useSpotAccount } from '@/lib/hooks/useSpotRead';
-import type { SpotBalances } from '@/lib/bff/spot-types';
+import { ZERO_SPOT_BALANCES, type SpotBalances } from '@/lib/bff/spot-types';
 import { SUISCAN_TX } from '@/lib/constants';
 import { docNumberFor, formatUsd, poolLabel, splitPool } from '@/lib/format';
 import { DEFAULT_SPOT_POOL } from '@/lib/spot/constants';
-
-const ZERO: SpotBalances = { base: 0, quote: 0, deep: 0 };
 
 /** A coin amount worth showing — drops dust below half a display unit. */
 const sig = (n: number) => Math.abs(n) >= 0.005;
@@ -52,7 +50,7 @@ export function SettledSweepCard({
   const account = useSpotAccount(w.state === 'proposed' && w.hasBalanceManager ? poolKey : undefined);
   // spot_withdraw_settled_amounts sweeps the account's SETTLED balances (filled-order proceeds) — NOT
   // fee rebates (those are claimed separately via spot_claim_rebates in GovernanceCard).
-  const settled = account.data?.settled ?? ZERO;
+  const settled = account.data?.settled ?? ZERO_SPOT_BALANCES;
   const parts = proceedsParts(settled, base, quote);
   const proceedsText = parts.length ? fmtProceeds(parts) : '';
 

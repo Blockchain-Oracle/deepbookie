@@ -10,6 +10,7 @@ import { useSpotAccount, useSpotPoolParams } from '@/lib/hooks/useSpotRead';
 import { SUISCAN_TX } from '@/lib/constants';
 import { docNumberFor, formatAddress, formatPct, formatUsd, num, poolLabel, str } from '@/lib/format';
 import { DEFAULT_SPOT_POOL } from '@/lib/spot/constants';
+import { ZERO_SPOT_BALANCES } from '@/lib/bff/spot-types';
 
 const seed = (v: unknown) => (num(v) > 0 ? String(num(v)) : '');
 /** Fee fields edit PERCENT; the agent proposes a FRACTION (0.0008 = 0.08%) — seed as percent so an
@@ -73,7 +74,7 @@ export function GovernanceCard({
   }
 
   const cur = params.data;
-  const rebates = account.data?.rebates ?? { base: 0, quote: 0, deep: 0 };
+  const rebates = account.data?.rebates ?? ZERO_SPOT_BALANCES;
   const totalRebate = rebates.base + rebates.quote + rebates.deep;
   // Only "empty" on a SUCCESSFUL read — a failed read must not disable a legitimate claim.
   const emptyRebate = account.isSuccess && totalRebate <= 0;

@@ -3,7 +3,7 @@
 import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { CoinLogo } from '@/components/widgets/CoinLogo';
-import { formatPct, formatUsd } from '@/lib/format';
+import { formatPct, formatSpotPrice } from '@/lib/format';
 import { useSpotMid, useSpotPoolParams } from '@/lib/hooks/useSpotRead';
 import type { SpotPool } from '@/lib/bff/spot-types';
 
@@ -11,13 +11,8 @@ const TH = 'text-[10px] font-semibold uppercase tracking-[0.1em] text-faint';
 const CTA =
   'rounded-[7px] bg-ink px-3.5 py-1.5 text-[12px] font-semibold text-paper transition hover:opacity-90';
 
-/** Mid with sensible precision: 4dp under 100, 2dp with thousands separators above. */
-function fmtMid(mid: number): string {
-  if (!mid || mid <= 0) return '—';
-  if (mid >= 1000) return formatUsd(mid, 2);
-  if (mid >= 1) return mid.toFixed(4);
-  return mid.toPrecision(4);
-}
+/** Mid price — the shared spot price ladder, with "—" for an empty/zero book. */
+const fmtMid = (mid: number) => formatSpotPrice(mid, '—');
 const fmtPct = (fee: number): string => (Number.isFinite(fee) ? formatPct(fee, 2) : '—');
 
 /** A subtle read-error marker — distinguishes a failed mid/params read from a genuine empty/zero value. */

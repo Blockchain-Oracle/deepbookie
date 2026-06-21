@@ -28,6 +28,10 @@ export function OpenOrdersList({ orders }: { orders: SpotOpenOrder[] }) {
   const account = useCurrentAccount();
   const bm = useBalanceManager(account?.address);
   const balanceManagerId = bm.data?.balanceManagerId ?? undefined;
+  // A resolver FAILURE (transient) leaves balanceManagerId undefined → cancels disable. Distinguish it
+  // from a genuine "no account" so we show a Retry banner, not silently-dead buttons (mirrors the write
+  // cards' NoBalanceManagerNotice). The order LIST renders independently of the BM resolver.
+  const bmError = (bm.data?.error ?? false) || bm.isError;
 
   const cancelAll = useTxAction();
 
@@ -57,6 +61,19 @@ export function OpenOrdersList({ orders }: { orders: SpotOpenOrder[] }) {
           {allBusy ? 'Cancelling…' : 'Cancel all'}
         </button>
       </div>
+
+      {bmError && !balanceManagerId && (
+        <div className="flex items-center justify-between gap-2.5 border-b border-[#F2EEE6] bg-[#FBF1EC] px-4 py-2">
+          <span className="text-[11.5px] font-medium text-clay">Couldn’t reach your account — cancels are paused.</span>
+          <button
+            type="button"
+            onClick={() => void bm.refetch()}
+            className="flex-none text-[11.5px] font-semibold text-ink underline underline-offset-2"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {cancelAll.status === 'done' && cancelAll.digest && (
         <a

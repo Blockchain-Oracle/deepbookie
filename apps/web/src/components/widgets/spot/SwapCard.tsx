@@ -6,16 +6,15 @@ import { useSpotWriteCard } from '@/components/widgets/spot/useSpotWriteCard';
 import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/widgets/ReceiptController';
 import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt';
 import { SUISCAN_TX } from '@/lib/constants';
-import { docNumberFor, formatUsd, splitPool } from '@/lib/format';
+import { docNumberFor, formatSpotPrice, formatUsd, splitPool } from '@/lib/format';
 
 const SLIPPAGES = [0.5, 1] as const;
 // DEEP fee headroom on non-whitelisted pools: the quoted deepRequired is computed against the book at
 // quote time, so we budget +5% to absorb a small move between quote and signature; unused DEEP is
 // returned to the wallet by the swap's transferObjects.
 const DEEP_FEE_BUFFER = 1.05;
-/** Spot number display (rate + amounts): 2dp ≥1000, 4dp ≥1, else precision-aware so a tiny value
- *  (e.g. a sub-1e-4 DBTC output) doesn't collapse to "0.0000". */
-const fmtRate = (r: number) => (r >= 1000 ? formatUsd(r, 2) : r >= 1 ? formatUsd(r, 4) : r > 0 ? r.toPrecision(4) : '0');
+/** Rate + amount display — the shared spot price ladder, with "0" for a non-positive value. */
+const fmtRate = (r: number) => formatSpotPrice(r, '0');
 // Coin disc tints from the design system (Components-Spot.dc.html §2).
 const COIN_BG: Record<string, string> = { SUI: '#4DA2FF', WAL: '#7d6f3a' };
 const COIN_GLYPH: Record<string, string> = { DBUSDC: '$', DBUSDT: '$', DBTC: '₿' };
@@ -133,11 +132,21 @@ export function SwapCard({
     );
   }
 
-  const cta = emptyBook ? 'No liquidity' : quote.isError && amt > 0 ? 'Re-quote needed' : quoting ? 'Fetching quote…' : 'Swap';
+  const cta = emptyBook
+    ? 'No liquidity'
+    : quote.isError && amt > 0
+      ? 'Re-quote needed'
+      : !params.isSuccess && amt > 0
+        ? 'Loading pool…'
+        : quoting
+          ? 'Fetching quote…'
+          : 'Swap';
   // Block signing off a STALE quote: TanStack v5 retains the last good `quote.data` when a background
   // refetch (e.g. window-focus during an indexer cold-start) errors. Without !quote.isError the button
   // would stay enabled and sign a minOut/deepAmount derived from the out-of-date snapshot.
-  const canSwap = amt > 0 && out > 0 && !quoting && !emptyBook && !quote.isError;
+  // Also require params.isSuccess so the whitelist/fee model is KNOWN at sign — the signed deepAmount
+  // (whitelisted ? 0 : …) must not depend on an unloaded default; keeps the sign self-consistent.
+  const canSwap = amt > 0 && out > 0 && !quoting && !emptyBook && !quote.isError && params.isSuccess;
   const fieldFrom = 'rounded-card-in border border-line bg-paper px-[13px] py-[11px]';
 
   return (
