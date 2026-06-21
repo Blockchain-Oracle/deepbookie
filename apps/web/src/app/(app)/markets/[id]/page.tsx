@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+import { ConnectModal, useCurrentAccount } from '@mysten/dapp-kit';
 import { useParams, useRouter } from 'next/navigation';
 import { Page } from '@/components/shell/Page';
 import { Card } from '@/components/ui/Card';
@@ -25,6 +27,8 @@ function Stat({ label, value }: { label: string; value: string }) {
 export default function MarketDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const account = useCurrentAccount();
+  const [connectOpen, setConnectOpen] = useState(false);
   const { data, isLoading, isError } = useMarket(id);
   const trades = useMarketTrades(id);
 
@@ -95,6 +99,8 @@ export default function MarketDetailPage() {
           odds={odds ?? undefined}
           asset={market.asset}
           settled={settled}
+          connected={!!account}
+          onNeedWallet={() => setConnectOpen(true)}
           onBet={(direction, strikeUsd) =>
             router.push(
               chatHref(
@@ -111,6 +117,11 @@ export default function MarketDetailPage() {
         />
         <TradeTape trades={trades.data} loading={trades.isLoading && !trades.data} />
       </div>
+      <ConnectModal
+        trigger={<span tabIndex={-1} aria-hidden className="sr-only" />}
+        open={connectOpen}
+        onOpenChange={setConnectOpen}
+      />
     </Page>
   );
 }

@@ -95,12 +95,19 @@ export function Chat() {
   useEffect(() => {
     if (autoSent.current) return;
     const q = new URLSearchParams(window.location.search).get('q');
-    if (q) {
-      autoSent.current = true;
-      sendMessage({ text: q });
-      window.history.replaceState(null, '', '/chat');
+    if (!q) return;
+    autoSent.current = true;
+    window.history.replaceState(null, '', '/chat');
+    // Wallet-gate the deep-link intent too: a disconnected ?q= (e.g. a "Bet UP" tap from the markets
+    // page) must NOT auto-send. Prefill it and open the connect modal so it only goes through once a
+    // wallet is connected — otherwise the chat would run a bet flow with no wallet.
+    if (!connected) {
+      setInput(q);
+      setConnectOpen(true);
+      return;
     }
-  }, [sendMessage]);
+    sendMessage({ text: q });
+  }, [sendMessage, connected]);
 
   // A proposed write that hasn't been signed/cancelled is an UNRESOLVED tool call. Sending a new
   // message while one is pending orphans it → the next turn throws AI_MissingToolResultsError and the
