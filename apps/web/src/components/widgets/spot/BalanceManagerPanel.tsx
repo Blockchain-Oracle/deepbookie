@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ConnectModal, useCurrentAccount } from '@mysten/dapp-kit';
 import { useTxAction, type TxStatus } from '@/lib/hooks/useTxAction';
 import { useBalanceManager } from '@/lib/hooks/useBalanceManager';
-import { useSpotBalance } from '@/lib/hooks/useSpotRead';
+import { useSpotBalance, useWalletCoinBalance } from '@/lib/hooks/useSpotRead';
 import { CoinLogo } from '@/components/widgets/CoinLogo';
 import { SUISCAN_OBJECT, SUISCAN_TX } from '@/lib/constants';
 import { formatAddress, formatUsd } from '@/lib/format';
@@ -57,6 +57,12 @@ export function BalanceManagerPanel({ onAction }: { onAction?: (text: string) =>
   const [amount, setAmount] = useState('');
 
   const managerId = bm.data?.balanceManagerId ?? null;
+  // Selected-coin balance for the form: deposit caps at the WALLET balance (what you can deposit),
+  // withdraw at the BM balance — shown + Max so the user sees what's available, not a blind
+  // "not enough balance" after the fact. Gated on managerId so no read fires before the account exists.
+  const formBmBal = useSpotBalance(managerId ? coin : undefined).data?.balance ?? 0;
+  const walletQ = useWalletCoinBalance(managerId && mode === 'deposit' ? coin : undefined);
+  const available = mode === 'deposit' ? (walletQ.data ?? 0) : formBmBal;
   const amt = Number(amount);
   const busy = create.status === 'signing' || move.status === 'signing';
 
@@ -215,6 +221,13 @@ export function BalanceManagerPanel({ onAction }: { onAction?: (text: string) =>
                 </option>
               ))}
             </select>
+          </div>
+          <div className="mb-1.5 text-right font-mono text-[10.5px] text-muted">
+            {mode === 'deposit' ? 'in wallet' : 'in account'}{' '}
+            {mode === 'deposit' && walletQ.isLoading ? '…' : formatUsd(available, available >= 1000 ? 1 : 2)} {coin} ·{' '}
+            <button type="button" onClick={() => setAmount(String(available))} className="font-bold text-green">
+              Max
+            </button>
           </div>
           <input
             inputMode="decimal"

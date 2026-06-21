@@ -1,7 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useCurrentAccount } from '@mysten/dapp-kit';
+import { useCurrentAccount, useSuiClient } from '@mysten/dapp-kit';
+import { POLL } from '@/lib/constants';
 import { apiPost } from './client';
 import { useBalanceManager } from './useBalanceManager';
 import type {
@@ -60,6 +61,29 @@ export function useSpotSwapQuote(
 
 export const useSpotBalance = (coinKey?: string, opts?: SpotReadOpts) =>
   useSpotRead<SpotCoinBalance>('spot_balance', coinKey ? { coinKey } : undefined, opts);
+
+/** The connected wallet's free balance of a coin (what's available to DEPOSIT) — read directly from
+ *  chain. The coinType comes from the BM `spot_balance` read; decimals from on-chain coin metadata, so
+ *  it's correct for any coin without hardcoding scalars. `undefined` coinKey disables it. */
+export function useWalletCoinBalance(coinKey?: string) {
+  const owner = useCurrentAccount()?.address;
+  const client = useSuiClient();
+  const coinType = useSpotBalance(coinKey).data?.coinType;
+  return useQuery({
+    queryKey: ['walletCoin', owner ?? null, coinType ?? null],
+    enabled: !!owner && !!coinType,
+    queryFn: async () => {
+      const [bal, meta] = await Promise.all([
+        client.getBalance({ owner: owner!, coinType: coinType! }),
+        client.getCoinMetadata({ coinType: coinType! }),
+      ]);
+      const dec = meta?.decimals ?? 9;
+      return Number(BigInt(bal.totalBalance)) / 10 ** dec;
+    },
+    refetchInterval: POLL.balance,
+    staleTime: 4_000,
+  });
+}
 
 export const useSpotAccount = (poolKey?: string, opts?: SpotReadOpts) =>
   useSpotRead<SpotAccount>('spot_account', poolKey ? { poolKey } : undefined, opts);

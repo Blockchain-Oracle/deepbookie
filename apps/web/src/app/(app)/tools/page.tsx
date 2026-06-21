@@ -1,9 +1,13 @@
+'use client';
+
+import { useMemo, useState } from 'react';
 import { allTools } from '@deepbookie/core';
 import { Page, PageHeader } from '@/components/shell/Page';
 import { ToolRow } from './ToolRow';
 
-// Keeper tool — not user-facing, hidden from the catalog (matches the agent's excluded set).
-const HIDDEN = new Set(['redeem_permissionless']);
+// Hidden from the catalog — matches the web agent's EXCLUDED set: a keeper tool + the market-order
+// tools (no editable card on web; the swap tools cover at-market execution).
+const HIDDEN = new Set(['redeem_permissionless', 'spot_place_market_order', 'spot_can_place_market_order']);
 
 const CATEGORIES: { title: string; blurb: string; tools: string[] }[] = [
   {
@@ -65,37 +69,75 @@ const CATEGORIES: { title: string; blurb: string; tools: string[] }[] = [
 ];
 
 /** Tool catalog — generated from the live core registry so it can never drift from what ships.
- *  Click any tool to copy its name to the clipboard. */
+ *  Search by name or description; click any tool to copy its name. */
 export default function ToolsPage() {
-  const byName = new Map(allTools.filter((t) => !HIDDEN.has(t.name)).map((t) => [t.name, t]));
-  const categorized = new Set(CATEGORIES.flatMap((c) => c.tools));
-  const other = [...byName.values()].filter((t) => !categorized.has(t.name)).map((t) => t.name);
-  const sections = other.length ? [...CATEGORIES, { title: 'Other', blurb: '', tools: other }] : CATEGORIES;
+  const [query, setQuery] = useState('');
+  const byName = useMemo(() => new Map(allTools.filter((t) => !HIDDEN.has(t.name)).map((t) => [t.name, t])), []);
+  const total = byName.size;
+
+  const sections = useMemo(() => {
+    const categorized = new Set(CATEGORIES.flatMap((c) => c.tools));
+    const other = [...byName.values()].filter((t) => !categorized.has(t.name)).map((t) => t.name);
+    const all = other.length ? [...CATEGORIES, { title: 'Other', blurb: '', tools: other }] : CATEGORIES;
+    const q = query.trim().toLowerCase();
+    if (!q) return all.map((c) => ({ ...c, tools: c.tools.filter((n) => byName.has(n)) }));
+    // Match on tool name OR description; keep only categories with a hit.
+    return all
+      .map((c) => ({
+        ...c,
+        tools: c.tools.filter((n) => {
+          const t = byName.get(n);
+          return t && (n.toLowerCase().includes(q) || t.description.toLowerCase().includes(q));
+        }),
+      }))
+      .filter((c) => c.tools.length > 0);
+  }, [byName, query]);
+
+  const shown = sections.reduce((n, c) => n + c.tools.length, 0);
 
   return (
     <Page>
       <PageHeader
         title="What DeepBookie can do"
-        subtitle={`${byName.size} tools the agent can call — click any one to copy its name; you sign every write yourself`}
+        subtitle={`${total} tools the agent can call — search or click any one to copy its name; you sign every write yourself`}
       />
-      <div className="flex flex-col gap-6">
-        {sections.map((cat) => (
-          <section key={cat.title}>
-            <div className="mb-0.5 flex items-baseline justify-between">
-              <h3 className="text-[15px] font-bold">{cat.title}</h3>
-              <span className="font-mono text-[10.5px] text-faint">{cat.tools.length} tools</span>
-            </div>
-            {cat.blurb && <p className="mb-2.5 text-[12.5px] text-muted">{cat.blurb}</p>}
-            <div className="grid gap-2.5 sm:grid-cols-2">
-              {cat.tools.map((name) => {
-                const t = byName.get(name);
-                if (!t) return null;
-                return <ToolRow key={name} name={name} desc={t.description} kind={t.kind} />;
-              })}
-            </div>
-          </section>
-        ))}
+      <div className="mb-5">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search tools — e.g. swap, stake, odds, redeem…"
+          className="w-full rounded-card-in border border-line-strong bg-card px-4 py-2.5 text-sm text-ink outline-none transition placeholder:text-faint focus:border-ink"
+        />
+        {query.trim() && (
+          <div className="mt-1.5 px-1 text-[11.5px] text-muted">
+            {shown} of {total} tools match “{query.trim()}”
+          </div>
+        )}
       </div>
+      {sections.length === 0 ? (
+        <div className="rounded-card border border-line bg-card p-8 text-center text-sm text-muted">
+          No tools match “{query.trim()}”.
+        </div>
+      ) : (
+        <div className="flex flex-col gap-6">
+          {sections.map((cat) => (
+            <section key={cat.title}>
+              <div className="mb-0.5 flex items-baseline justify-between">
+                <h3 className="text-[15px] font-bold">{cat.title}</h3>
+                <span className="font-mono text-[10.5px] text-faint">{cat.tools.length} tools</span>
+              </div>
+              {cat.blurb && <p className="mb-2.5 text-[12.5px] text-muted">{cat.blurb}</p>}
+              <div className="grid gap-2.5 sm:grid-cols-2">
+                {cat.tools.map((name) => {
+                  const t = byName.get(name);
+                  if (!t) return null;
+                  return <ToolRow key={name} name={name} desc={t.description} kind={t.kind} />;
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
     </Page>
   );
 }
