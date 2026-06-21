@@ -1,0 +1,53 @@
+---
+title: Milestones
+description: What DeepBookie has shipped, what's being built, and what's on the roadmap.
+---
+
+# Milestones
+
+What's live today, what's next, and where DeepBookie is headed.
+
+<Roadmap
+  phases={[
+    {
+      label: 'Now',
+      subtitle: 'Shipped and live on Sui testnet.',
+      status: 'shipped',
+      items: [
+        { title: 'Live web app', body: 'Chat to trade DeepBook at deepbookie.xyz — Predict and Spot, signed in your wallet.' },
+        { title: '44 tools', body: 'The full DeepBook surface — Predict (yes/no BTC markets) and Spot (the order book).' },
+        { title: '5 npm packages', body: 'predict-client, core, node, mcp, cli — under the @deepbookie scope.' },
+        { title: 'Claude skill', body: 'Install the agent in one line. The same tools your wallet signs.' },
+        { title: 'MCP + CLI', body: 'Trade from Claude Desktop, Cursor, or your terminal.' },
+        { title: 'First Predict TS client', body: 'No one had shipped a TypeScript client for DeepBook Predict — until now.' },
+      ],
+    },
+    {
+      label: 'Next',
+      subtitle: 'Building right now.',
+      status: 'building',
+      items: [
+        { title: 'Mainnet', body: 'Move from testnet to real trades on Sui mainnet.' },
+        { title: 'Mobile app', body: 'iOS and Android — chat to trade from your phone.' },
+        { title: 'Telegram & Discord bot', body: 'Trade without leaving your group chat.' },
+      ],
+    },
+    {
+      label: 'Later',
+      subtitle: 'On the roadmap.',
+      status: 'later',
+      items: [
+        { title: 'Voice trading', body: 'Talk to DeepBookie, don’t type. Same wallet signature at the end.' },
+        { title: 'More markets', body: 'ETH, SOL, and beyond — every asset DeepBook lists.' },
+        { title: 'Agent strategies', body: 'Auto-trade within limits you set. Stop-loss, take-profit, scheduled bets.' },
+        { title: 'Embeddable SDK', body: 'Drop DeepBookie’s chat into any Sui dapp in a few lines.' },
+      ],
+    },
+  ]}
+/>
+
+## How we pick what to build next
+
+Every milestone here was picked by one rule: **does it help more people trade DeepBook?** Mainnet, mobile, voice, more assets — every one removes a step between *"I want to make this trade"* and *"my wallet signed it."*
+
+If something you want isn't on this list, [open an issue](https://github.com/Blockchain-Oracle/deepbookie/issues) — the roadmap is public on purpose.
