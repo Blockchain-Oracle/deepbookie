@@ -3,7 +3,7 @@
 DeepBookie is an AI agent for trading **DeepBook Predict** (Sui's testnet, expiry-based prediction market). One shared tool registry → **MCP + CLI + skill + a generative-UI web app + landing**. **Tools build UNSIGNED Sui transactions; signing happens at the edge** (local key for MCP/CLI, browser wallet for web) — the agent holds no key.
 
 ## Scope (locked)
-Predict-deep (27 tools): all Predict writes/reads + a thin Spot funding/price bridge. **No margin / maintainer / admin** (not viable on testnet). The web app is the headline. Full plan: `~/.claude/plans/graceful-wondering-phoenix.md`; rationale in `research/`; designer spec in `docs/DESIGNER-BRIEF.md`.
+Predict-deep (27 tools): all Predict writes/reads + a thin Spot funding/price bridge. **No margin / maintainer / admin** (not viable on testnet). The web app is the headline.
 
 ## Layout
 - `packages/predict-client` — `@deepbookie/predict-client`: the first DeepBook Predict TS client — unsigned-PTB builders + indexer/devInspect readers + SVI→N(d2) math. Depends ONLY on `@mysten/sui`. The durable npm artifact.
