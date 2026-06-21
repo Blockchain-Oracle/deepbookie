@@ -167,7 +167,9 @@ function HistoryReplay({ id, title, onBack }: { id: string; title: string; onBac
           read-only
         </span>
       </div>
-      <div className="min-h-0 flex-1">
+      {/* flex-col so MessageList's `flex-1 overflow-y-auto` resolves + actually scrolls (a plain
+          block parent collapses flex-1 → the transcript overflowed with no scroll). */}
+      <div className="flex min-h-0 flex-1 flex-col">
         {session.isLoading && !session.data ? (
           <div className="p-6">
             <Skeleton className="h-40 w-full" />

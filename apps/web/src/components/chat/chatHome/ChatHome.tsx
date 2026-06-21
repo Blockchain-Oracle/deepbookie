@@ -46,7 +46,13 @@ export function ChatHome({ onAction }: { onAction: (text: string) => void }) {
 
       {/* mobile: featured hero + 2-col grid (no horizontal scroll) */}
       <div className="mt-5 px-4 md:hidden">
-        <CategoryTile category={CATEGORIES[0]!} variant="hero" disabled={false} onAction={onAction} onNeedWallet={needWallet} />
+        <CategoryTile
+          category={CATEGORIES[0]!}
+          variant="hero"
+          disabled={disabled(CATEGORIES[0]!)}
+          onAction={onAction}
+          onNeedWallet={needWallet}
+        />
         <div className="my-3.5 flex items-center gap-2.5">
           <span className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-faint">Or pick a category</span>
           <span className="h-px flex-1 bg-line" />

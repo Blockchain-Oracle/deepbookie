@@ -23,7 +23,7 @@ export function CategoryTile({
   onAction: (text: string) => void;
   onNeedWallet: () => void;
 }) {
-  const inner = variant === 'hero' ? <Hero category={category} /> : <Compact category={category} dim={disabled} />;
+  const inner = variant === 'hero' ? <Hero category={category} dim={disabled} /> : <Compact category={category} dim={disabled} />;
   const cls = `${TILE} ${variant === 'hero' ? 'border-[#C9D8CF]' : 'border-line'} ${disabled ? 'cursor-pointer bg-[#FBFAF7]' : 'cursor-pointer'}`;
 
   if (disabled) {
@@ -47,7 +47,7 @@ export function CategoryTile({
   );
 }
 
-function Hero({ category }: { category: Category }) {
+function Hero({ category, dim }: { category: Category; dim?: boolean }) {
   return (
     <>
       <div className="mb-[9px] flex items-center justify-between">
@@ -72,10 +72,16 @@ function Hero({ category }: { category: Category }) {
           <div className="mt-[3px] text-[9.5px] font-semibold uppercase tracking-[0.13em] text-faint">UP · 4:00pm</div>
         </div>
       </div>
-      <div className="mt-3 flex items-center gap-1.5 rounded-[8px] border border-[#EDE9E0] bg-[#F6F4EF] px-2.5 py-[7px] font-mono text-[10.5px] text-ink-soft">
-        <span className="min-w-0 flex-1 truncate">&ldquo;{category.prompt}&rdquo;</span>
-        <span className="ml-auto flex-none">→</span>
-      </div>
+      {dim ? (
+        <div className="mt-3 flex items-center gap-1.5 rounded-[8px] border border-wallet/30 bg-wallet/10 px-2.5 py-[7px] text-[10.5px] font-semibold text-wallet">
+          <span className="size-1.5 rounded-full bg-wallet" /> Connect wallet to use
+        </div>
+      ) : (
+        <div className="mt-3 flex items-center gap-1.5 rounded-[8px] border border-[#EDE9E0] bg-[#F6F4EF] px-2.5 py-[7px] font-mono text-[10.5px] text-ink-soft">
+          <span className="min-w-0 flex-1 truncate">&ldquo;{category.prompt}&rdquo;</span>
+          <span className="ml-auto flex-none">→</span>
+        </div>
+      )}
     </>
   );
 }
