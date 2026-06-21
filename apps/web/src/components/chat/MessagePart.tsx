@@ -32,6 +32,7 @@ import { ModifyOrderCard } from '@/components/widgets/spot/ModifyOrderCard';
 import { StakeCard } from '@/components/widgets/spot/StakeCard';
 import { GovernanceCard } from '@/components/widgets/spot/GovernanceCard';
 import { SettledSweepCard } from '@/components/widgets/spot/SettledSweepCard';
+import { StaticToolReceipt, StaticReadStub, HOOK_FIRING_READS } from '@/components/chat/StaticToolReceipt';
 import { poolLabel } from '@/lib/format';
 import type { Market, MarketState, Odds, Portfolio, Position, Positions, Quote, RangeQuote, Vault } from '@/lib/bff/types';
 import type { SpotCanPlace, SpotOpenOrder, SpotOrderbook, SpotPool } from '@/lib/bff/spot-types';
@@ -109,12 +110,16 @@ export function MessagePart({
   addToolResult,
   onAction,
   onOutcome,
+  readOnly,
 }: {
   role: string;
   part: Part;
   addToolResult: AddToolResult;
   onAction: (text: string) => void;
   onOutcome?: OnSignOutcome;
+  /** Archived/replay view: render every tool part STATICALLY — no interactive cards, no live hooks
+   *  (which would freeze the page), no re-prompt/re-sign on a finished conversation. */
+  readOnly?: boolean;
 }) {
   if (part.type === 'text') {
     if (role === 'user') {
@@ -134,6 +139,15 @@ export function MessagePart({
   if (!part.type.startsWith('tool-')) return null;
   const tp = part as ToolView;
   const name = tp.type.slice('tool-'.length);
+
+  // Archived/replay view: render static records only — never the interactive cards (they show
+  // Sign/Deposit buttons on a finished chat) and never the hook-firing read widgets (they'd fire live
+  // network polls and freeze the page). Pure-data read cards fall through but with their click/prompt
+  // callbacks gated off (below), so the user can SEE the odds/markets but can't re-prompt.
+  if (readOnly) {
+    if (WRITE.has(name) || SPOT_INPUT[name]) return <StaticToolReceipt part={tp} />;
+    if (HOOK_FIRING_READS.has(name)) return <StaticReadStub name={name} />;
+  }
 
   // Spot generative-input writes → their bespoke card (handles its own states + sign). These cards
   // seed editable fields from part.input via one-shot useState initializers, so we must wait until the
@@ -219,7 +233,7 @@ export function MessagePart({
         <OddsCurveCard
           status={ready ? 'live' : 'loading'}
           odds={ready ? (out as Odds) : undefined}
-          onBet={(d, s) => onAction(`Buy ${d} at $${Math.round(s)}.`)}
+          onBet={readOnly ? undefined : (d, s) => onAction(`Buy ${d} at $${Math.round(s)}.`)}
         />
       );
     case 'get_market':
@@ -238,7 +252,10 @@ export function MessagePart({
       return ready ? <ActivityTape bets={out as Position[]} /> : skeleton('h-24');
     case 'list_markets':
       return ready ? (
-        <MarketTable markets={out as Market[]} onPick={(m) => onAction(`Show the odds for the ${m.asset} market ${m.oracleId}.`)} />
+        <MarketTable
+          markets={out as Market[]}
+          onPick={readOnly ? undefined : (m) => onAction(`Show the odds for the ${m.asset} market ${m.oracleId}.`)}
+        />
       ) : (
         skeleton('h-24')
       );

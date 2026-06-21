@@ -12,12 +12,15 @@ export function MessageList({
   addToolResult,
   onAction,
   onOutcome,
+  readOnly,
 }: {
   messages: UIMessage[];
   status: string;
   addToolResult: AddToolResult;
   onAction: (text: string) => void;
   onOutcome?: OnSignOutcome;
+  /** Archived/replay view — render tool parts statically (no live cards, no re-prompt). */
+  readOnly?: boolean;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -55,6 +58,7 @@ export function MessageList({
                 addToolResult={addToolResult}
                 onAction={onAction}
                 onOutcome={onOutcome}
+                readOnly={readOnly}
               />
             ))}
           </div>

@@ -145,6 +145,7 @@ export default function HistoryPage() {
             status="ready"
             addToolResult={noopResult}
             onAction={() => {}}
+            readOnly
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted">Select a session.</div>
