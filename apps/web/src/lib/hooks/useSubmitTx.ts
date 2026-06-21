@@ -40,6 +40,13 @@ export function reasonFor(e: unknown): string {
 
 type ObjChange = { type: string; objectType?: string; objectId?: string };
 
+/** create-tools whose freshly-created SHARED manager id must be captured from effects (the resolvers
+ *  lag/can't-see-shared-objects, so the captured id is the authoritative source — see [[shared-bm…]]). */
+const CREATE_CAPTURE: Record<string, { kind: 'predict' | 'balance'; typeSuffix: string }> = {
+  spot_create_balance_manager: { kind: 'balance', typeSuffix: 'balance_manager::BalanceManager' },
+  create_manager: { kind: 'predict', typeSuffix: 'predict_manager::PredictManager' },
+};
+
 /** Bust the caches a write can affect, so balances/positions/spot reflect chain. */
 function bustCaches(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: ['balance'] });
@@ -83,39 +90,48 @@ export function useSubmitTx() {
       const tx = await getToolsForAdapter(allTools, ctx).build(toolName, safeInput);
       const { digest } = await signAndExecute({ transaction: tx });
 
-      // Capturing the freshly-created SHARED BalanceManager id is critical: the on-chain resolver can't
-      // find shared objects, so this captured id is the ONLY authoritative source for later spot actions
-      // + reloads. Retry on a flaky/cold-start RPC so a transient waitForTransaction failure can't
-      // silently strand the id and later guide the user into creating a duplicate (orphaning funds).
-      if (toolName === 'spot_create_balance_manager') {
-        let captured = false;
+      // Capture the freshly-created SHARED manager id (PredictManager OR BalanceManager): the resolvers
+      // lag (indexer) or can't see shared objects at all, so this captured id is the authoritative
+      // source for later actions + reloads. Retry on a flaky/cold-start RPC so a transient
+      // waitForTransaction failure can't strand the id → a duplicate-create nag → orphaned funds.
+      const cap = CREATE_CAPTURE[toolName];
+      if (cap) {
+        let captured: string | null = null;
         let lastErr: unknown;
         for (let attempt = 0; attempt < 3 && !captured; attempt++) {
           try {
             const tb = await client.waitForTransaction({ digest, options: { showObjectChanges: true } });
             const created = (tb.objectChanges as ObjChange[] | undefined)?.find(
-              (c) => c.type === 'created' && c.objectType?.includes('balance_manager::BalanceManager'),
+              (c) => c.type === 'created' && c.objectType?.includes(cap.typeSuffix),
             );
-            if (created?.objectId) {
-              setStoredBalanceManager(owner, created.objectId);
-              qc.setQueryData(['balanceManager', owner], { balanceManagerId: created.objectId });
-              captured = true;
-            }
+            if (created?.objectId) captured = created.objectId;
           } catch (e) {
-            lastErr = e; // keep the last cause so the final warn names WHY, not just "failed"
+            lastErr = e; // keep the last cause so the final warn names WHY
           }
         }
-        // Capture failed on every attempt → the shared BM id is unknown AND the on-chain resolver can't
-        // recover it, so do NOT let the UI fall through to "no account → Create" (which would mint a
-        // duplicate + orphan funds). Seed an error so the panel shows Retry, not Create — and leave a
-        // structured breadcrumb so this isn't a silent failure (the BM exists on-chain at `digest`).
-        if (!captured) {
-          clientLogger.warn('BalanceManager id capture failed after retries — id unrecoverable this session', {
+        if (captured) {
+          // Durable server-side capture (DB-first resolution) — AWAIT so the very next chat turn /
+          // action resolves the manager instead of nagging "create one".
+          await fetch('/api/manager-capture', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ owner, kind: cap.kind, managerId: captured }),
+          }).catch((e) => clientLogger.warn('manager capture POST failed', { err: e instanceof Error ? e.message : String(e) }));
+          if (cap.kind === 'balance') {
+            // Same-device instant source (the resolver can't find a shared BM): localStorage + cache.
+            setStoredBalanceManager(owner, captured);
+            qc.setQueryData(['balanceManager', owner], { balanceManagerId: captured });
+          }
+          // predict: the bustCaches below invalidates ['positions'] → refetch resolves it DB-first.
+        } else {
+          clientLogger.warn('manager id capture failed after retries — id unrecoverable this session', {
             digest,
             owner,
+            kind: cap.kind,
             err: lastErr instanceof Error ? lastErr.message : lastErr ? String(lastErr) : undefined,
           });
-          qc.setQueryData(['balanceManager', owner], { balanceManagerId: null, error: true });
+          // BalanceManager only: seed an error so the panel shows Retry (never "Create" → no duplicate).
+          if (cap.kind === 'balance') qc.setQueryData(['balanceManager', owner], { balanceManagerId: null, error: true });
         }
       }
 

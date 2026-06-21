@@ -1,4 +1,4 @@
-import { index, jsonb, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { index, jsonb, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core';
 
 /**
  * Chat sessions = History. One row per conversation, keyed by wallet. `messages` is the full
@@ -41,3 +41,24 @@ export const txOutcomes = pgTable(
 );
 
 export type TxOutcomeRow = typeof txOutcomes.$inferSelect;
+
+/**
+ * Captured manager ids (owner → id), keyed by (wallet, kind). Both the PredictManager and the DeepBook
+ * BalanceManager are SHARED objects: the on-chain resolver can't see a BalanceManager at all, and the
+ * Predict indexer lags ~7s after creation — so resolving by owner can transiently return null and make
+ * the agent nag "create one" (→ a duplicate that orphans funds). We capture the id at creation here so
+ * resolution is instant + durable across sessions/devices, with the indexer/tx-scan as fallback.
+ */
+export const managers = pgTable(
+  'managers',
+  {
+    walletAddress: text('wallet_address').notNull(),
+    kind: text('kind').notNull(), // 'predict' | 'balance'
+    managerId: text('manager_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.walletAddress, t.kind] })],
+);
+
+export type ManagerRow = typeof managers.$inferSelect;
+export type ManagerKind = 'predict' | 'balance';
