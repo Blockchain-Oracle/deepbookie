@@ -8,12 +8,24 @@ import {
   buildRedeemRange,
   buildSupply,
   buildWithdraw,
+  getRangeTradeAmounts,
+  getTradeAmounts,
   toDusdc,
 } from '@deepbookie/predict-client';
 import { z } from 'zod';
-import type { ToolContext } from '../context.js';
+import { ZERO_ADDRESS, type ToolContext } from '../context.js';
 import { defineWrite } from '../tool.js';
 import { resolveMarket } from './helpers.js';
+
+/** +5% over the exact mint cost — absorbs odds drift between the quote and the signature. */
+const FUND_BUFFER_BPS = 10_500n;
+const withBuffer = (cost: bigint) => (cost * FUND_BUFFER_BPS) / 10_000n;
+/** Pick the larger of the agent-supplied fundUsd and the auto-computed cost — never deposit less. */
+const fundAmount = (cost: bigint, fundUsd?: number) => {
+  const requested = fundUsd ? toDusdc(fundUsd) : 0n;
+  const auto = withBuffer(cost);
+  return requested > auto ? requested : auto;
+};
 
 async function firstDusdcCoin(ctx: ToolContext): Promise<string> {
   if (!ctx.sender) throw new Error('funding requires a connected wallet (ctx.sender)');
@@ -65,16 +77,30 @@ const mint = defineWrite({
   inputSchema: binary.extend({ fundUsd: z.number().positive().optional() }),
   build: async (a, ctx) => {
     const { expiry, snap } = await resolveMarket(a.oracleId);
-    const funding = a.fundUsd
-      ? { fundCoinId: await firstDusdcCoin(ctx), depositAmount: toDusdc(a.fundUsd) }
-      : undefined;
+    const strike = snap(a.strikeUsd);
+    const quantity = toDusdc(a.quantityUsd);
+    // ALWAYS fund the PredictManager in the same tx — the bet pays from the manager balance, so an
+    // unfunded manager aborts ("insufficient PredictManager balance"). We compute the exact mint cost
+    // and deposit cost + 5% from a wallet dUSDC coin, so a bet never fails for an empty manager.
+    const { mintCost } = await getTradeAmounts(ctx.client, {
+      oracleId: a.oracleId,
+      expiry,
+      strike,
+      direction: a.direction,
+      quantity,
+      sender: ctx.sender ?? ZERO_ADDRESS,
+    });
+    const funding = {
+      fundCoinId: await firstDusdcCoin(ctx),
+      depositAmount: fundAmount(mintCost, a.fundUsd),
+    };
     return buildMint({
       managerId: requireManager(ctx, a.managerId),
       oracleId: a.oracleId,
       expiry,
-      strike: snap(a.strikeUsd),
+      strike,
       direction: a.direction,
-      quantity: toDusdc(a.quantityUsd),
+      quantity,
       funding,
     });
   },
@@ -126,16 +152,29 @@ const mintRange = defineWrite({
       throw new RangeError('lowerStrikeUsd must be < higherStrikeUsd');
     }
     const { expiry, snap } = await resolveMarket(a.oracleId);
-    const funding = a.fundUsd
-      ? { fundCoinId: await firstDusdcCoin(ctx), depositAmount: toDusdc(a.fundUsd) }
-      : undefined;
+    const lowerStrike = snap(a.lowerStrikeUsd);
+    const higherStrike = snap(a.higherStrikeUsd);
+    const quantity = toDusdc(a.quantityUsd);
+    // Always fund the manager with the exact range cost + 5% (same reason as binary mint).
+    const { mintCost } = await getRangeTradeAmounts(ctx.client, {
+      oracleId: a.oracleId,
+      expiry,
+      lower: lowerStrike,
+      higher: higherStrike,
+      quantity,
+      sender: ctx.sender ?? ZERO_ADDRESS,
+    });
+    const funding = {
+      fundCoinId: await firstDusdcCoin(ctx),
+      depositAmount: fundAmount(mintCost, a.fundUsd),
+    };
     return buildMintRange({
       managerId: requireManager(ctx, a.managerId),
       oracleId: a.oracleId,
       expiry,
-      lowerStrike: snap(a.lowerStrikeUsd),
-      higherStrike: snap(a.higherStrikeUsd),
-      quantity: toDusdc(a.quantityUsd),
+      lowerStrike,
+      higherStrike,
+      quantity,
       funding,
     });
   },
