@@ -13,8 +13,9 @@ const SLIPPAGES = [0.5, 1] as const;
 // quote time, so we budget +5% to absorb a small move between quote and signature; unused DEEP is
 // returned to the wallet by the swap's transferObjects.
 const DEEP_FEE_BUFFER = 1.05;
-/** Rate display: 4dp for ≥1, but precision-aware below 1 so a tiny rate doesn't show "0.0000". */
-const fmtRate = (r: number) => (r >= 1 ? formatUsd(r, 4) : r > 0 ? r.toPrecision(4) : '0');
+/** Spot number display (rate + amounts): 2dp ≥1000, 4dp ≥1, else precision-aware so a tiny value
+ *  (e.g. a sub-1e-4 DBTC output) doesn't collapse to "0.0000". */
+const fmtRate = (r: number) => (r >= 1000 ? formatUsd(r, 2) : r >= 1 ? formatUsd(r, 4) : r > 0 ? r.toPrecision(4) : '0');
 // Coin disc tints from the design system (Components-Spot.dc.html §2).
 const COIN_BG: Record<string, string> = { SUI: '#4DA2FF', WAL: '#7d6f3a' };
 const COIN_GLYPH: Record<string, string> = { DBUSDC: '$', DBUSDT: '$', DBTC: '₿' };
@@ -104,7 +105,7 @@ export function SwapCard({
       ? []
       : [
       { label: 'Rate', value: `1 ${from} = ${fmtRate(rate)} ${to}` },
-      { label: `Min received · ${slip}%`, value: `${formatUsd(minOut, out >= 1000 ? 2 : 4)} ${to}` },
+      { label: `Min received · ${slip}%`, value: `${fmtRate(minOut)} ${to}` },
       {
         label: 'Fee',
         value: whitelisted ? 'from input coin' : `${formatUsd(deepRequired, 4)} DEEP`,
@@ -178,7 +179,7 @@ export function SwapCard({
             </span>
           ) : (
             <span className={`font-mono text-[21px] font-semibold tabular-nums ${out > 0 ? 'text-green' : 'text-faint'}`}>
-              {emptyBook ? '—' : formatUsd(out, out >= 1000 ? 2 : 4)}
+              {emptyBook ? '—' : fmtRate(out)}
             </span>
           )}
           <CoinChip coin={to} />
@@ -187,7 +188,7 @@ export function SwapCard({
 
       {/* preview lines */}
       <Kv label="Rate" loading={quoting} value={`1 ${from} = ${fmtRate(rate)}`} />
-      <Kv label={`Min received · ${slip}%`} loading={quoting} value={formatUsd(minOut, out >= 1000 ? 2 : 4)} />
+      <Kv label={`Min received · ${slip}%`} loading={quoting} value={fmtRate(minOut)} />
       <Kv
         label="Fee"
         loading={quoting}

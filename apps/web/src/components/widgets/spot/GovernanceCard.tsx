@@ -106,7 +106,7 @@ export function GovernanceCard({
           <button
             type="button"
             // Require both fees AND a stake — a blank field would otherwise sign a real on-chain 0.
-            disabled={!w.hasBalanceManager || !(Number(taker) > 0 && Number(maker) > 0 && Number(stake) > 0)}
+            disabled={!w.hasBalanceManager || !(Number(taker) > 0 && Number(maker) >= 0 && Number(stake) > 0)}
             onClick={() =>
               void w.sign(
                 { poolKey, takerFee: toFrac(taker), makerFee: toFrac(maker), stakeRequired: Number(stake) },
@@ -134,7 +134,7 @@ export function GovernanceCard({
           </div>
           <button
             type="button"
-            disabled={!w.hasBalanceManager || proposalId.trim().length < 3}
+            disabled={!w.hasBalanceManager || accountErr || proposalId.trim().length < 3}
             onClick={() => void w.sign({ poolKey, proposalId: proposalId.trim() }, { proposalId: proposalId.trim() })}
             className={DARK_BTN}
           >
@@ -174,7 +174,7 @@ export function GovernanceCard({
         </>
       )}
 
-      {!w.hasBalanceManager && (
+      {!w.hasBalanceManager && !w.bmLoading && (
         <div className="mt-2 text-center text-[11px] text-faint">
           {w.bmError
             ? 'Couldn’t reach your account.'
