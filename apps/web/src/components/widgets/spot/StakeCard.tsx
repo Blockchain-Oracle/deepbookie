@@ -28,8 +28,8 @@ export function StakeCard({
   const isUnstake = w.toolName === 'spot_unstake';
   const poolKey = (typeof w.proposed.poolKey === 'string' && w.proposed.poolKey) || DEFAULT_SPOT_POOL;
 
-  const account = useSpotAccount(w.state === 'proposed' ? poolKey : undefined);
-  const deepBal = useSpotBalance(w.state === 'proposed' && !isUnstake ? 'DEEP' : undefined);
+  const account = useSpotAccount(w.state === 'proposed' && w.hasBalanceManager ? poolKey : undefined);
+  const deepBal = useSpotBalance(w.state === 'proposed' && w.hasBalanceManager && !isUnstake ? 'DEEP' : undefined);
   const active = account.data?.stake.active ?? 0;
   const inactive = account.data?.stake.inactive ?? 0;
   // DEEP held INSIDE the BalanceManager (checkManagerBalance) — staking pulls from here, NOT the free

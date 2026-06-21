@@ -11,18 +11,17 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // Spot reads the widgets may proxy through the server (where the SDK's `core.simulateTransaction`
-// devInspect is guaranteed). Writes are NEVER here — they build + sign in the browser. Whitelist.
-const ALLOWED = new Set([
-  'spot_list_pools',
-  'spot_mid_price',
-  'spot_orderbook',
-  'spot_swap_quote',
-  'spot_pool_params',
-  'spot_balance',
-  'spot_account',
-  'spot_open_orders',
-  'spot_can_place_limit_order',
-]);
+// devInspect is guaranteed). Writes are NEVER here — they build + sign in the browser.
+// DERIVED from the registry (single source of truth): the allowlist is exactly the spot READ tools, so
+// a future write can never accidentally become reachable here, and a new read is whitelisted by
+// construction. spot_can_place_market_order is kept out of the WEB surface (no market-order UI; matches
+// the agent EXCLUDED set in ai/tools.ts).
+const WEB_EXCLUDED_READS = new Set(['spot_can_place_market_order']);
+const ALLOWED = new Set(
+  allTools
+    .filter((t) => t.surface === 'spot' && t.kind === 'read' && !WEB_EXCLUDED_READS.has(t.name))
+    .map((t) => t.name),
+);
 
 // These reads inspect the wallet's BalanceManager, so they need it resolved into the ctx.
 const BM_SCOPED = new Set([

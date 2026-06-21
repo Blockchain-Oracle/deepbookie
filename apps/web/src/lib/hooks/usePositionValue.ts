@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useQuote } from './useQuote';
 import type { Position } from '@/lib/bff/types';
 
@@ -31,7 +32,16 @@ const DUST_USD = 0.0001;
  * the chat card, the desktop row, and the mobile card all show the same numbers.
  */
 export function usePositionValue(position: Position): PositionValue {
-  const phase: PositionPhase = position.expiry <= Date.now() ? 'settled' : 'open';
+  // Flip phase at the expiry boundary even on an idle screen: `phase` derives from `now` (state), and a
+  // one-shot timer fires AT expiry to advance it — so a mounted chat PositionCard relabels open→settled
+  // (Sell now → Collect/Lost, unrealized → realized) without waiting for an unrelated re-render.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (position.expiry <= Date.now()) return;
+    const t = setTimeout(() => setNow(Date.now()), position.expiry - Date.now() + 250);
+    return () => clearTimeout(t);
+  }, [position.expiry]);
+  const phase: PositionPhase = position.expiry <= now ? 'settled' : 'open';
   const q = useQuote(
     {
       oracleId: position.oracleId,

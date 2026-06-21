@@ -175,10 +175,6 @@ export function ReceiptController({
       title: `Withdraw ${input.amount === undefined ? 'all' : formatUsd(num(input.amount))} ${str(input.coinKey)}`,
       lines: [{ label: 'Coin', value: str(input.coinKey) }, { label: 'Amount', value: input.amount === undefined ? 'All available' : `${formatUsd(num(input.amount))} ${str(input.coinKey)}`, strong: true }],
     },
-    spot_place_market_order: {
-      title: `${input.isBid ? 'Buy' : 'Sell'} ${formatUsd(num(input.quantity))} (market)`,
-      lines: [{ label: 'Pool', value: poolLabel(str(input.poolKey)) }, { label: 'Quantity', value: formatUsd(num(input.quantity)), strong: true }],
-    },
     spot_cancel_order: {
       title: 'Cancel order',
       lines: [{ label: 'Pool', value: poolLabel(str(input.poolKey)) }, { label: 'Order', value: shortenDigest(str(input.orderId)) }],

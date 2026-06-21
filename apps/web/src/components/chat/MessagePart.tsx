@@ -50,7 +50,6 @@ const WRITE = new Set([
   'spot_create_balance_manager',
   'spot_deposit',
   'spot_withdraw',
-  'spot_place_market_order',
   'spot_cancel_order',
   'spot_cancel_all_orders',
 ]);
