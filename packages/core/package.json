@@ -1,6 +1,6 @@
 {
   "name": "@deepbookie/core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Neutral, transport-free tool registry for DeepBookie — reads execute, writes return unsigned Sui transactions.",
   "license": "MIT",
   "type": "module",
