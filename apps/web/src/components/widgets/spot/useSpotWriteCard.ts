@@ -64,7 +64,7 @@ export function useSpotWriteCard(part: WriteToolPart, addToolResult: AddToolResu
     bmLoading: bm.isLoading,
     /** Resolver-error flag — true when the BM lookup FAILED (vs genuinely none). Cards show retry,
      *  not "create one", so a transient failure can't lead to a duplicate shared BalanceManager. */
-    bmError: bm.data?.error ?? false,
+    bmError: (bm.data?.error ?? false) || bm.isError,
     /** localStorage blocked → BM existence is UNKNOWN (resolver can't find shared BMs). Warn, don't
      *  imply "no account" — a returning user could otherwise be nudged into a duplicate. */
     storageBlocked: bm.data?.storageBlocked ?? false,

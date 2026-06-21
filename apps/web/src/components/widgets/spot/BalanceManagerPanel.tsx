@@ -91,7 +91,7 @@ export function BalanceManagerPanel({ onAction }: { onAction?: (text: string) =>
   // A network/RPC failure resolving the BalanceManager is NOT "no account". Offering "Create one"
   // here would let the user mint a SECOND shared BalanceManager and orphan funds in the first, so
   // show a retry instead. (The error flag is plumbed from /api/spot/balance-manager.)
-  if (!bm.isLoading && managerId == null && bm.data?.error) {
+  if (!bm.isLoading && managerId == null && (bm.data?.error || bm.isError)) {
     return (
       <div className="flex flex-col justify-center gap-[11px] rounded-card border border-line bg-card p-5">
         <div className="text-[9.5px] font-semibold uppercase tracking-[0.13em] text-faint">Spot account</div>

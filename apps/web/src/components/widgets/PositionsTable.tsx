@@ -66,10 +66,10 @@ function PositionRow({ p, managerId }: { p: Position; managerId: string }) {
       </div>
       <span className="flex-1 text-right font-mono text-[13px] tabular-nums">{formatUsd(p.quantityUsd)}</span>
       <span className="flex-1 text-right font-mono text-[13px] tabular-nums">
-        {v.valueUsd === undefined ? '…' : formatUsd(v.valueUsd)}
+        {v.isError ? '—' : v.valueUsd === undefined ? '…' : formatUsd(v.valueUsd)}
       </span>
       <span className="flex-1 text-right">
-        <Pnl pnl={v.pnlUsd} />
+        <Pnl pnl={v.pnlUsd} error={v.isError} />
       </span>
       <span className="flex w-24 items-center justify-end">
         <Action p={p} managerId={managerId} v={v} />
@@ -96,8 +96,11 @@ function PositionMobileCard({ p, managerId }: { p: Position; managerId: string }
       </div>
       <div className="flex justify-between">
         <Mini label="Size" value={formatUsd(p.quantityUsd)} />
-        <Mini label={open ? 'Value now' : 'Payout'} value={v.valueUsd === undefined ? '…' : formatUsd(v.valueUsd)} />
-        <MiniPnl pnl={v.pnlUsd} />
+        <Mini
+          label={open ? 'Value now' : 'Payout'}
+          value={v.isError ? '—' : v.valueUsd === undefined ? '…' : formatUsd(v.valueUsd)}
+        />
+        <MiniPnl pnl={v.pnlUsd} error={v.isError} />
       </div>
     </Card>
   );
@@ -120,7 +123,8 @@ function OutcomeTag({ won }: { won: boolean | undefined }) {
   );
 }
 
-function Pnl({ pnl }: { pnl: number | undefined }) {
+function Pnl({ pnl, error }: { pnl: number | undefined; error?: boolean }) {
+  if (error) return <span className="font-mono text-[13px] text-faint">—</span>;
   if (pnl === undefined) return <span className="font-mono text-[13px] text-faint">…</span>;
   const pos = pnl >= 0;
   return (
@@ -140,12 +144,12 @@ function Mini({ label, value }: { label: string; value: string }) {
   );
 }
 
-function MiniPnl({ pnl }: { pnl: number | undefined }) {
+function MiniPnl({ pnl, error }: { pnl: number | undefined; error?: boolean }) {
   return (
     <div className="text-right">
       <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-faint">PnL</div>
       <div className="mt-0.5">
-        <Pnl pnl={pnl} />
+        <Pnl pnl={pnl} error={error} />
       </div>
     </div>
   );

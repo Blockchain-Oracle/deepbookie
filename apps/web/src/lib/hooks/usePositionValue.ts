@@ -15,6 +15,8 @@ export interface PositionValue {
   /** Settled only: did the bet win? (payout above dust). undefined when open or still loading. */
   won: boolean | undefined;
   isLoading: boolean;
+  /** The pricing read FAILED — distinct from loading; consumers show "—", not the loading "…". */
+  isError: boolean;
 }
 
 const DUST_USD = 0.0001;
@@ -41,5 +43,5 @@ export function usePositionValue(position: Position): PositionValue {
   const valueUsd = q.data?.redeemPayoutUsd;
   const pnlUsd = valueUsd === undefined ? undefined : valueUsd - position.costUsd;
   const won = phase === 'settled' && valueUsd !== undefined ? valueUsd > DUST_USD : undefined;
-  return { phase, valueUsd, pnlUsd, won, isLoading: q.isLoading };
+  return { phase, valueUsd, pnlUsd, won, isLoading: q.isLoading, isError: q.isError };
 }

@@ -28,7 +28,15 @@ export function useBalanceManager(owner?: string) {
       // No stored id AND storage is blocked → the resolver can't find shared BMs, so we genuinely
       // can't tell if one exists. Flag it so the panel warns rather than silently offering "create".
       if (!isStorageAvailable()) return { balanceManagerId: null, storageBlocked: true };
-      return apiGet<BmResult>(`/api/spot/balance-manager?owner=${owner}`);
+      // Catch transport/HTTP failures HERE so a hard error surfaces as the soft `error` flag that every
+      // consumer already handles (retry, never "create"). Otherwise apiGet throws → React Query
+      // isError + undefined data → cards/panel fall through to the duplicate-BM "create" path. This
+      // also avoids React Query's silent 3× retry wait before the user sees the retry state.
+      try {
+        return await apiGet<BmResult>(`/api/spot/balance-manager?owner=${owner}`);
+      } catch {
+        return { balanceManagerId: null, error: true };
+      }
     },
     staleTime: STALE.manager,
   });

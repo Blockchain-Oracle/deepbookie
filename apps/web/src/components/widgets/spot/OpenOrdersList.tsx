@@ -78,7 +78,14 @@ export function OpenOrdersList({ orders }: { orders: SpotOpenOrder[] }) {
       </div>
 
       {orders.map((o) => (
-        <Row key={o.orderId} order={o} poolKey={poolKey} balanceManagerId={balanceManagerId} allBusy={allBusy} />
+        <Row
+          key={o.orderId}
+          order={o}
+          poolKey={poolKey}
+          balanceManagerId={balanceManagerId}
+          allBusy={allBusy}
+          allDone={cancelAll.status === 'done'}
+        />
       ))}
     </Card>
   );
@@ -90,16 +97,20 @@ function Row({
   poolKey,
   balanceManagerId,
   allBusy,
+  allDone,
 }: {
   order: SpotOpenOrder;
   poolKey: string;
   balanceManagerId?: string;
   allBusy: boolean;
+  allDone: boolean;
 }) {
   const cancel = useTxAction();
   const busy = cancel.status === 'signing';
   const done = cancel.status === 'done' && !!cancel.digest;
-  const canCancel = !!balanceManagerId && !busy && !allBusy;
+  // After a successful "Cancel all", these rows are stale until refetch — don't offer a per-row cancel
+  // that would abort on an already-cancelled order.
+  const canCancel = !!balanceManagerId && !busy && !allBusy && !allDone;
 
   const { base, pair: label } = splitPool(order.poolKey);
   const pct = fillPct(order);
@@ -150,6 +161,8 @@ function Row({
           >
             ✗ Retry
           </button>
+        ) : allDone ? (
+          <span className="font-mono text-[10.5px] text-faint">cancelled</span>
         ) : (
           <button
             type="button"

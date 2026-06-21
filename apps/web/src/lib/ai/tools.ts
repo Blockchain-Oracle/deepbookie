@@ -51,16 +51,19 @@ export function buildAiTools(opts: {
               WALLET_SCOPED.has(t.name)
                 ? // Runs against the wallet ctx (managerId/balanceManagerId baked in); the Predict
                   // manager reads also force the resolved id over any model-supplied one.
-                  withReliability(() =>
-                    // Predict manager reads force the wallet-resolved managerId over any model-supplied
-                    // one (a hallucinated "unknown" must never win — the #1 "can't read balance" bug).
-                    api.read(
+                  withReliability(() => {
+                    // Wallet-scoped reads must use the CTX-resolved ids, never a model-supplied one (a
+                    // hallucinated "AUTO"/"unknown" must never win). Strip any id from args, then force
+                    // the resolved managerId for the Predict manager reads. (The spot reads' schemas
+                    // already omit balanceManagerId, so ctx wins there — this keeps it true if that changes.)
+                    const { managerId: _m, balanceManagerId: _b, ...safe } = args as Record<string, unknown>;
+                    return api.read(
                       t.name,
                       t.name === 'get_portfolio' || t.name === 'get_positions'
-                        ? { ...args, managerId: opts.managerId }
-                        : args,
-                    ),
-                  )
+                        ? { ...safe, managerId: opts.managerId }
+                        : safe,
+                    );
+                  })
                 : // Shared catalog/book reads: cached + timeout + retry (no wallet ctx needed).
                   cachedAiRead(t.name, args),
           })

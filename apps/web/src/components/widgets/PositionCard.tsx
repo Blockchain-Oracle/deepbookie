@@ -73,11 +73,14 @@ export function PositionCard({
       </div>
       <div className="flex justify-between">
         <Mini label="Size" value={formatUsd(position.quantityUsd)} />
-        <Mini label={open ? 'Value now' : 'Payout'} value={v.valueUsd === undefined ? '…' : formatUsd(v.valueUsd)} />
+        <Mini
+          label={open ? 'Value now' : 'Payout'}
+          value={v.isError ? '—' : v.valueUsd === undefined ? '…' : formatUsd(v.valueUsd)}
+        />
         <Mini
           label="PnL"
-          value={pnl === undefined ? '…' : `${pnl >= 0 ? '+' : '−'}${formatUsd(Math.abs(pnl))}`}
-          accent={pnl !== undefined && pnl >= 0}
+          value={v.isError ? '—' : pnl === undefined ? '…' : `${pnl >= 0 ? '+' : '−'}${formatUsd(Math.abs(pnl))}`}
+          accent={!v.isError && pnl !== undefined && pnl >= 0}
           right
         />
       </div>
