@@ -102,6 +102,15 @@ function PositionMobileCard({ p, managerId }: { p: Position; managerId: string }
         />
         <MiniPnl pnl={v.pnlUsd} error={v.isError} />
       </div>
+      {v.isError && (
+        <button
+          type="button"
+          onClick={v.refetch}
+          className="mt-2 text-[11px] font-semibold text-muted underline underline-offset-2 transition hover:text-ink"
+        >
+          Couldn’t price this position — retry
+        </button>
+      )}
     </Card>
   );
 }

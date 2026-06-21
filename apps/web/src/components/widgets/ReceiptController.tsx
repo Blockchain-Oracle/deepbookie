@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { SignReceipt, type ReceiptLine } from './SignReceipt';
 import { deriveReceiptState } from './receiptState';
@@ -64,6 +64,9 @@ export function ReceiptController({
   const positionsQ = usePositions(account?.address);
   const bm = useBalanceManager(account?.address);
   const [local, setLocal] = useState<'idle' | 'signing' | 'dismissed'>('idle');
+  // Synchronous re-entry guard — `local` state only flips next render, so a fast double-click could
+  // pass a state-only check twice and queue two wallet prompts. A ref flips in the same tick.
+  const inFlight = useRef(false);
 
   const toolName = part.type.slice('tool-'.length);
   const input = part.input ?? {};
@@ -84,7 +87,8 @@ export function ReceiptController({
   const state = deriveReceiptState(part, local === 'signing');
 
   const onAuthorize = async () => {
-    if (local === 'signing') return; // re-entry / double-submit guard
+    if (inFlight.current) return; // synchronous re-entry / double-submit guard
+    inFlight.current = true;
     setLocal('signing');
     try {
       const digest = await submit(toolName, input, {
@@ -103,6 +107,8 @@ export function ReceiptController({
         onOutcome?.({ toolCallId: part.toolCallId, toolName, status: 'failed' });
       }
       setLocal('idle'); // allow retry after a failure
+    } finally {
+      inFlight.current = false; // clears on every terminal path so a legit retry isn't blocked
     }
   };
 

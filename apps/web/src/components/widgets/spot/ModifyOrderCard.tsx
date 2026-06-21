@@ -66,7 +66,8 @@ export function ModifyOrderCard({
   const releases = reducingBy * price;
   const belowMin = minSize > 0 && signQty < minSize;
   // Gate on the SAME bounds we sign: newQty>=current is "no change"; signQty<=filled / belowMin invalid.
-  const invalid = !order || newQty >= current || signQty <= filled || belowMin || !paramsReady;
+  // lotSize<=0 means snap() can't lot-align (would sign a raw qty that aborts on-chain) → never sign.
+  const invalid = !order || newQty >= current || signQty <= filled || belowMin || !paramsReady || lotSize <= 0;
   const filledPct = current > 0 ? Math.min(100, (filled / current) * 100) : 0;
   const knobPct = current > 0 ? Math.min(100, (newQty / current) * 100) : 0;
   const activeWidth = Math.max(0, knobPct - filledPct);

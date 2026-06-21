@@ -17,6 +17,9 @@ export interface PositionValue {
   isLoading: boolean;
   /** The pricing read FAILED — distinct from loading; consumers show "—", not the loading "…". */
   isError: boolean;
+  /** Re-run the pricing read — for a Retry affordance, so a transient devInspect failure on a SETTLED
+   *  winning position doesn't read as "worth nothing" with no way to recover. */
+  refetch: () => void;
 }
 
 const DUST_USD = 0.0001;
@@ -43,5 +46,5 @@ export function usePositionValue(position: Position): PositionValue {
   const valueUsd = q.data?.redeemPayoutUsd;
   const pnlUsd = valueUsd === undefined ? undefined : valueUsd - position.costUsd;
   const won = phase === 'settled' && valueUsd !== undefined ? valueUsd > DUST_USD : undefined;
-  return { phase, valueUsd, pnlUsd, won, isLoading: q.isLoading, isError: q.isError };
+  return { phase, valueUsd, pnlUsd, won, isLoading: q.isLoading, isError: q.isError, refetch: () => void q.refetch() };
 }

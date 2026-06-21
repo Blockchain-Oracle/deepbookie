@@ -130,31 +130,53 @@ export function SettledSweepCard({
   }
 
   // A failed read must NOT be shown as "nothing to sweep" — that would hide real proceeds + the action.
+  // Dismiss resolves the tool call (w.cancel) so the chat turn isn't wedged; Retry re-reads.
   if (account.isError) {
     return (
-      <button
-        type="button"
-        onClick={() => void account.refetch()}
-        className="flex w-full items-center justify-between gap-2.5 rounded-card border border-dashed border-[#CBC6BB] bg-[#FBFAF7] px-[15px] py-3.5 text-left transition hover:bg-paper"
-      >
+      <div className="flex w-full flex-col gap-2.5 rounded-card border border-dashed border-[#CBC6BB] bg-[#FBFAF7] px-[15px] py-3.5">
         <span className="text-[12.5px] text-muted">
           Couldn’t check settled proceeds on <span className="font-semibold text-ink-soft">{poolName}</span>.
         </span>
-        <span className="flex-none text-[11.5px] font-semibold text-ink underline underline-offset-2">Retry</span>
-      </button>
+        <div className="flex gap-2.5">
+          <button
+            type="button"
+            onClick={() => void account.refetch()}
+            className="rounded-[9px] border border-line-strong px-4 py-2 text-[12px] font-semibold text-ink transition hover:bg-paper"
+          >
+            Retry
+          </button>
+          <button
+            type="button"
+            onClick={w.cancel}
+            className="rounded-[9px] border border-line-strong px-4 py-2 text-[12px] font-semibold text-[#7d7870] transition hover:bg-paper"
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
     );
   }
 
-  // Nothing settled → the "hidden"/empty state: a quiet, un-actionable note (only on a successful read).
+  // Nothing settled → the "hidden"/empty state: a quiet note + Dismiss so the tool call resolves and
+  // the assistant turn can continue (otherwise the Composer stays disabled for the whole turn).
   if (account.isSuccess && parts.length === 0) {
     return (
-      <div className="flex items-center gap-2.5 rounded-card border border-dashed border-[#CBC6BB] bg-[#FBFAF7] px-[15px] py-3.5">
-        <span className="flex size-5 flex-none items-center justify-center rounded-full border border-line-strong text-[11px] text-faint">
-          ✓
-        </span>
-        <span className="text-[12.5px] text-muted">
-          Nothing to sweep on <span className="font-semibold text-ink-soft">{poolName}</span> — all proceeds are settled.
-        </span>
+      <div className="flex w-full flex-col gap-2.5 rounded-card border border-dashed border-[#CBC6BB] bg-[#FBFAF7] px-[15px] py-3.5">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-5 flex-none items-center justify-center rounded-full border border-line-strong text-[11px] text-faint">
+            ✓
+          </span>
+          <span className="text-[12.5px] text-muted">
+            Nothing to sweep on <span className="font-semibold text-ink-soft">{poolName}</span> — all proceeds are settled.
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={w.cancel}
+          className="self-start rounded-[9px] border border-line-strong px-4 py-2 text-[12px] font-semibold text-[#7d7870] transition hover:bg-paper"
+        >
+          Dismiss
+        </button>
       </div>
     );
   }

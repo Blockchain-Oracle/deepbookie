@@ -31,7 +31,10 @@ export function StakeCard({
   const deepBal = useSpotBalance(w.state === 'proposed' && !isUnstake ? 'DEEP' : undefined);
   const active = account.data?.stake.active ?? 0;
   const inactive = account.data?.stake.inactive ?? 0;
-  const wallet = deepBal.data?.balance ?? 0;
+  // DEEP held INSIDE the BalanceManager (checkManagerBalance) — staking pulls from here, NOT the free
+  // wallet balance, so this is the correct cap. Named to prevent a future edit pointing it at the
+  // on-chain wallet (which would over-permit a stake that aborts on-chain).
+  const accountDeep = deepBal.data?.balance ?? 0;
 
   const [amount, setAmount] = useState<string>(() => {
     const seed = num(w.proposed.amount);
@@ -128,9 +131,9 @@ export function StakeCard({
 
   const amt = Number(amount);
   // While the DEEP balance is loading or errored, don't cap (avoid a false "too much"); once the
-  // balance is known, enforce amt <= wallet so the user can't try to stake more than they hold.
+  // balance is known, enforce amt <= accountDeep so the user can't stake more than the BM holds.
   const deepKnown = !deepBal.isLoading && !deepBal.isError;
-  const stakeValid = amt > 0 && (!deepKnown || amt <= wallet) && w.hasBalanceManager;
+  const stakeValid = amt > 0 && (!deepKnown || amt <= accountDeep) && w.hasBalanceManager;
   // On-chain `unstake` withdraws ALL stake (active + inactive) — fresh same-epoch stake sits in
   // `inactive` until the next epoch, so gating on `active` alone would block a legitimate unstake.
   const totalStake = active + inactive;
@@ -196,8 +199,8 @@ export function StakeCard({
             <div className="mb-1.5 flex justify-between">
               <span className="text-[9.5px] font-semibold uppercase tracking-[0.13em] text-faint">Amount to stake</span>
               <span className="font-mono text-[10.5px] text-muted">
-in account {deep(wallet)} ·{' '}
-                <button type="button" onClick={() => setAmount(String(wallet))} className="font-bold text-green">
+in account {deep(accountDeep)} ·{' '}
+                <button type="button" onClick={() => setAmount(String(accountDeep))} className="font-bold text-green">
                   Max
                 </button>
               </span>

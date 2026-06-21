@@ -11,8 +11,9 @@ import { DEFAULT_SPOT_POOL } from '@/lib/spot/constants';
 
 const seed = (v: unknown) => (num(v) > 0 ? String(num(v)) : '');
 /** Fee fields edit PERCENT; the agent proposes a FRACTION (0.0008 = 0.08%) — seed as percent so an
- *  un-edited proposal signs the agent's intended fee, not 1/100 of it (toFrac divides by 100 again). */
-const seedPct = (v: unknown) => (num(v) > 0 ? String(num(v) * 100) : '');
+ *  un-edited proposal signs the agent's intended fee, not 1/100 of it (toFrac divides by 100 again).
+ *  Seeds an explicit 0 too (a fee-free maker proposal is valid); only a genuinely-omitted field → ''. */
+const seedPct = (v: unknown) => (typeof v === 'number' ? String(v * 100) : '');
 /** Percent input → on-chain fraction (0.08% → 0.0008). The proposal tool wants the fraction. */
 const toFrac = (percentStr: string) => Number(percentStr) / 100;
 

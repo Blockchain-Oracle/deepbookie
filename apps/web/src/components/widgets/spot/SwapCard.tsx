@@ -85,12 +85,15 @@ export function SwapCard({
   // Rate label is always "1 {from} = rate {to}" → receive(out) per pay(amt), both directions.
   const liveRate = amt > 0 && liveOut > 0 ? liveOut / amt : 0;
 
-  // Proposed form shows live values; the terminal receipt reads the snapshot taken at sign time.
-  const out = signed?.out ?? liveOut;
-  const deepRequired = signed?.deepRequired ?? liveDeep;
-  const minOut = signed?.minOut ?? liveMinOut;
-  const rate = signed?.rate ?? liveRate;
-  const whitelisted = signed?.whitelisted ?? liveWhitelisted;
+  // The snapshot is ONLY for the terminal "signed" receipt; the editable form always shows the live
+  // quote — so a retry form (after a decline/failure) never displays frozen economics from the prior
+  // attempt. (The sign handler re-snapshots liveOut at click, so the signed value is fresh regardless.)
+  const showSnap = w.state === 'signed';
+  const out = showSnap ? (signed?.out ?? liveOut) : liveOut;
+  const deepRequired = showSnap ? (signed?.deepRequired ?? liveDeep) : liveDeep;
+  const minOut = showSnap ? (signed?.minOut ?? liveMinOut) : liveMinOut;
+  const rate = showSnap ? (signed?.rate ?? liveRate) : liveRate;
+  const whitelisted = showSnap ? (signed?.whitelisted ?? liveWhitelisted) : liveWhitelisted;
   const quoting = quote.isFetching && amt > 0;
   const emptyBook = amt > 0 && quote.data != null && out <= 0;
   const docNumber = docNumberFor(part.toolCallId);

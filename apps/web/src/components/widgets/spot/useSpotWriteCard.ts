@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { useBalanceManager } from '@/lib/hooks/useBalanceManager';
 import { isUserRejection, reasonFor, useSubmitTx } from '@/lib/hooks/useSubmitTx';
@@ -21,6 +21,10 @@ export function useSpotWriteCard(part: WriteToolPart, addToolResult: AddToolResu
   const account = useCurrentAccount();
   const bm = useBalanceManager(account?.address);
   const [local, setLocal] = useState<'idle' | 'signing' | 'dismissed'>('idle');
+  // Synchronous re-entry guard. `local` is React state — `setLocal('signing')` only flips on the next
+  // render, so a fast double-click (or Enter+click) before that commit would pass a state-only check
+  // twice and pop the wallet twice → two signed txs. A ref flips in the same tick. (Mirrors useTxAction.)
+  const inFlight = useRef(false);
 
   const state = deriveReceiptState(part, local === 'signing');
 
@@ -31,7 +35,8 @@ export function useSpotWriteCard(part: WriteToolPart, addToolResult: AddToolResu
   // output, so the terminal receipt — and a History replay after remount — shows what was signed,
   // not the agent's original proposal or an ephemeral 0.
   async function sign(input: Record<string, unknown>, output?: Record<string, unknown>) {
-    if (local === 'signing') return;
+    if (inFlight.current) return;
+    inFlight.current = true;
     setLocal('signing');
     try {
       const digest = await submit(toolName, input, { balanceManagerId: balanceManagerId ?? undefined });
@@ -47,6 +52,8 @@ export function useSpotWriteCard(part: WriteToolPart, addToolResult: AddToolResu
         onOutcome?.({ toolCallId: part.toolCallId, toolName, status: 'failed' });
       }
       setLocal('idle'); // allow retry after a failure
+    } finally {
+      inFlight.current = false; // clears on every terminal path so a legit retry isn't blocked
     }
   }
 
@@ -72,7 +79,11 @@ export function useSpotWriteCard(part: WriteToolPart, addToolResult: AddToolResu
      *  imply "no account" — a returning user could otherwise be nudged into a duplicate. */
     storageBlocked: bm.data?.storageBlocked ?? false,
     bmRefetch: () => void bm.refetch(),
-    /** Agent-proposed args — seed the form's defaults from these. */
+    /** Agent-proposed args — seed the form's defaults from these. NOTE: cards seed editable fields via
+     *  one-shot lazy `useState` initializers and are keyed stably (never remount to re-seed), so this
+     *  MUST be the FINAL streamed input. That's guaranteed by MessagePart rendering a skeleton while
+     *  `state === 'input-streaming'` and only mounting the card afterward — don't break that gate or
+     *  every seed silently captures empty proposal values. */
     proposed: part.input ?? {},
     digest: part.output?.digest,
     reason: part.errorText,

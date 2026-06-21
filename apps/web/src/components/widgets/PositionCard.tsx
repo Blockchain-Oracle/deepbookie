@@ -84,6 +84,16 @@ export function PositionCard({
           right
         />
       </div>
+      {v.isError && (
+        // A failed pricing read must not read as "worth nothing" on a settled winner — offer a retry.
+        <button
+          type="button"
+          onClick={v.refetch}
+          className="mt-2 text-[11px] font-semibold text-muted underline underline-offset-2 transition hover:text-ink"
+        >
+          Couldn’t price this position — retry
+        </button>
+      )}
     </Card>
   );
 }
