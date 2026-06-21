@@ -48,6 +48,7 @@ export const CATEGORIES: Category[] = [
     dot: 'bg-green',
     motif: 'oddsCurve',
     isLive: true,
+    needsWallet: true,
   },
   {
     id: 'place-bet',
@@ -69,6 +70,7 @@ export const CATEGORIES: Category[] = [
     familyLabel: 'Spot',
     dot: 'bg-wallet',
     motif: 'swap',
+    needsWallet: true,
   },
   {
     id: 'orders',
@@ -101,6 +103,7 @@ export const CATEGORIES: Category[] = [
     familyLabel: 'Predict · PLP',
     dot: 'bg-green',
     motif: 'vaultStack',
+    needsWallet: true,
   },
   {
     id: 'stake',
