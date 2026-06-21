@@ -62,6 +62,25 @@ export function Chat() {
     return () => clearTimeout(t);
   }, [messages]);
 
+  // Belt-and-suspenders client save: PATCH the transcript ~after each settled turn so a tab closed
+  // mid-stream never loses a signed session, and the row gets a real title (not the "New chat" default).
+  // The server onFinish covers the normal case; this closes the tab-close gap.
+  useEffect(() => {
+    const wallet = account?.address;
+    if (!wallet || messages.length === 0 || status !== 'ready') return;
+    const firstUser = messages.find((m) => m.role === 'user');
+    const textPart = firstUser?.parts.find((p) => (p as { type?: string }).type === 'text') as { text?: string } | undefined;
+    const title = (textPart?.text ?? '').trim().slice(0, 120) || 'New chat';
+    const t = setTimeout(() => {
+      void fetch(`/api/chats/${chatId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ walletAddress: wallet, title, messages }),
+      }).catch(() => {});
+    }, 800);
+    return () => clearTimeout(t);
+  }, [messages, status, account?.address, chatId]);
+
   // Start a fresh live conversation; the previous chatId stays saved + archived in History.
   const newChat = () => {
     setMessages([]);
