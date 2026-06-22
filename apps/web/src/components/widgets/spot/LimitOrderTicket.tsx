@@ -11,7 +11,8 @@ import { SUISCAN_TX } from '@/lib/constants';
 import { docNumberFor, formatUsd, poolLabel, splitPool, str } from '@/lib/format';
 import { DEFAULT_SPOT_POOL } from '@/lib/spot/constants';
 
-const fmt = (n: number, dp: number) => n.toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+const fmt = (n: number, dp: number) =>
+  (Number.isFinite(n) ? n : 0).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
 const dpOf = (step: number) => (step > 0 && step < 1 ? Math.min(8, Math.round(-Math.log10(step))) : step >= 1 ? 1 : 4);
 const isMult = (v: number, step: number) => (step > 0 ? Math.abs(v / step - Math.round(v / step)) < 1e-6 : true);
 

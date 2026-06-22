@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
-const fmt = (v: number) => `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmt = (v: number) =>
+  `$${(Number.isFinite(v) ? v : 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /**
  * Decorative count-up for the "Your account" launcher motif (ease-out cubic over 1.2s). It is a

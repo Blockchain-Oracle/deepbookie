@@ -53,7 +53,11 @@ export function usePositionValue(position: Position): PositionValue {
     // re-querying the chain; open positions still refresh at the default cadence.
     { staleTime: phase === 'settled' ? 5 * 60_000 : 5_000 },
   );
-  const valueUsd = q.data?.redeemPayoutUsd;
+  // The quote returns `null` for a position that no longer exists on-chain (e.g. just sold, but still
+  // lingering in the indexer ~7s). Normalize null → undefined so the typed `number | undefined` contract
+  // holds and every `=== undefined` guard downstream catches it (a leaked null hit formatUsd → crash).
+  const raw = q.data?.redeemPayoutUsd;
+  const valueUsd = typeof raw === 'number' ? raw : undefined;
   const pnlUsd = valueUsd === undefined ? undefined : valueUsd - position.costUsd;
   const won = phase === 'settled' && valueUsd !== undefined ? valueUsd > DUST_USD : undefined;
   return { phase, valueUsd, pnlUsd, won, isLoading: q.isLoading, isError: q.isError, refetch: () => void q.refetch() };

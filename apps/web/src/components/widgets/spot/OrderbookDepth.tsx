@@ -12,8 +12,9 @@ const SIZE_INK = '#a8a298';
 
 /** Sensible size precision: whole numbers for >=100, else up to 2dp. */
 function fmtSize(n: number): string {
-  const dp = n >= 100 ? 0 : n >= 1 ? 1 : 2;
-  return n.toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+  const safe = Number.isFinite(n) ? n : 0;
+  const dp = safe >= 100 ? 0 : safe >= 1 ? 1 : 2;
+  return safe.toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
 }
 
 /** Cumulative depth from the mid outward, normalized to a shared max so the two sides are comparable. */
