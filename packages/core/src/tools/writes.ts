@@ -8,6 +8,7 @@ import {
   buildRedeemRange,
   buildSupply,
   buildWithdraw,
+  buildWithdrawBalance,
   toDusdc,
 } from '@deepbookie/predict-client';
 import { z } from 'zod';
@@ -205,6 +206,16 @@ const withdraw = defineWrite({
   build: async (a, ctx) => buildWithdraw(a.plpCoinId, requireSender(ctx)),
 });
 
+const withdrawBalance = defineWrite({
+  name: 'withdraw_balance',
+  description:
+    'Cash out: withdraw dUSDC from your PredictManager trading balance (where sell/redeem proceeds land) back to your wallet.',
+  surface: 'predict',
+  inputSchema: z.object({ amountUsd: z.number().positive(), managerId: z.string().optional() }),
+  build: async (a, ctx) =>
+    buildWithdrawBalance(requireManager(ctx, a.managerId), toDusdc(a.amountUsd), requireSender(ctx)),
+});
+
 export const writeTools = [
   createManager,
   mint,
@@ -214,4 +225,5 @@ export const writeTools = [
   redeemRange,
   supply,
   withdraw,
+  withdrawBalance,
 ];

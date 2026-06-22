@@ -43,6 +43,7 @@ export const TARGET = {
   getTradeAmounts: `${PREDICT_PACKAGE}::predict::get_trade_amounts`,
   getRangeTradeAmounts: `${PREDICT_PACKAGE}::predict::get_range_trade_amounts`,
   deposit: `${PREDICT_PACKAGE}::predict_manager::deposit`,
+  withdrawBalance: `${PREDICT_PACKAGE}::predict_manager::withdraw`,
   marketKeyUp: `${PREDICT_PACKAGE}::market_key::up`,
   marketKeyDown: `${PREDICT_PACKAGE}::market_key::down`,
   rangeKeyNew: `${PREDICT_PACKAGE}::range_key::new`,

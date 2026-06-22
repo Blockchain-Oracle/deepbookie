@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { ConnectScreen } from '@/components/onboarding/ConnectScreen';
 import { PortfolioRollup } from '@/components/widgets/PortfolioRollup';
 import { PositionsTable } from '@/components/widgets/PositionsTable';
+import { WithdrawBalanceButton } from '@/components/widgets/WithdrawBalanceButton';
 import { usePositions } from '@/lib/hooks/usePositions';
 
 /** Positions & PnL — resolves the wallet's shared manager, then rolls up portfolio + open positions. */
@@ -40,7 +41,19 @@ export default function PositionsPage() {
         <NoAccount />
       ) : (
         <div className="flex flex-col gap-5">
-          {data.portfolio && <PortfolioRollup portfolio={data.portfolio} />}
+          {data.portfolio && (
+            <div className="flex flex-col gap-3">
+              <PortfolioRollup portfolio={data.portfolio} />
+              {data.portfolio.tradingBalanceUsd > 0 && (
+                <div className="flex items-center justify-between gap-3 rounded-card border border-line bg-card px-4 py-3">
+                  <span className="text-[12.5px] text-muted">
+                    Proceeds from selling land in your account. Cash out to your wallet anytime.
+                  </span>
+                  <WithdrawBalanceButton managerId={data.managerId} balanceUsd={data.portfolio.tradingBalanceUsd} />
+                </div>
+              )}
+            </div>
+          )}
           <PositionsTable positions={data.positions?.open ?? []} managerId={data.managerId} />
           <LifecycleNote />
         </div>
