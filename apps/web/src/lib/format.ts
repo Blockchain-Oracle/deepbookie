@@ -25,9 +25,11 @@ export function shortenDigest(digest: string, lead = 8, tail = 6): string {
   return formatAddress(digest, lead, tail);
 }
 
-/** Tabular dollar figure, e.g. 1,284.91. */
-export function formatUsd(value: number, decimals = 2): string {
-  return value.toLocaleString('en-US', {
+/** Tabular dollar figure, e.g. 1,284.91. Null/undefined/NaN coerce to 0 — a display formatter must
+ *  never crash the render (a null exit-value once threw `null.toLocaleString` and white-screened the app). */
+export function formatUsd(value: number | null | undefined, decimals = 2): string {
+  const n = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+  return n.toLocaleString('en-US', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
