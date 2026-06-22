@@ -21,8 +21,8 @@ export function PortfolioRollup({ portfolio }: { portfolio: Portfolio }) {
       </div>
       <div className="mt-3 flex gap-6">
         <Stat label="Unrealized" value={signed(portfolio.unrealizedPnlUsd)} mint={portfolio.unrealizedPnlUsd >= 0} />
-        <Stat label="Exposure" value={formatUsd(portfolio.openExposureUsd)} />
-        <Stat label="Realized" value={signed(portfolio.realizedPnlUsd)} />
+        <Stat label="In open bets" value={formatUsd(portfolio.openExposureUsd)} />
+        <Stat label="Win / loss" value={signed(portfolio.realizedPnlUsd)} />
       </div>
     </div>
   );
