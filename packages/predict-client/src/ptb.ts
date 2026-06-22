@@ -171,3 +171,17 @@ export function buildWithdraw(plpCoinId: string, recipient: string): Transaction
   tx.transferObjects([out], tx.pure.address(recipient));
   return tx;
 }
+
+/** withdraw_balance — pull `amount` (6dp) of dUSDC out of the manager's TRADING balance to `recipient`.
+ *  This is how a user cashes out: redeem/sell proceeds accrue in the manager balance, and this moves
+ *  them back to the wallet (`predict_manager::withdraw` returns a Coin; we transfer it to the wallet). */
+export function buildWithdrawBalance(managerId: string, amount: Num, recipient: string): Transaction {
+  const tx = new Transaction();
+  const out = tx.moveCall({
+    target: TARGET.withdrawBalance,
+    typeArguments: [DUSDC_TYPE],
+    arguments: [tx.object(managerId), tx.pure.u64(amount)],
+  });
+  tx.transferObjects([out], tx.pure.address(recipient));
+  return tx;
+}
