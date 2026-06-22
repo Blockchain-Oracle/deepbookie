@@ -1,6 +1,6 @@
 {
   "name": "@deepbookie/predict-client",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "The first DeepBook Predict TypeScript client — unsigned PTB builders, indexer readers, and SVI vol-surface math for Sui's DeepBook Predict prediction market.",
   "license": "MIT",
   "type": "module",

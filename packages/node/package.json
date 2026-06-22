@@ -1,6 +1,6 @@
 {
   "name": "@deepbookie/node",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "DeepBookie Node-side runtime: Pino logger (stderr) + auto-provisioned local-key signer for the MCP and CLI.",
   "license": "MIT",
   "type": "module",

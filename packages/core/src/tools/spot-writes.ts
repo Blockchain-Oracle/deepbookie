@@ -4,6 +4,9 @@ import { defineWrite } from '../tool.js';
 import { requireBalanceManager, requireSpotSender, spotClient } from '../spot/client.js';
 import { SPOT_MANAGER_KEY } from '../spot/constants.js';
 
+// The only stakeable coin in DeepBook governance — staking always pulls DEEP from the manager.
+const DEEP_COIN_KEY = 'DEEP';
+
 const swapInput = z.object({
   poolKey: z.string(),
   amount: z.number().positive(),
@@ -196,13 +199,25 @@ const withdrawSettled = defineWrite({
 
 const stake = defineWrite({
   name: 'spot_stake',
-  description: 'Stake DEEP into a pool for lower trading fees + governance voting power.',
+  description:
+    'Stake DEEP into a pool for lower trading fees + governance voting power. Pass fundDeep to first deposit that much DEEP from your wallet into the balance manager (same PTB), so you can stake even when the manager holds none.',
   surface: 'spot',
-  inputSchema: z.object({ poolKey: z.string(), amount: z.number().positive() }),
+  inputSchema: z.object({
+    poolKey: z.string(),
+    amount: z.number().positive(),
+    // DEEP to deposit from the wallet into the balance manager BEFORE staking, composed into the SAME
+    // transaction. Staking pulls from the manager (not the wallet), so when the manager is short the UI
+    // passes the shortfall here and "stake N DEEP" succeeds in one signature (mirrors the mint auto-fund).
+    fundDeep: z.number().nonnegative().optional(),
+  }),
   build: async (a, ctx) => {
     requireBalanceManager(ctx);
     const tx = new Transaction();
-    spotClient(ctx).governance.stake(a.poolKey, SPOT_MANAGER_KEY, a.amount)(tx);
+    const sc = spotClient(ctx);
+    if (a.fundDeep && a.fundDeep > 0) {
+      sc.balanceManager.depositIntoManager(SPOT_MANAGER_KEY, DEEP_COIN_KEY, a.fundDeep)(tx);
+    }
+    sc.governance.stake(a.poolKey, SPOT_MANAGER_KEY, a.amount)(tx);
     return tx;
   },
 });
