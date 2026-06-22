@@ -2,9 +2,14 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useCurrentAccount, useSuiClient } from '@mysten/dapp-kit';
+import { SPOT_COINS } from '@deepbookie/core';
 import { POLL } from '@/lib/constants';
 import { apiPost } from './client';
 import { useBalanceManager } from './useBalanceManager';
+
+/** coinKey → { coinType, scalar } from the SDK testnet catalog — the source of truth for reading a
+ *  wallet's coin balance DIRECTLY (independent of any BalanceManager read). */
+const COIN_CATALOG = SPOT_COINS as Record<string, { type: string; scalar: number }>;
 import type {
   SpotAccount,
   SpotCanPlace,
@@ -62,23 +67,20 @@ export function useSpotSwapQuote(
 export const useSpotBalance = (coinKey?: string, opts?: SpotReadOpts) =>
   useSpotRead<SpotCoinBalance>('spot_balance', coinKey ? { coinKey } : undefined, opts);
 
-/** The connected wallet's free balance of a coin (what's available to DEPOSIT) — read directly from
- *  chain. The coinType comes from the BM `spot_balance` read; decimals from on-chain coin metadata, so
- *  it's correct for any coin without hardcoding scalars. `undefined` coinKey disables it. */
+/** The connected wallet's free balance of a coin (what's available to DEPOSIT), read DIRECTLY from
+ *  chain using the coin's KNOWN type from the SDK catalog — NOT derived from a BalanceManager read.
+ *  (Deriving it from the BM read returned 0 whenever the BM was empty/unresolved, even though the
+ *  wallet held the coin.) `undefined` coinKey, or an unknown coin, disables it. */
 export function useWalletCoinBalance(coinKey?: string) {
   const owner = useCurrentAccount()?.address;
   const client = useSuiClient();
-  const coinType = useSpotBalance(coinKey).data?.coinType;
+  const coin = coinKey ? COIN_CATALOG[coinKey] : undefined;
   return useQuery({
-    queryKey: ['walletCoin', owner ?? null, coinType ?? null],
-    enabled: !!owner && !!coinType,
+    queryKey: ['walletCoin', owner ?? null, coin?.type ?? null],
+    enabled: !!owner && !!coin,
     queryFn: async () => {
-      const [bal, meta] = await Promise.all([
-        client.getBalance({ owner: owner!, coinType: coinType! }),
-        client.getCoinMetadata({ coinType: coinType! }),
-      ]);
-      const dec = meta?.decimals ?? 9;
-      return Number(BigInt(bal.totalBalance)) / 10 ** dec;
+      const bal = await client.getBalance({ owner: owner!, coinType: coin!.type });
+      return Number(BigInt(bal.totalBalance)) / coin!.scalar;
     },
     refetchInterval: POLL.balance,
     staleTime: 4_000,
