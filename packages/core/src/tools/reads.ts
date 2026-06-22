@@ -38,6 +38,32 @@ function mapPosition(p: PositionEntry) {
   };
 }
 
+/**
+ * The STILL-HELD positions: minted netted against redeemed. The indexer keeps separate minted/redeemed
+ * EVENT lists (never a live holding), so listing `minted` made an already-sold position look open —
+ * "Sell now" on it then MoveAborted (predict_manager::decrease_position, code 1) since the position no
+ * longer exists, and get_quote (which prices a market leg, not your holding) still showed a value.
+ * Matched by market leg (oracle|strike|direction|expiry); cost scales with the remaining quantity. Only
+ * legs with remaining quantity > 0 survive.
+ */
+function netOpenPositions(minted: PositionEntry[], redeemed: PositionEntry[]): PositionEntry[] {
+  const key = (p: PositionEntry) => `${p.oracle_id}|${p.strike}|${p.is_up}|${p.expiry}`;
+  const redeemedQty = new Map<string, number>();
+  for (const r of redeemed) redeemedQty.set(key(r), (redeemedQty.get(key(r)) ?? 0) + r.quantity);
+  const agg = new Map<string, { qty: number; cost: number; rep: PositionEntry }>();
+  for (const m of minted) {
+    const k = key(m);
+    const prev = agg.get(k);
+    agg.set(k, { qty: (prev?.qty ?? 0) + m.quantity, cost: (prev?.cost ?? 0) + m.cost, rep: prev?.rep ?? m });
+  }
+  const open: PositionEntry[] = [];
+  for (const [k, { qty, cost, rep }] of agg) {
+    const remaining = qty - (redeemedQty.get(k) ?? 0);
+    if (remaining > 0) open.push({ ...rep, quantity: remaining, cost: Math.round((cost * remaining) / qty) });
+  }
+  return open;
+}
+
 const listMarkets = defineRead({
   name: 'list_markets',
   description: 'List active DeepBook Predict markets (each is a BTC above/below market with an expiry).',
@@ -186,14 +212,22 @@ const getPortfolio = defineRead({
 
 const getPositions = defineRead({
   name: 'get_positions',
-  description: 'Detailed list of a manager’s open (minted) and closed (redeemed) Predict positions.',
+  description:
+    'A manager’s Predict positions: `open` = still-held (minted net of redeemed — the actionable list), plus the raw `minted` and `redeemed` event history.',
   surface: 'predict',
   inputSchema: z.object({ managerId: z.string().optional() }),
   read: async (a, ctx) => {
     const managerId = a.managerId ?? ctx.managerId;
     if (!managerId) throw new Error('get_positions requires a managerId');
     const pos = await getManagerPositions(managerId);
-    return { managerId, minted: pos.minted.map(mapPosition), redeemed: pos.redeemed.map(mapPosition) };
+    return {
+      managerId,
+      // `open` is what the UI should offer "Sell now"/"Collect" on — a sold position nets out and
+      // disappears, so it can't be re-redeemed into a decrease_position abort.
+      open: netOpenPositions(pos.minted, pos.redeemed).map(mapPosition),
+      minted: pos.minted.map(mapPosition),
+      redeemed: pos.redeemed.map(mapPosition),
+    };
   },
 });
 

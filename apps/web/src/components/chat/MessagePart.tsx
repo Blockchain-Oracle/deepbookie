@@ -83,12 +83,12 @@ interface ToolView {
 }
 
 function PositionList({ positions }: { positions: Positions }) {
-  if (!positions.minted.length && !positions.redeemed.length) {
+  if (!positions.open.length && !positions.redeemed.length) {
     return <Card className="p-4 text-center text-sm text-muted">No positions yet.</Card>;
   }
   return (
     <div className="flex flex-col gap-2">
-      {positions.minted.map((p) => (
+      {positions.open.map((p) => (
         <PositionCard
           key={`m-${p.oracleId}-${p.strikeUsd}-${p.direction}-${p.expiry}`}
           position={p}

@@ -95,6 +95,10 @@ export interface Position {
 
 export interface Positions {
   managerId: string;
+  /** Still-held positions (minted net of redeemed) — the actionable "Sell now"/"Collect" list. A sold
+   *  position nets out and disappears, so it can't be re-redeemed into a decrease_position abort. */
+  open: Position[];
+  /** Raw event history (every mint / every redeem) — for records, not for offering a sell action. */
   minted: Position[];
   redeemed: Position[];
 }
