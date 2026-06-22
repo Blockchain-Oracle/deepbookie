@@ -10,6 +10,7 @@ import { PortfolioRollup } from '@/components/widgets/PortfolioRollup';
 import { PositionsTable } from '@/components/widgets/PositionsTable';
 import { WithdrawBalanceButton } from '@/components/widgets/WithdrawBalanceButton';
 import { usePositions } from '@/lib/hooks/usePositions';
+import { formatUsd } from '@/lib/format';
 
 /** Positions & PnL — resolves the wallet's shared manager, then rolls up portfolio + open positions. */
 export default function PositionsPage() {
@@ -45,11 +46,22 @@ export default function PositionsPage() {
             <div className="flex flex-col gap-3">
               <PortfolioRollup portfolio={data.portfolio} />
               {data.portfolio.tradingBalanceUsd > 0 && (
-                <div className="flex items-center justify-between gap-3 rounded-card border border-line bg-card px-4 py-3">
-                  <span className="text-[12.5px] text-muted">
-                    Proceeds from selling land in your account. Cash out to your wallet anytime.
-                  </span>
-                  <WithdrawBalanceButton managerId={data.managerId} balanceUsd={data.portfolio.tradingBalanceUsd} />
+                <div className="rounded-card border border-line bg-card p-4">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.13em] text-faint">Available to cash out</span>
+                    <span className="font-mono text-[22px] font-extrabold tabular-nums text-ink">
+                      {formatUsd(data.portfolio.tradingBalanceUsd)} <span className="text-[12px] font-medium text-faint">dUSDC</span>
+                    </span>
+                  </div>
+                  <p className="mt-2.5 text-[13px] leading-[1.5] text-[#6B665E]">
+                    Spendable cash in your trading account — it’s what comes back when you{' '}
+                    <span className="font-bold text-green">sell</span> a bet or <span className="font-bold text-green">collect</span> a
+                    win, plus any funds a bet didn’t use. It’s yours: keep it here to bet again, or send it to your wallet.
+                  </p>
+                  <div className="mt-3.5 flex flex-wrap items-center gap-3">
+                    <WithdrawBalanceButton managerId={data.managerId} balanceUsd={data.portfolio.tradingBalanceUsd} />
+                    <span className="text-[11.5px] text-faint">Goes straight to your connected wallet · you sign it</span>
+                  </div>
                 </div>
               )}
             </div>

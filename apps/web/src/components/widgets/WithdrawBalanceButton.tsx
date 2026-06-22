@@ -22,10 +22,10 @@ export function WithdrawBalanceButton({ managerId, balanceUsd }: { managerId: st
         href={SUISCAN_TX(digest)}
         target="_blank"
         rel="noreferrer"
-        title="Withdrawn to your wallet."
+        title="Sent to your wallet."
         className="inline-flex items-center gap-1 rounded-[9px] border border-line bg-card px-3.5 py-2 text-[12.5px] font-semibold text-green transition hover:bg-paper"
       >
-        Withdrawn to wallet ✓ ↗
+        Cashed out to wallet ✓ ↗
       </a>
     );
   }
@@ -45,8 +45,8 @@ export function WithdrawBalanceButton({ managerId, balanceUsd }: { managerId: st
       {signing
         ? 'Signing…'
         : failed
-          ? 'Retry withdraw'
-          : `Withdraw ${formatUsd(balanceUsd)} dUSDC to wallet`}
+          ? 'Retry cash-out'
+          : `Cash out ${formatUsd(balanceUsd)} dUSDC to wallet`}
     </button>
   );
 }
