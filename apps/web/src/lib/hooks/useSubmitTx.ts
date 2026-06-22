@@ -7,6 +7,7 @@ import { SuiJsonRpcClient } from '@mysten/sui/jsonRpc';
 import { allTools, getToolsForAdapter, type ToolContext } from '@deepbookie/core';
 import { NETWORK } from '@/lib/constants';
 import { setStoredBalanceManager } from '@/lib/spot/bmStore';
+import { markRedeemed, positionKey } from '@/lib/predict/redeemedStore';
 import { clientLogger } from '@/lib/logger.client';
 
 /** A wallet decline (user rejected the popup) — a cancellation, not a failure. */
@@ -89,6 +90,13 @@ export function useSubmitTx() {
       const { managerId: _m, balanceManagerId: _b, ...safeInput } = input;
       const tx = await getToolsForAdapter(allTools, ctx).build(toolName, safeInput);
       const { digest } = await signAndExecute({ transaction: tx });
+
+      // A successful redeem closes the position on-chain, but the indexer lags ~7s and keeps returning
+      // it. Mark it now so every RedeemButton (chat card AND positions page) goes terminal immediately —
+      // a second "Sell now" on an already-closed position would MoveAbort (decrease_position, code 1).
+      if (toolName === 'redeem' || toolName === 'redeem_range') {
+        markRedeemed(qc, positionKey(safeInput));
+      }
 
       // Capture the freshly-created SHARED manager id (PredictManager OR BalanceManager): the resolvers
       // lag (indexer) or can't see shared objects at all, so this captured id is the authoritative
