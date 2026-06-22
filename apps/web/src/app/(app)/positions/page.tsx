@@ -41,7 +41,7 @@ export default function PositionsPage() {
       ) : (
         <div className="flex flex-col gap-5">
           {data.portfolio && <PortfolioRollup portfolio={data.portfolio} />}
-          <PositionsTable positions={data.positions?.minted ?? []} managerId={data.managerId} />
+          <PositionsTable positions={data.positions?.open ?? []} managerId={data.managerId} />
           <LifecycleNote />
         </div>
       )}
