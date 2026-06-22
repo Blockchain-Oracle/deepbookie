@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { allTools } from '@deepbookie/core';
 import { Page, PageHeader } from '@/components/shell/Page';
 import { ToolRow } from './ToolRow';
+import { promptFor } from './toolPrompts';
 
 // Hidden from the catalog — matches the web agent's EXCLUDED set: a keeper tool + the market-order
 // tools (no editable card on web; the swap tools cover at-market execution).
@@ -87,7 +88,12 @@ export default function ToolsPage() {
         ...c,
         tools: c.tools.filter((n) => {
           const t = byName.get(n);
-          return t && (n.toLowerCase().includes(q) || t.description.toLowerCase().includes(q));
+          return (
+            t &&
+            (n.toLowerCase().includes(q) ||
+              t.description.toLowerCase().includes(q) ||
+              promptFor(n).toLowerCase().includes(q))
+          );
         }),
       }))
       .filter((c) => c.tools.length > 0);
@@ -99,7 +105,7 @@ export default function ToolsPage() {
     <Page>
       <PageHeader
         title="What DeepBookie can do"
-        subtitle={`${total} tools the agent can call — search or click any one to copy its name; you sign every write yourself`}
+        subtitle={`${total} things you can ask DeepBookie — search, then click any one to copy a ready-to-use prompt; you sign every write yourself`}
       />
       <div className="mb-5">
         <input
@@ -131,7 +137,7 @@ export default function ToolsPage() {
                 {cat.tools.map((name) => {
                   const t = byName.get(name);
                   if (!t) return null;
-                  return <ToolRow key={name} name={name} desc={t.description} kind={t.kind} />;
+                  return <ToolRow key={name} name={name} prompt={promptFor(name)} desc={t.description} kind={t.kind} />;
                 })}
               </div>
             </section>

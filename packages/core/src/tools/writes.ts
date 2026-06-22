@@ -15,6 +15,18 @@ import type { ToolContext } from '../context.js';
 import { defineWrite } from '../tool.js';
 import { resolveMarket } from './helpers.js';
 
+/**
+ * Deposit at least the full position size into the PredictManager. The mint PTB is
+ * deposit → withdraw_with_proof → mint; the withdraw pulls the premium, and on a freshly created
+ * manager the in-tx proof needs the deposit to comfortably exceed the premium or it aborts
+ * ("insufficient", code 3). A binary's premium is always ≤ the position size, so depositing the
+ * quantity is a guaranteed-sufficient margin. Leftover stays staged in the manager for the next bet.
+ */
+const fundAmount = (quantity: bigint, fundUsd?: number) => {
+  const requested = fundUsd ? toDusdc(fundUsd) : 0n;
+  return requested > quantity ? requested : quantity;
+};
+
 async function firstDusdcCoin(ctx: ToolContext): Promise<string> {
   if (!ctx.sender) throw new Error('funding requires a connected wallet (ctx.sender)');
   const coins = await ctx.client.getCoins({ owner: ctx.sender, coinType: DUSDC_TYPE });
@@ -65,16 +77,21 @@ const mint = defineWrite({
   inputSchema: binary.extend({ fundUsd: z.number().positive().optional() }),
   build: async (a, ctx) => {
     const { expiry, snap } = await resolveMarket(a.oracleId);
-    const funding = a.fundUsd
-      ? { fundCoinId: await firstDusdcCoin(ctx), depositAmount: toDusdc(a.fundUsd) }
-      : undefined;
+    const strike = snap(a.strikeUsd);
+    const quantity = toDusdc(a.quantityUsd);
+    // ALWAYS fund the manager in the same tx (the bet pays from the manager balance) with at least the
+    // full position size — enough margin for the in-tx withdraw proof, even on a brand-new manager.
+    const funding = {
+      fundCoinId: await firstDusdcCoin(ctx),
+      depositAmount: fundAmount(quantity, a.fundUsd),
+    };
     return buildMint({
       managerId: requireManager(ctx, a.managerId),
       oracleId: a.oracleId,
       expiry,
-      strike: snap(a.strikeUsd),
+      strike,
       direction: a.direction,
-      quantity: toDusdc(a.quantityUsd),
+      quantity,
       funding,
     });
   },
@@ -126,16 +143,21 @@ const mintRange = defineWrite({
       throw new RangeError('lowerStrikeUsd must be < higherStrikeUsd');
     }
     const { expiry, snap } = await resolveMarket(a.oracleId);
-    const funding = a.fundUsd
-      ? { fundCoinId: await firstDusdcCoin(ctx), depositAmount: toDusdc(a.fundUsd) }
-      : undefined;
+    const lowerStrike = snap(a.lowerStrikeUsd);
+    const higherStrike = snap(a.higherStrikeUsd);
+    const quantity = toDusdc(a.quantityUsd);
+    // Always fund with at least the full position size — same in-tx proof margin as the binary mint.
+    const funding = {
+      fundCoinId: await firstDusdcCoin(ctx),
+      depositAmount: fundAmount(quantity, a.fundUsd),
+    };
     return buildMintRange({
       managerId: requireManager(ctx, a.managerId),
       oracleId: a.oracleId,
       expiry,
-      lowerStrike: snap(a.lowerStrikeUsd),
-      higherStrike: snap(a.higherStrikeUsd),
-      quantity: toDusdc(a.quantityUsd),
+      lowerStrike,
+      higherStrike,
+      quantity,
       funding,
     });
   },

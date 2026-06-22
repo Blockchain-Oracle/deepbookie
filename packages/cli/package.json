@@ -1,6 +1,6 @@
 {
   "name": "@deepbookie/cli",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "DeepBookie CLI — trade DeepBook Predict from the terminal; the tool builds the tx, your local key signs it.",
   "license": "MIT",
   "type": "module",

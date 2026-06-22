@@ -71,6 +71,8 @@ export function OddsCurveCard({
   // must precede the early returns below.
   const [pick, setPick] = useState<number | null>(null);
   const [amount, setAmount] = useState('5');
+  // One-shot: the moment you tap Bet UP/DOWN it disables, so a fast double-tap can't fire two bets.
+  const [betSent, setBetSent] = useState(false);
   if (status === 'loading' || (status === 'live' && !odds)) {
     return (
       <Card className="p-4">
@@ -189,19 +191,27 @@ export function OddsCurveCard({
               <div className="flex gap-2">
                 <button
                   type="button"
-                  disabled={!(Number(amount) > 0)}
-                  onClick={() => onBet('UP', sel.strike, Number(amount))}
+                  disabled={betSent || !(Number(amount) > 0)}
+                  onClick={() => {
+                    if (betSent) return;
+                    setBetSent(true);
+                    onBet('UP', sel.strike, Number(amount));
+                  }}
                   className="flex-1 rounded-card-in bg-green py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Bet UP ↑
+                  {betSent ? 'Sending…' : 'Bet UP ↑'}
                 </button>
                 <button
                   type="button"
-                  disabled={!(Number(amount) > 0)}
-                  onClick={() => onBet('DOWN', sel.strike, Number(amount))}
+                  disabled={betSent || !(Number(amount) > 0)}
+                  onClick={() => {
+                    if (betSent) return;
+                    setBetSent(true);
+                    onBet('DOWN', sel.strike, Number(amount));
+                  }}
                   className="flex-1 rounded-card-in bg-clay py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Bet DOWN ↓
+                  {betSent ? 'Sending…' : 'Bet DOWN ↓'}
                 </button>
               </div>
             </>

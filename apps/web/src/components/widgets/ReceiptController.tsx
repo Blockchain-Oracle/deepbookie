@@ -27,6 +27,7 @@ export interface WriteToolPart {
     newQuantity?: number;
     reducingBy?: number;
     base?: string;
+    fundDeep?: number;
   };
   toolCallId: string;
   errorText?: string;

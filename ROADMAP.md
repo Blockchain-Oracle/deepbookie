@@ -1,6 +1,6 @@
-# DeepBookie — Milestones
+# DeepBookie — Roadmap
 
-What's shipped, what's building, what's on the roadmap. Live version: [docs.deepbookie.xyz/milestones](https://docs.deepbookie.xyz/milestones).
+What's shipped, what's building, what's next. Live version: [docs.deepbookie.xyz/roadmap](https://docs.deepbookie.xyz/roadmap).
 
 ## Now — shipped and live on Sui testnet
 

@@ -87,7 +87,7 @@ export const NAV_TABS: NavItem[] = [
   { label: 'Docs', href: '/get-started/introduction' },
   { label: 'Tools', href: '/tools' },
   { label: 'Cookbooks', href: '/cookbooks' },
-  { label: 'Milestones', href: '/milestones' },
+  { label: 'Roadmap', href: '/roadmap' },
 ];
 
 export const APP_URL = 'https://deepbookie.xyz';

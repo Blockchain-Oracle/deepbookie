@@ -5,7 +5,7 @@ import { useSpotWriteCard } from '@/components/widgets/spot/useSpotWriteCard';
 import { NoBalanceManagerNotice } from '@/components/widgets/spot/NoBalanceManagerNotice';
 import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/widgets/ReceiptController';
 import { SignReceipt, type ReceiptLine } from '@/components/widgets/SignReceipt';
-import { useSpotAccount, useSpotBalance } from '@/lib/hooks/useSpotRead';
+import { useSpotAccount, useSpotBalance, useWalletCoinBalance } from '@/lib/hooks/useSpotRead';
 import { SUISCAN_TX } from '@/lib/constants';
 import { docNumberFor, formatUsd, num, poolLabel } from '@/lib/format';
 import { DEFAULT_SPOT_POOL } from '@/lib/spot/constants';
@@ -29,13 +29,21 @@ export function StakeCard({
   const poolKey = (typeof w.proposed.poolKey === 'string' && w.proposed.poolKey) || DEFAULT_SPOT_POOL;
 
   const account = useSpotAccount(w.state === 'proposed' && w.hasBalanceManager ? poolKey : undefined);
-  const deepBal = useSpotBalance(w.state === 'proposed' && w.hasBalanceManager && !isUnstake ? 'DEEP' : undefined);
+  const stakeReadOn = w.state === 'proposed' && w.hasBalanceManager && !isUnstake;
+  const deepBal = useSpotBalance(stakeReadOn ? 'DEEP' : undefined);
+  // DEEP free in the WALLET — auto-deposited into the manager in the same PTB when the manager is short
+  // (see fundDeep below). Read straight from the coin catalog, independent of the manager balance.
+  const walletDeep = useWalletCoinBalance(stakeReadOn ? 'DEEP' : undefined);
   const active = account.data?.stake.active ?? 0;
   const inactive = account.data?.stake.inactive ?? 0;
-  // DEEP held INSIDE the BalanceManager (checkManagerBalance) — staking pulls from here, NOT the free
-  // wallet balance, so this is the correct cap. Named to prevent a future edit pointing it at the
-  // on-chain wallet (which would over-permit a stake that aborts on-chain).
+  // DEEP held INSIDE the BalanceManager (checkManagerBalance) — staking pulls from here. The wallet
+  // balance is added in `stakeable` below because we deposit the shortfall before staking, so the cap
+  // can safely include it. Kept separate so the receipt can show "deposited from wallet".
   const accountDeep = deepBal.data?.balance ?? 0;
+  const walletDeepBal = walletDeep.data ?? 0;
+  // What the user can actually stake in one click: DEEP already in the manager + DEEP in the wallet
+  // (which we deposit first). The Max button + validity gate use this, not the (often-empty) manager.
+  const stakeable = accountDeep + walletDeepBal;
 
   const [amount, setAmount] = useState<string>(() => {
     const seed = num(w.proposed.amount);
@@ -55,8 +63,10 @@ export function StakeCard({
   // figure lives in the durable output (persisted at sign time) so it survives remount + replay.
   if (w.state !== 'proposed') {
     const amt = num(part.output?.amount) || signedAmt;
+    const funded = num(part.output?.fundDeep);
     const lines: ReceiptLine[] = [
       { label: 'Pool', value: poolLabel(poolKey) },
+      ...(funded > 0 && !isUnstake ? [{ label: 'Deposited from wallet', value: `${deep(funded)} DEEP` }] : []),
       { label: isUnstake ? 'Amount returned' : 'Amount', value: `${deep(amt)} DEEP`, strong: true, accent: !isUnstake },
     ];
     return (
@@ -81,11 +91,17 @@ export function StakeCard({
   }
 
   const amt = Number(amount);
+  // The manager is short whenever amt exceeds its DEEP — then we deposit the shortfall from the wallet
+  // in the same PTB (rounded to DEEP's 6dp so float dust can't try to pull more than the wallet holds).
+  const shortfall = Math.max(0, amt - accountDeep);
+  const fundDeep = shortfall > 0 ? Math.round(shortfall * 1e6) / 1e6 : undefined;
   // Block the stake when the DEEP balance read FAILED (signing would just MoveAbort with no client
-  // explanation — show a Retry instead). While it's still LOADING, keep the cap fail-open (on-chain is
-  // authoritative); once known, enforce amt <= accountDeep so the user can't stake more than the BM holds.
+  // explanation — show a Retry instead). While either balance is still LOADING, keep the cap fail-open
+  // (on-chain is authoritative); once known, enforce amt <= stakeable (manager + wallet) so the user
+  // can't stake more than we can actually fund.
+  const balLoading = deepBal.isLoading || walletDeep.isLoading;
   const stakeValid =
-    amt > 0 && !deepBal.isError && (deepBal.isLoading || amt <= accountDeep) && w.hasBalanceManager;
+    amt > 0 && !deepBal.isError && (balLoading || amt <= stakeable) && w.hasBalanceManager;
   // On-chain `unstake` withdraws ALL stake (active + inactive) — fresh same-epoch stake sits in
   // `inactive` until the next epoch, so gating on `active` alone would block a legitimate unstake.
   const totalStake = active + inactive;
@@ -102,7 +118,9 @@ export function StakeCard({
       }
     } else if (stakeValid) {
       setSignedAmt(amt);
-      void w.sign({ poolKey, amount: amt }, { amount: amt });
+      // fundDeep (the wallet shortfall) is composed into the same PTB by the spot_stake builder and
+      // persisted to the output so the receipt can show what was deposited after a remount/replay.
+      void w.sign({ poolKey, amount: amt, fundDeep }, { amount: amt, fundDeep });
     }
   };
 
@@ -160,8 +178,8 @@ export function StakeCard({
                 </button>
               ) : (
                 <span className="font-mono text-[10.5px] text-muted">
-                  in account {deep(accountDeep)} ·{' '}
-                  <button type="button" onClick={() => setAmount(String(accountDeep))} className="font-bold text-green">
+                  acct {deep(accountDeep)} · wallet {deep(walletDeepBal)} ·{' '}
+                  <button type="button" onClick={() => setAmount(String(stakeable))} className="font-bold text-green">
                     Max
                   </button>
                 </span>
@@ -181,6 +199,17 @@ export function StakeCard({
               </div>
             </div>
           </div>
+          {amt > accountDeep && amt <= stakeable && !balLoading && (
+            <div className="-mt-0.5 mb-[11px] text-[10.5px] leading-[1.4] text-muted">
+              Your account holds {deep(accountDeep)} DEEP — we’ll deposit {deep(amt - accountDeep)} from your wallet in the
+              same transaction, then stake.
+            </div>
+          )}
+          {amt > stakeable && !balLoading && (
+            <div className="-mt-0.5 mb-[11px] text-[10.5px] leading-[1.4] text-clay">
+              You have {deep(stakeable)} DEEP available (account + wallet).
+            </div>
+          )}
           <button
             type="button"
             onClick={onSubmit}
