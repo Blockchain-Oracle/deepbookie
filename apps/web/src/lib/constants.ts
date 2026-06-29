@@ -82,6 +82,10 @@ export const FAUCET_AMOUNT_USD = 10;
 export const FAUCET_MIN_BALANCE_USD = 1; // only grant dUSDC if recipient is below this
 export const FAUCET_MIN_SUI = 0.05; // request gas SUI if recipient is below this
 export const FAUCET_SUI_GRANT = 0.05; // operator-funded gas grant (fallback when the public faucet 429s)
+// Slice B — gasless: route writes through Enoki sponsorship (/api/sponsor/*) so users need no SUI.
+// Off by default; flip on (NEXT_PUBLIC_SPONSOR_ENABLED=true) once the Enoki portal has sponsorship
+// enabled + a funded gas budget AND ENOKI_PRIVATE_KEY is set as a runtime env var on the server.
+export const SPONSOR_ENABLED = process.env.NEXT_PUBLIC_SPONSOR_ENABLED === 'true';
 export const SUI_GAS_FAUCET_URL = 'https://faucet.testnet.sui.io/v2/gas';
 export const SUI_DECIMALS = 9;
 // Faucet abuse guard (in-memory; per-process — DB-backed grant log is the Phase 6 hardening).

@@ -1,11 +1,18 @@
 'use client';
 
 import { useCallback } from 'react';
-import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit';
+import {
+  useCurrentAccount,
+  useSignAndExecuteTransaction,
+  useSignTransaction,
+  useSuiClient,
+} from '@mysten/dapp-kit';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { SuiJsonRpcClient } from '@mysten/sui/jsonRpc';
+import { Transaction } from '@mysten/sui/transactions';
+import { toBase64 } from '@mysten/sui/utils';
 import { allTools, getToolsForAdapter, type ToolContext } from '@deepbookie/core';
-import { NETWORK } from '@/lib/constants';
+import { NETWORK, SPONSOR_ENABLED } from '@/lib/constants';
 import { setStoredBalanceManager } from '@/lib/spot/bmStore';
 import { markRedeemed, positionKey } from '@/lib/predict/redeemedStore';
 import { clientLogger } from '@/lib/logger.client';
@@ -64,10 +71,44 @@ function bustCaches(qc: QueryClient) {
  * must never keep the card stuck on "Confirm in your wallet…". The wait + cache-bust run in the
  * background. Returns the digest; throws on failure (caller renders the FAILED receipt via reasonFor).
  */
+async function postJson(url: string, body: unknown): Promise<Record<string, unknown>> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return (await res.json().catch(() => ({}))) as Record<string, unknown>;
+}
+
+/**
+ * Gasless path (Slice B): build the tx-kind only, have Enoki sponsor the gas, sign the sponsored
+ * bytes in the wallet (sign-only — no gas), then execute via Enoki. Works for any wallet incl. a
+ * fresh zkLogin/Google address with 0 SUI. Returns the on-chain digest.
+ */
+async function submitSponsored(
+  tx: Transaction,
+  sender: string,
+  client: ReturnType<typeof useSuiClient>,
+  signTransaction: ReturnType<typeof useSignTransaction>['mutateAsync'],
+): Promise<string> {
+  const transactionKindBytes = toBase64(await tx.build({ client, onlyTransactionKind: true }));
+  const created = await postJson('/api/sponsor/create', { sender, transactionKindBytes });
+  if (typeof created.bytes !== 'string' || typeof created.digest !== 'string') {
+    throw new Error((created.message as string) ?? 'Couldn’t sponsor this transaction.');
+  }
+  const { signature } = await signTransaction({ transaction: Transaction.from(created.bytes) });
+  const executed = await postJson('/api/sponsor/execute', { digest: created.digest, signature });
+  if (typeof executed.digest !== 'string') {
+    throw new Error((executed.message as string) ?? 'Sponsored execution failed.');
+  }
+  return executed.digest;
+}
+
 export function useSubmitTx() {
   const client = useSuiClient();
   const account = useCurrentAccount();
   const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
+  const { mutateAsync: signTransaction } = useSignTransaction();
   const qc = useQueryClient();
 
   return useCallback(
@@ -89,7 +130,10 @@ export function useSubmitTx() {
       // ctx ids are authoritative. Strip both from the proposed input before building.
       const { managerId: _m, balanceManagerId: _b, ...safeInput } = input;
       const tx = await getToolsForAdapter(allTools, ctx).build(toolName, safeInput);
-      const { digest } = await signAndExecute({ transaction: tx });
+      // Gasless via Enoki sponsorship when enabled; otherwise the wallet pays its own gas.
+      const digest = SPONSOR_ENABLED
+        ? await submitSponsored(tx, owner, client, signTransaction)
+        : (await signAndExecute({ transaction: tx })).digest;
 
       // A successful redeem closes the position on-chain, but the indexer lags ~7s and keeps returning
       // it. Mark it now so every RedeemButton (chat card AND positions page) goes terminal immediately —
@@ -158,6 +202,6 @@ export function useSubmitTx() {
 
       return digest;
     },
-    [account, client, signAndExecute, qc],
+    [account, client, signAndExecute, signTransaction, qc],
   );
 }
