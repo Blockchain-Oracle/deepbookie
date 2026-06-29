@@ -81,6 +81,7 @@ export const MARKET_TRADES_LIMIT = 12; // recent trades shown on a market detail
 export const FAUCET_AMOUNT_USD = 10;
 export const FAUCET_MIN_BALANCE_USD = 1; // only grant dUSDC if recipient is below this
 export const FAUCET_MIN_SUI = 0.05; // request gas SUI if recipient is below this
+export const FAUCET_SUI_GRANT = 0.05; // operator-funded gas grant (fallback when the public faucet 429s)
 export const SUI_GAS_FAUCET_URL = 'https://faucet.testnet.sui.io/v2/gas';
 export const SUI_DECIMALS = 9;
 // Faucet abuse guard (in-memory; per-process — DB-backed grant log is the Phase 6 hardening).

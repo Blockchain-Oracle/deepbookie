@@ -9,7 +9,7 @@ import {
   NETWORK,
   SUI_DECIMALS,
 } from '@/lib/constants';
-import { grantDusdc, requestSuiGas } from '@/lib/faucet.server';
+import { grantDusdc, grantSuiGas, requestSuiGas } from '@/lib/faucet.server';
 import { allowFaucet } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger.server';
 
@@ -55,12 +55,28 @@ export async function POST(req: Request) {
     const minSuiBase = BigInt(Math.round(FAUCET_MIN_SUI * 10 ** SUI_DECIMALS));
     const needSui = BigInt(suiBal.totalBalance) < minSuiBase;
 
-    const suiRequested = needSui ? await requestSuiGas(address) : false;
+    // Gas SUI: try the free public testnet faucet first; if it's rate-limited (429s constantly from
+    // server IPs), fall back to an operator-funded gas grant so a fresh zkLogin/Google user can sign.
+    let suiRequested = false;
+    let suiDigest: string | null = null;
+    if (needSui) {
+      suiRequested = await requestSuiGas(address);
+      if (!suiRequested) {
+        suiDigest = await grantSuiGas(address);
+        suiRequested = suiDigest !== null;
+      }
+    }
     const digest = needDusdc ? await grantDusdc(address, FAUCET_AMOUNT_USD) : null;
     const granted = needDusdc ? FAUCET_AMOUNT_USD : 0;
 
-    logger.info({ address, granted, digest, suiRequested }, 'faucet grant');
-    return NextResponse.json({ granted, digest, suiRequested, alreadyFunded: granted === 0 });
+    logger.info({ address, granted, digest, suiRequested, suiDigest }, 'faucet grant');
+    return NextResponse.json({
+      granted,
+      digest,
+      suiRequested,
+      suiDigest,
+      alreadyFunded: granted === 0 && !suiRequested,
+    });
   } catch (err) {
     logger.error(
       { address, err: err instanceof Error ? err.message : String(err) },

@@ -2,7 +2,7 @@ import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
 import { Transaction } from '@mysten/sui/transactions';
 import { toDusdc } from '@deepbookie/predict-client';
-import { DUSDC_TYPE, NETWORK, SUI_GAS_FAUCET_URL } from '@/lib/constants';
+import { DUSDC_TYPE, FAUCET_SUI_GRANT, NETWORK, SUI_DECIMALS, SUI_GAS_FAUCET_URL } from '@/lib/constants';
 
 /**
  * Server-only faucet. The OPERATOR key is the single deliberately-scoped server credential —
@@ -61,4 +61,32 @@ export async function requestSuiGas(recipient: string): Promise<boolean> {
   } catch {
     return false; // gas faucet is best-effort; dUSDC grant is the primary path
   }
+}
+
+/**
+ * Operator-funded gas grant — the reliable fallback when the public testnet faucet is rate-limited
+ * (it frequently 429s from server IPs like Vercel). Splits SUI from the operator's gas coin and
+ * transfers it to `recipient` so a brand-new address (e.g. a zkLogin / Google sign-in user with 0
+ * SUI) can pay for its first transactions. Returns the digest, or null if the operator is too low
+ * on SUI to grant safely (keeps a reserve for its own gas).
+ */
+export async function grantSuiGas(recipient: string): Promise<string | null> {
+  const client = rpc();
+  const kp = operator();
+  const grant = BigInt(Math.round(FAUCET_SUI_GRANT * 10 ** SUI_DECIMALS));
+  const reserve = BigInt(Math.round(0.03 * 10 ** SUI_DECIMALS)); // keep ~0.03 SUI for the operator's own gas
+  const bal = await client.getBalance({ owner: kp.toSuiAddress() });
+  if (BigInt(bal.totalBalance) < grant + reserve) return null;
+
+  const tx = new Transaction();
+  const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(grant)]);
+  tx.transferObjects([coin], tx.pure.address(recipient));
+
+  const res = await client.signAndExecuteTransaction({
+    signer: kp,
+    transaction: tx,
+    options: { showEffects: true },
+  });
+  await client.waitForTransaction({ digest: res.digest });
+  return res.digest;
 }
