@@ -2,6 +2,7 @@
 
 import { ConnectButton } from '@mysten/dapp-kit';
 import { BrandMark } from '@/components/ui/BrandMark';
+import { googleLoginEnabled } from '@/lib/dapp-kit';
 
 export function ConnectScreen() {
   return (
@@ -23,8 +24,9 @@ export function ConnectScreen() {
             <span className="text-mint">chatting.</span>
           </h2>
           <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-[#cfc9bd]">
-            Connect your Sui wallet to start trading. DeepBookie builds the trade — you sign every
-            one in your own wallet.
+            {googleLoginEnabled
+              ? 'Sign in with Google or connect a Sui wallet to start trading. DeepBookie builds the trade — you sign every one yourself.'
+              : 'Connect your Sui wallet to start trading. DeepBookie builds the trade — you sign every one in your own wallet.'}
           </p>
         </div>
         <div className="font-mono text-xs text-[#6b675e]">you sign every trade</div>
@@ -32,7 +34,7 @@ export function ConnectScreen() {
 
       <div className="flex flex-col justify-center gap-4 bg-paper p-10">
         <div className="text-[10px] font-semibold uppercase tracking-[0.13em] text-faint">
-          Choose a wallet
+          {googleLoginEnabled ? 'Sign in or connect a wallet' : 'Choose a wallet'}
         </div>
         <ConnectButton />
         <p className="max-w-sm text-xs leading-relaxed text-muted">

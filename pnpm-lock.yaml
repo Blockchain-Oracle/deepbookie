@@ -108,6 +108,9 @@ importers:
       '@mysten/dapp-kit':
         specifier: ^1.1.1
         version: 1.1.1(@mysten/sui@2.19.0(typescript@5.9.3))(@tanstack/react-query@5.101.0(react@19.2.7))(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.7))
+      '@mysten/enoki':
+        specifier: ~1.1.0
+        version: 1.1.1(@mysten/sui@2.19.0(typescript@5.9.3))(@types/react@19.2.17)(react@19.2.7)
       '@mysten/sui':
         specifier: ^2.19.0
         version: 2.19.0(typescript@5.9.3)
@@ -1466,6 +1469,18 @@ packages:
     peerDependencies:
       '@mysten/sui': ^2.19.0
 
+  '@mysten/enoki@1.1.1':
+    resolution: {integrity: sha512-fmJ2FNMtLfbmXi5JI9RKEQFSsqtt/ue3Gq3lQW3DzXiMG0DAXbU0rqgZg+9OycdhmLRV1orjzHh3F15uG6C5Xw==}
+    peerDependencies:
+      '@mysten/sui': ^2.19.0
+      '@types/react': '>=17.0.0'
+      react: '>=17.0.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      react:
+        optional: true
+
   '@mysten/slush-wallet@1.1.1':
     resolution: {integrity: sha512-CUKwSPVtgGtDOtsjQ1Sy033gGES5pkVy0kGsBkE8vPCesgHT/PgAGSivAO54vLPJ11emQh6T+wHyNjrbzkklUQ==}
     peerDependencies:
@@ -1483,8 +1498,21 @@ packages:
     peerDependencies:
       '@mysten/sui': ^2.19.0
 
+  '@mysten/webcrypto-signer@0.2.3':
+    resolution: {integrity: sha512-QFH7XwZLgK1B1HFeezvO5DbA79Nl7AruzMqUSo3WVqlmuLysXMdK5gKnn1G6BifkiWnaX9HYZFsdfmesAdgyKQ==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      '@mysten/sui': ^2.20.1
+
   '@mysten/window-wallet-core@0.2.0':
     resolution: {integrity: sha512-W5Pm3jWPK7tQ8kiqrD3lRRJIFUDNHW3CCGtu6kv0h+n+UPAcKTeqMEkBH9oXrqfa72+QxjMckZUvc0pYWbj3Rw==}
+
+  '@nanostores/react@1.1.0':
+    resolution: {integrity: sha512-MbH35fjhcf7LAubYX5vhOChYUfTLzNLqH/mBGLVsHkcvjy0F8crO1WQwdmQ2xKbAmtpalDa2zBt3Hlg5kqr8iw==}
+    engines: {node: ^20.0.0 || >=22.0.0}
+    peerDependencies:
+      nanostores: ^1.2.0
+      react: '>=18.0.0'
 
   '@napi-rs/simple-git-android-arm-eabi@0.1.22':
     resolution: {integrity: sha512-JQZdnDNm8o43A5GOzwN/0Tz3CDBQtBUNqzVwEopm32uayjdjxev1Csp1JeaqF3v9djLDIvsSE39ecsN2LhCKKQ==}
@@ -2653,6 +2681,26 @@ packages:
     resolution: {integrity: sha512-aCWYmVeSCGViyEU5k7GMoW8zxE4Gs+C1s1Pp2XLesvSNlnZ4PMES9HUnTB3hl0b3RVj7C61yze3IWyrncqg4MA==}
     engines: {node: '>=22'}
 
+  '@wallet-standard/ui-compare@1.0.3':
+    resolution: {integrity: sha512-AXst7auT0+5eIaj8MyUXZLopKWN2HwqiQNTVgcF80u9X9a/fsiiHi8tlY0dc/y/AIOM654cMpvpJqsJEZNV9pg==}
+    engines: {node: '>=22'}
+
+  '@wallet-standard/ui-core@1.0.1':
+    resolution: {integrity: sha512-LFmsSjMw3wXfZgZ5eAFGdIJ1512dGTWIEeoPDKsc6mHf7cMU18tvtpe4bOL76lT9Qh1Gc+4+kdtwSkTuJ9L+jw==}
+    engines: {node: '>=22'}
+
+  '@wallet-standard/ui-features@1.0.3':
+    resolution: {integrity: sha512-3YgxBoDXZCsaSyCNMph7i7G57ap+C6Y+l3HmTEQKigzTGxPUJ2mvqpTPwdj8D2cVkTKBzu8/78wweV7I9eG1rA==}
+    engines: {node: '>=22'}
+
+  '@wallet-standard/ui-registry@1.1.1':
+    resolution: {integrity: sha512-vJDZ/K2xwIqkxiyWUhPb6s62bTMRbYPj0MCJa9lYsqHGZgMbKBI3ZjLJK5MzWow2VxoOfuR77HuJng+HDWt1hA==}
+    engines: {node: '>=22'}
+
+  '@wallet-standard/ui@1.0.3':
+    resolution: {integrity: sha512-H2QJTR5m3PeHi06q8kj4TiRf3U+fEe6W+jw+hztPkjTRBVDeCIrwRhbdgAyI8yaGc7dBhzGYqhUQ9ecYj7x0rQ==}
+    engines: {node: '>=22'}
+
   '@wallet-standard/wallet@1.1.1':
     resolution: {integrity: sha512-8WiRPaKk/wNNRZhB2eVhpR/JW7/aqTCMoZhgVUCujuzDmxxmGvsosMxdCG4NAdYkoyozAHCX8/xLtlWUn5mNdQ==}
     engines: {node: '>=22'}
@@ -3719,6 +3767,9 @@ packages:
     resolution: {integrity: sha512-im9DjEDQ55s9fL4EYzOAv0yMqmMBSZp6G0VvFyTMPKWxiSBHUj9NW/qqLmXUwXrrM7AvqSlTCfvqRb0cM8yYqw==}
     engines: {node: '>=0.10.0'}
 
+  idb-keyval@6.2.5:
+    resolution: {integrity: sha512-eKQkTnS0relYsSOYomx8ozIbmdsQCKUdhyuIaQ2DZgKuaxtyQQMkyD/wlnQN32pO3yutN1b1L8uqwcDKaJd7/Q==}
+
   ignore@5.3.2:
     resolution: {integrity: sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g==}
     engines: {node: '>= 4'}
@@ -4254,6 +4305,10 @@ packages:
     resolution: {integrity: sha512-sPdqC6ByMVVGvF1ynvvMo0/o+oD1VX7DaHhijt1bFgjvBkHBib4t49GoNDhf2NDta4oeUNlaGbSt5K7qjZ955Q==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
+
+  nanostores@1.4.0:
+    resolution: {integrity: sha512-i0tloweeudshAEuddpDxcg9Ik6pkPfVsHIgKyf143JrgG7/MOh0+q7BypdLXZPoOP7fOYt1eTcwGkyiVmhJFkA==}
+    engines: {node: ^20.0.0 || >=22.0.0}
 
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
@@ -6243,6 +6298,20 @@ snapshots:
       - debug
       - supports-color
 
+  '@mysten/enoki@1.1.1(@mysten/sui@2.19.0(typescript@5.9.3))(@types/react@19.2.17)(react@19.2.7)':
+    dependencies:
+      '@mysten/sui': 2.19.0(typescript@5.9.3)
+      '@mysten/utils': 0.4.0
+      '@mysten/wallet-standard': 0.21.1(@mysten/sui@2.19.0(typescript@5.9.3))
+      '@mysten/webcrypto-signer': 0.2.3(@mysten/sui@2.19.0(typescript@5.9.3))
+      '@nanostores/react': 1.1.0(nanostores@1.4.0)(react@19.2.7)
+      '@wallet-standard/ui': 1.0.3
+      idb-keyval: 6.2.5
+      nanostores: 1.4.0
+    optionalDependencies:
+      '@types/react': 19.2.17
+      react: 19.2.7
+
   '@mysten/slush-wallet@1.1.1(@mysten/sui@2.19.0(typescript@5.9.3))(typescript@5.9.3)':
     dependencies:
       '@mysten/sui': 2.19.0(typescript@5.9.3)
@@ -6284,6 +6353,11 @@ snapshots:
       '@mysten/sui': 2.19.0(typescript@5.9.3)
       '@wallet-standard/core': 1.1.2
 
+  '@mysten/webcrypto-signer@0.2.3(@mysten/sui@2.19.0(typescript@5.9.3))':
+    dependencies:
+      '@mysten/sui': 2.19.0(typescript@5.9.3)
+      '@noble/curves': 2.2.0
+
   '@mysten/window-wallet-core@0.2.0(typescript@5.9.3)':
     dependencies:
       '@mysten/utils': 0.4.0
@@ -6291,6 +6365,11 @@ snapshots:
       valibot: 1.4.1(typescript@5.9.3)
     transitivePeerDependencies:
       - typescript
+
+  '@nanostores/react@1.1.0(nanostores@1.4.0)(react@19.2.7)':
+    dependencies:
+      nanostores: 1.4.0
+      react: 19.2.7
 
   '@napi-rs/simple-git-android-arm-eabi@0.1.22':
     optional: true
@@ -7350,6 +7429,35 @@ snapshots:
   '@wallet-standard/features@1.1.1':
     dependencies:
       '@wallet-standard/base': 1.1.1
+
+  '@wallet-standard/ui-compare@1.0.3':
+    dependencies:
+      '@wallet-standard/base': 1.1.1
+      '@wallet-standard/ui-core': 1.0.1
+      '@wallet-standard/ui-registry': 1.1.1
+
+  '@wallet-standard/ui-core@1.0.1':
+    dependencies:
+      '@wallet-standard/base': 1.1.1
+
+  '@wallet-standard/ui-features@1.0.3':
+    dependencies:
+      '@wallet-standard/base': 1.1.1
+      '@wallet-standard/errors': 0.1.2
+      '@wallet-standard/ui-core': 1.0.1
+      '@wallet-standard/ui-registry': 1.1.1
+
+  '@wallet-standard/ui-registry@1.1.1':
+    dependencies:
+      '@wallet-standard/base': 1.1.1
+      '@wallet-standard/errors': 0.1.2
+      '@wallet-standard/ui-core': 1.0.1
+
+  '@wallet-standard/ui@1.0.3':
+    dependencies:
+      '@wallet-standard/ui-compare': 1.0.3
+      '@wallet-standard/ui-core': 1.0.1
+      '@wallet-standard/ui-features': 1.0.3
 
   '@wallet-standard/wallet@1.1.1':
     dependencies:
@@ -8580,6 +8688,8 @@ snapshots:
     dependencies:
       safer-buffer: 2.1.2
 
+  idb-keyval@6.2.5: {}
+
   ignore@5.3.2: {}
 
   ignore@7.0.5: {}
@@ -9339,6 +9449,8 @@ snapshots:
       thenify-all: 1.6.0
 
   nanoid@3.3.13: {}
+
+  nanostores@1.4.0: {}
 
   natural-compare@1.4.0: {}
 
