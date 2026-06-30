@@ -96,6 +96,17 @@ function moveCallTargets(tx: Transaction): string[] {
   return [...new Set(targets)];
 }
 
+/**
+ * Tools that must NOT be sponsored — they move SUI as an input, which on Sui is fundamentally
+ * incompatible with sponsorship: the DeepBook SDK sources SUI via `coinWithBalance` → splits from
+ * `tx.gas`, but in a sponsored tx `tx.gas` belongs to the SPONSOR. Enoki (correctly) rejects.
+ * The user has SUI from the faucet, so user-pays-gas works fine for these.
+ */
+const SUI_SWAP_TOOLS = new Set<string>([
+  'spot_swap_base_for_quote', // base side is SUI for SUI_* pools
+  'spot_swap_quote_for_base', // quote side is SUI for *_SUI pools
+]);
+
 async function submitSponsored(
   tx: Transaction,
   sender: string,
@@ -146,10 +157,27 @@ export function useSubmitTx() {
       // ctx ids are authoritative. Strip both from the proposed input before building.
       const { managerId: _m, balanceManagerId: _b, ...safeInput } = input;
       const tx = await getToolsForAdapter(allTools, ctx).build(toolName, safeInput);
-      // Gasless via Enoki sponsorship when enabled; otherwise the wallet pays its own gas.
-      const digest = SPONSOR_ENABLED
-        ? await submitSponsored(tx, owner, client, signTransaction)
-        : (await signAndExecute({ transaction: tx })).digest;
+      // Gasless via Enoki when enabled, EXCEPT SUI-swaps (architecturally unsponsorable — SUI input
+      // would split from the sponsor's gas coin). Belt-and-suspenders: if a sponsorship attempt
+      // throws (bad allowlist guess, future SDK change, transient Enoki 5xx), fall back to user-pays
+      // so the trade still goes through instead of dead-ending. We only re-throw a wallet rejection
+      // (the user declined) — that's not a failure to retry around.
+      const useSponsorship = SPONSOR_ENABLED && !SUI_SWAP_TOOLS.has(toolName);
+      let digest: string;
+      if (useSponsorship) {
+        try {
+          digest = await submitSponsored(tx, owner, client, signTransaction);
+        } catch (err) {
+          if (isUserRejection(err)) throw err;
+          clientLogger.warn('sponsor failed, falling back to user-pays', {
+            tool: toolName,
+            err: err instanceof Error ? err.message : String(err),
+          });
+          digest = (await signAndExecute({ transaction: tx })).digest;
+        }
+      } else {
+        digest = (await signAndExecute({ transaction: tx })).digest;
+      }
 
       // A successful redeem closes the position on-chain, but the indexer lags ~7s and keeps returning
       // it. Mark it now so every RedeemButton (chat card AND positions page) goes terminal immediately —
