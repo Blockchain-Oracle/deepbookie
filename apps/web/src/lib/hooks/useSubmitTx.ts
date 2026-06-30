@@ -16,35 +16,12 @@ import { NETWORK, SPONSOR_ENABLED } from '@/lib/constants';
 import { setStoredBalanceManager } from '@/lib/spot/bmStore';
 import { markRedeemed, positionKey } from '@/lib/predict/redeemedStore';
 import { clientLogger } from '@/lib/logger.client';
+import { isUserRejection } from '@/lib/diagnose';
 
-/** A wallet decline (user rejected the popup) — a cancellation, not a failure. */
-export function isUserRejection(e: unknown): boolean {
-  const m = (e instanceof Error ? e.message : String(e)).toLowerCase();
-  return m.includes('reject') || m.includes('denied') || m.includes('cancel');
-}
-
-/** Map a thrown build/sign error to a user-facing reason (the FAILED receipt shows this). */
-export function reasonFor(e: unknown): string {
-  const m = (e instanceof Error ? e.message : String(e)).toLowerCase();
-  if (m.includes('reject') || m.includes('denied') || m.includes('cancel'))
-    return 'Signature declined in your wallet. No funds moved.';
-  // A settled/expired market is the most common terminal-state abort; check its specific strings BEFORE
-  // the generic MoveAbort branch (a settlement abort is itself a MoveAbort whose text names "settled").
-  if (m.includes('settled') || m.includes('not active') || m.includes('expired'))
-    return 'This market has settled — it can no longer be traded.';
-  // On-chain abort (MoveAbort) — check before "manager"/"balance" since the abort string often names them.
-  if (m.includes('moveabort') || m.includes('abort'))
-    return 'The transaction was rejected on-chain — usually not enough balance, or the market/order changed. Try again.';
-  if (m.includes('balance manager') || m.includes('balancemanager'))
-    return 'Set up your DeepBook spot account first, then trade.';
-  if (m.includes('no dusdc')) return 'No dUSDC in your wallet — fund from the faucet first.';
-  if (m.includes('manager')) return 'Create your account first, then place this bet.';
-  if (m.includes('insufficient') || m.includes('balance')) return 'Not enough balance to cover this.';
-  if (m.includes('timeout') || m.includes('indexer')) return 'Couldn’t reach the market right now — try again.';
-  // Unknown failure: the tx may already have broadcast (we sign+execute), so DON'T assert "no funds moved"
-  // here — only the wallet-decline branch above can promise that.
-  return 'The transaction failed or its result couldn’t be confirmed — check your wallet history before retrying.';
-}
+// Diagnosis lives in lib/diagnose.ts now — re-export here so existing call sites keep working
+// during the migration; new code should import from '@/lib/diagnose' directly.
+export { diagnose, isUserRejection, reasonFor } from '@/lib/diagnose';
+export type { Diagnosis, DiagnosisCode } from '@/lib/diagnose';
 
 type ObjChange = { type: string; objectType?: string; objectId?: string };
 

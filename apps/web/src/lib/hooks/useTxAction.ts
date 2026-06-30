@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { isUserRejection, reasonFor, useSubmitTx } from './useSubmitTx';
+import { useSubmitTx } from './useSubmitTx';
+import { diagnose, isUserRejection, type Diagnosis } from '@/lib/diagnose';
 
 export type TxStatus = 'idle' | 'signing' | 'done' | 'error';
 
@@ -15,6 +16,7 @@ export function useTxAction() {
   const [status, setStatus] = useState<TxStatus>('idle');
   const [digest, setDigest] = useState<string | null>(null);
   const [reason, setReason] = useState<string | null>(null);
+  const [diagnosis, setDiagnosis] = useState<Diagnosis | null>(null);
   // Synchronous re-entry guard — `status` only flips to 'signing' on the next render, so a fast
   // double-click before that could fire two submits. This blocks the second immediately.
   const inFlight = useRef(false);
@@ -29,6 +31,7 @@ export function useTxAction() {
       inFlight.current = true;
       setStatus('signing');
       setReason(null);
+      setDiagnosis(null);
       try {
         const d = await submit(tool, input, ids);
         setDigest(d);
@@ -40,7 +43,9 @@ export function useTxAction() {
           setStatus('idle');
           return null;
         }
-        setReason(reasonFor(e));
+        const d = diagnose(e);
+        setDiagnosis(d);
+        setReason(d.headline);
         setStatus('error');
         return null;
       } finally {
@@ -53,7 +58,8 @@ export function useTxAction() {
   const reset = useCallback(() => {
     setStatus('idle');
     setReason(null);
+    setDiagnosis(null);
   }, []);
 
-  return { status, digest, reason, run, reset };
+  return { status, digest, reason, diagnosis, run, reset };
 }

@@ -4,7 +4,8 @@ import { useRef, useState } from 'react';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { SignReceipt, type ReceiptLine } from './SignReceipt';
 import { deriveReceiptState } from './receiptState';
-import { useSubmitTx, reasonFor, isUserRejection } from '@/lib/hooks/useSubmitTx';
+import { useSubmitTx } from '@/lib/hooks/useSubmitTx';
+import { diagnose, isUserRejection, type Diagnosis } from '@/lib/diagnose';
 import { useQuote } from '@/lib/hooks/useQuote';
 import { usePositions } from '@/lib/hooks/usePositions';
 import { useBalanceManager } from '@/lib/hooks/useBalanceManager';
@@ -65,6 +66,9 @@ export function ReceiptController({
   const positionsQ = usePositions(account?.address);
   const bm = useBalanceManager(account?.address);
   const [local, setLocal] = useState<'idle' | 'signing' | 'dismissed'>('idle');
+  // Rich diagnosis for the card (the AI SDK's tool-result errorText is string-only — we keep the
+  // structured envelope here so the card can render headline + detail + suggestion).
+  const [localDiagnosis, setLocalDiagnosis] = useState<Diagnosis | undefined>();
   // Synchronous re-entry guard — `local` state only flips next render, so a fast double-click could
   // pass a state-only check twice and queue two wallet prompts. A ref flips in the same tick.
   const inFlight = useRef(false);
@@ -104,7 +108,10 @@ export function ReceiptController({
         addToolResult({ tool: toolName, toolCallId: part.toolCallId, output: { status: 'cancelled' } });
         onOutcome?.({ toolCallId: part.toolCallId, toolName, status: 'cancelled' });
       } else {
-        addToolResult({ tool: toolName, toolCallId: part.toolCallId, state: 'output-error', errorText: reasonFor(e) });
+        const d = diagnose(e);
+        setLocalDiagnosis(d);
+        // Rich (multi-line) error for the AI agent so its next reply can speak to the actual cause.
+        addToolResult({ tool: toolName, toolCallId: part.toolCallId, state: 'output-error', errorText: d.forModel });
         onOutcome?.({ toolCallId: part.toolCallId, toolName, status: 'failed' });
       }
       setLocal('idle'); // allow retry after a failure
@@ -126,6 +133,7 @@ export function ReceiptController({
     digest: part.output?.digest,
     suiscanUrl: part.output?.digest ? SUISCAN_TX(part.output.digest) : undefined,
     reason: part.errorText,
+    diagnosis: localDiagnosis,
     authorizeDisabled: needsManager && !!account && positionsQ.isLoading,
     onAuthorize,
     onCancel,

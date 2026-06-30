@@ -25,7 +25,8 @@ export interface SignReceiptProps {
   settleNote?: string; // e.g. "Binary · settles in 27 minutes"
   signedAt?: string;
   digest?: string;
-  reason?: string; // failure reason (required visible in failed state)
+  reason?: string; // failure headline (back-compat — used only when `diagnosis` isn't passed)
+  diagnosis?: { headline: string; detail?: string; suggestion?: string }; // richer failure shape
   suiscanUrl?: string;
   authorizeDisabled?: boolean;
   onAuthorize?: () => void;
@@ -179,7 +180,20 @@ export function SignReceipt(p: SignReceiptProps) {
 
       {p.state === 'failed' && (
         <div className="px-4 pb-4 pt-1">
-          <div className="mb-3 text-[12.5px] leading-snug text-[#a06550]">{p.reason ?? 'The transaction was rejected. No funds moved.'}</div>
+          <div className="mb-3 space-y-1">
+            <div className="text-[12.5px] font-semibold leading-snug text-[#a06550]">
+              {p.diagnosis?.headline ?? p.reason ?? 'The transaction was rejected. No funds moved.'}
+            </div>
+            {p.diagnosis?.detail && (
+              <div className="text-[12px] leading-snug text-[#8b6856]">{p.diagnosis.detail}</div>
+            )}
+            {p.diagnosis?.suggestion && (
+              <div className="text-[12px] leading-snug text-ink-soft">
+                <span className="font-semibold text-ink">Try this: </span>
+                {p.diagnosis.suggestion}
+              </div>
+            )}
+          </div>
           <div className="flex gap-2.5">
             <button type="button" onClick={p.onRetry} className="flex-1 rounded-card-in bg-ink py-2.5 text-[13.5px] font-semibold text-paper transition hover:opacity-90">
               Try again

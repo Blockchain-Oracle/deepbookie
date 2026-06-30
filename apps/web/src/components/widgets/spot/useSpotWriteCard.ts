@@ -3,7 +3,8 @@
 import { useRef, useState } from 'react';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { useBalanceManager } from '@/lib/hooks/useBalanceManager';
-import { isUserRejection, reasonFor, useSubmitTx } from '@/lib/hooks/useSubmitTx';
+import { useSubmitTx } from '@/lib/hooks/useSubmitTx';
+import { diagnose, isUserRejection, type Diagnosis } from '@/lib/diagnose';
 import { deriveReceiptState } from '@/components/widgets/receiptState';
 import type { AddToolResult, OnSignOutcome, WriteToolPart } from '@/components/widgets/ReceiptController';
 
@@ -21,6 +22,7 @@ export function useSpotWriteCard(part: WriteToolPart, addToolResult: AddToolResu
   const account = useCurrentAccount();
   const bm = useBalanceManager(account?.address);
   const [local, setLocal] = useState<'idle' | 'signing' | 'dismissed'>('idle');
+  const [localDiagnosis, setLocalDiagnosis] = useState<Diagnosis | undefined>();
   // Synchronous re-entry guard. `local` is React state — `setLocal('signing')` only flips on the next
   // render, so a fast double-click (or Enter+click) before that commit would pass a state-only check
   // twice and pop the wallet twice → two signed txs. A ref flips in the same tick. (Mirrors useTxAction.)
@@ -48,7 +50,9 @@ export function useSpotWriteCard(part: WriteToolPart, addToolResult: AddToolResu
         addToolResult({ tool: toolName, toolCallId: part.toolCallId, output: { status: 'cancelled' } });
         onOutcome?.({ toolCallId: part.toolCallId, toolName, status: 'cancelled' });
       } else {
-        addToolResult({ tool: toolName, toolCallId: part.toolCallId, state: 'output-error', errorText: reasonFor(e) });
+        const d = diagnose(e);
+        setLocalDiagnosis(d);
+        addToolResult({ tool: toolName, toolCallId: part.toolCallId, state: 'output-error', errorText: d.forModel });
         onOutcome?.({ toolCallId: part.toolCallId, toolName, status: 'failed' });
       }
       setLocal('idle'); // allow retry after a failure
@@ -89,6 +93,7 @@ export function useSpotWriteCard(part: WriteToolPart, addToolResult: AddToolResu
     proposed: part.input ?? {},
     digest: part.output?.digest,
     reason: part.errorText,
+    diagnosis: localDiagnosis,
     dismissed: local === 'dismissed',
     sign,
     cancel,
