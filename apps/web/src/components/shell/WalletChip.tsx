@@ -9,7 +9,7 @@ import { formatAddress, formatUsd } from '@/lib/format';
 /** Wallet area: a compact Connect trigger (stock modal) or the connected account chip + dropdown. */
 export function WalletChip() {
   const account = useCurrentAccount();
-  const { dusdc, sui } = useBalances();
+  const { dusdc, sui, deep } = useBalances();
   const { mutate: disconnect } = useDisconnectWallet();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -63,17 +63,14 @@ export function WalletChip() {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-52 overflow-hidden rounded-card border border-line-strong bg-card shadow-[var(--shadow-float)]">
-          <div className="border-b border-line px-3 py-2.5">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-faint">Balance</div>
-            <div className="mt-0.5 font-mono text-sm font-bold tabular-nums">
-              {dusdc.data != null ? `${formatUsd(dusdc.data)} dUSDC` : '—'}
+        <div className="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-card border border-line-strong bg-card shadow-[var(--shadow-float)]">
+          <div className="border-b border-line px-3 py-3">
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-faint">
+              Balances
             </div>
-            <div className="mt-0.5 font-mono text-xs font-semibold tabular-nums text-ink-soft">
-              {sui.data != null
-                ? `${sui.data.toLocaleString(undefined, { maximumFractionDigits: 4 })} SUI`
-                : '—'}
-            </div>
+            <BalanceRow label="dUSDC" value={dusdc.data != null ? formatUsd(dusdc.data) : null} primary />
+            <BalanceRow label="SUI" value={sui.data != null ? formatTokenAmount(sui.data) : null} />
+            <BalanceRow label="DEEP" value={deep.data != null ? formatTokenAmount(deep.data) : null} />
           </div>
           <MenuItem
             onClick={() => {
@@ -105,6 +102,31 @@ export function WalletChip() {
       )}
     </div>
   );
+}
+
+/** One balance row in the dropdown: label left, amount right (tabular-nums for alignment). `primary`
+ *  styles dUSDC slightly bolder so the user's "tradeable" balance reads first; SUI/DEEP are smaller
+ *  utility rows beneath it. A null value renders as '—' (loading / disconnected). */
+function BalanceRow({ label, value, primary }: { label: string; value: string | null; primary?: boolean }) {
+  return (
+    <div className={`flex items-baseline justify-between ${primary ? '' : 'mt-1'}`}>
+      <span
+        className={`text-[10px] font-semibold uppercase tracking-[0.08em] ${primary ? 'text-ink-soft' : 'text-faint'}`}
+      >
+        {label}
+      </span>
+      <span
+        className={`font-mono tabular-nums ${primary ? 'text-sm font-bold text-ink' : 'text-[12px] font-semibold text-ink-soft'}`}
+      >
+        {value ?? '—'}
+      </span>
+    </div>
+  );
+}
+
+/** Token-amount formatter — keeps DEEP/SUI to ~4 dp max, trims trailing zeros via toLocaleString. */
+function formatTokenAmount(n: number): string {
+  return n.toLocaleString(undefined, { maximumFractionDigits: 4 });
 }
 
 function MenuItem({
