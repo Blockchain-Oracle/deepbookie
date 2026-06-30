@@ -10,7 +10,7 @@ import {
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { SuiJsonRpcClient } from '@mysten/sui/jsonRpc';
 import { Transaction } from '@mysten/sui/transactions';
-import { toBase64 } from '@mysten/sui/utils';
+import { normalizeSuiAddress, toBase64 } from '@mysten/sui/utils';
 import { allTools, getToolsForAdapter, type ToolContext } from '@deepbookie/core';
 import { NETWORK, SPONSOR_ENABLED } from '@/lib/constants';
 import { setStoredBalanceManager } from '@/lib/spot/bmStore';
@@ -85,14 +85,30 @@ async function postJson(url: string, body: unknown): Promise<Record<string, unkn
  * bytes in the wallet (sign-only — no gas), then execute via Enoki. Works for any wallet incl. a
  * fresh zkLogin/Google address with 0 SUI. Returns the on-chain digest.
  */
+/** Every move-call target this tx invokes, normalized — Enoki's sponsor allowlist must exact-match
+ *  (fully-padded addresses) the calls in the tx, so we derive it straight from the tx itself. */
+function moveCallTargets(tx: Transaction): string[] {
+  const targets = tx
+    .getData()
+    .commands.flatMap((c) =>
+      c.MoveCall ? [`${normalizeSuiAddress(c.MoveCall.package)}::${c.MoveCall.module}::${c.MoveCall.function}`] : [],
+    );
+  return [...new Set(targets)];
+}
+
 async function submitSponsored(
   tx: Transaction,
   sender: string,
   client: ReturnType<typeof useSuiClient>,
   signTransaction: ReturnType<typeof useSignTransaction>['mutateAsync'],
 ): Promise<string> {
+  const allowedMoveCallTargets = moveCallTargets(tx);
   const transactionKindBytes = toBase64(await tx.build({ client, onlyTransactionKind: true }));
-  const created = await postJson('/api/sponsor/create', { sender, transactionKindBytes });
+  const created = await postJson('/api/sponsor/create', {
+    sender,
+    transactionKindBytes,
+    allowedMoveCallTargets,
+  });
   if (typeof created.bytes !== 'string' || typeof created.digest !== 'string') {
     throw new Error((created.message as string) ?? 'Couldn’t sponsor this transaction.');
   }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { executeSponsored } from '@/lib/enoki.server';
+import { enokiErrorInfo, executeSponsored } from '@/lib/enoki.server';
 import { logger } from '@/lib/logger.server';
 
 export const runtime = 'nodejs';
@@ -25,12 +25,10 @@ export async function POST(req: Request) {
     const res = await executeSponsored(digest, signature);
     return NextResponse.json({ digest: res.digest });
   } catch (err) {
-    logger.error(
-      { digest, err: err instanceof Error ? err.message : String(err) },
-      'sponsor execute failed',
-    );
+    const info = enokiErrorInfo(err);
+    logger.error({ digest, ...info }, 'sponsor execute failed');
     return NextResponse.json(
-      { error: 'sponsor_failed', message: 'The sponsored transaction couldn’t be submitted — try again.' },
+      { error: 'sponsor_failed', message: info.message, code: info.code, detail: info.errors },
       { status: 502 },
     );
   }

@@ -1,6 +1,24 @@
-import { EnokiClient } from '@mysten/enoki';
-import { PREDICT_PACKAGE } from '@deepbookie/predict-client';
+import { EnokiClient, EnokiClientError } from '@mysten/enoki';
 import { NETWORK } from '@/lib/constants';
+
+/** Extract the actionable detail from an Enoki failure (the API returns a specific code/message that
+ *  the generic Error.message hides — e.g. a disallowed move target or gas-budget issue). */
+export function enokiErrorInfo(err: unknown): {
+  message: string;
+  code?: string;
+  status?: number;
+  errors?: unknown;
+} {
+  if (err instanceof EnokiClientError) {
+    return {
+      message: err.errors?.[0]?.message ?? err.message,
+      code: err.code,
+      status: err.status,
+      errors: err.errors,
+    };
+  }
+  return { message: err instanceof Error ? err.message : String(err) };
+}
 
 /**
  * Server-only Enoki sponsorship (Slice B — gasless). Uses the PRIVATE Enoki key (`ENOKI_PRIVATE_KEY`)
@@ -21,37 +39,24 @@ function client(): EnokiClient {
 }
 
 /**
- * Move-call targets the gas sponsor is willing to pay for — restricting this prevents anyone from
- * draining the gas budget on arbitrary calls. Native PTB commands (split/merge/transfer coins) are
- * NOT moveCalls, so they don't need listing. Covers every Predict write the web app can build.
+ * Build a sponsored transaction from the client's `onlyTransactionKind` bytes. Returns the full
+ * sponsored tx bytes (gas owner = Enoki) + its digest for the wallet to sign.
+ *
+ * Enoki ALWAYS enforces an allowlist (no wildcard, no allow-all; the comparison is against
+ * fully-normalized 64-hex addresses). Rather than hand-maintain a list — which inevitably forgets a
+ * target (spot/DeepBook did) — the client extracts the move-call targets from the very tx it's
+ * sponsoring and passes them here. So every tx the app builds is covered automatically.
  */
-export const SPONSORED_TARGETS: readonly string[] = [
-  'predict::create_manager',
-  'predict::mint',
-  'predict::mint_range',
-  'predict::redeem',
-  'predict::redeem_range',
-  'predict::redeem_permissionless',
-  'predict::supply',
-  'predict::withdraw',
-  'predict_manager::deposit',
-  'predict_manager::withdraw',
-  'market_key::up',
-  'market_key::down',
-  'range_key::new',
-].map((s) => `${PREDICT_PACKAGE}::${s}`);
-
-/** Build a sponsored transaction from the client's `onlyTransactionKind` bytes. Returns the full
- *  sponsored tx bytes (gas owner = Enoki) + its digest for the wallet to sign. */
 export async function createSponsored(
   sender: string,
   transactionKindBytes: string,
+  allowedMoveCallTargets: string[],
 ): Promise<{ bytes: string; digest: string }> {
   return client().createSponsoredTransaction({
     network: NETWORK,
     sender,
     transactionKindBytes,
-    allowedMoveCallTargets: [...SPONSORED_TARGETS],
+    allowedMoveCallTargets,
   });
 }
 
