@@ -66,7 +66,8 @@ const withdraw = defineWrite({
 
 const swapBaseForQuote = defineWrite({
   name: 'spot_swap_base_for_quote',
-  description: 'Swap an exact base amount for quote on a spot pool (outputs sent to your wallet).',
+  description:
+    "Swap an exact amount of the pool's BASE token (the FIRST token in the pool name — e.g. DEEP in DEEP_SUI, SUI in SUI_DBUSDC) for QUOTE. `amount` is the INPUT quantity in BASE units (e.g. amount=10 on DEEP_SUI means swap 10 DEEP for SUI). Use this when the user's FROM token is the pool's base. Outputs sent to your wallet.",
   surface: 'spot',
   inputSchema: swapInput,
   build: async (a, ctx) => {
@@ -85,7 +86,8 @@ const swapBaseForQuote = defineWrite({
 
 const swapQuoteForBase = defineWrite({
   name: 'spot_swap_quote_for_base',
-  description: 'Swap an exact quote amount for base on a spot pool (outputs sent to your wallet).',
+  description:
+    "Swap an exact amount of the pool's QUOTE token (the SECOND token in the pool name — e.g. SUI in DEEP_SUI, DBUSDC in SUI_DBUSDC) for BASE. `amount` is the INPUT quantity in QUOTE units (e.g. amount=0.5 on DEEP_SUI means swap 0.5 SUI for DEEP). Use this when the user's FROM token is the pool's quote. Outputs sent to your wallet.",
   surface: 'spot',
   inputSchema: swapInput,
   build: async (a, ctx) => {

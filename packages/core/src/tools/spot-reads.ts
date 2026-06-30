@@ -71,7 +71,8 @@ const orderbook = defineRead({
 
 const swapQuote = defineRead({
   name: 'spot_swap_quote',
-  description: 'Preview a spot swap: output amount + DEEP fee for a given base or quote input.',
+  description:
+    "Preview a spot swap: output amount + DEEP fee. Pools are named BASE_QUOTE (e.g. DEEP_SUI = base DEEP, quote SUI). Pass `baseQuantity` to quote selling BASE for QUOTE; pass `quoteQuantity` to quote selling QUOTE for BASE. Use the side that matches the user's INPUT token — e.g. quoting 0.5 SUI→DEEP on DEEP_SUI is `quoteQuantity: 0.5` (SUI is the quote side).",
   surface: 'spot',
   inputSchema: poolInput
     .extend({ baseQuantity: z.number().nonnegative().optional(), quoteQuantity: z.number().nonnegative().optional() })
