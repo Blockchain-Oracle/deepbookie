@@ -9,7 +9,7 @@ import { formatAddress, formatUsd } from '@/lib/format';
 /** Wallet area: a compact Connect trigger (stock modal) or the connected account chip + dropdown. */
 export function WalletChip() {
   const account = useCurrentAccount();
-  const { dusdc, deep } = useBalances();
+  const { dusdc, sui } = useBalances();
   const { mutate: disconnect } = useDisconnectWallet();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -70,8 +70,8 @@ export function WalletChip() {
               {dusdc.data != null ? `${formatUsd(dusdc.data)} dUSDC` : '—'}
             </div>
             <div className="mt-0.5 font-mono text-xs font-semibold tabular-nums text-ink-soft">
-              {deep.data != null
-                ? `${deep.data.toLocaleString(undefined, { maximumFractionDigits: 4 })} DEEP`
+              {sui.data != null
+                ? `${sui.data.toLocaleString(undefined, { maximumFractionDigits: 4 })} SUI`
                 : '—'}
             </div>
           </div>
